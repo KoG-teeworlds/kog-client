@@ -27,7 +27,7 @@ import json, sys
 m = json.load(open(sys.argv[1]))
 if m["channel"] != sys.argv[2]:
     sys.exit("the draft is of channel %s" % m["channel"])
-urls = [f["url"] for f in m["files"]] + [p["client"]["url"] for p in m["platforms"].values()]
+urls = [f["url"] for f in m["files"]] + [p["client"]["url"] for p in m["platforms"].values()] + [p["url"] for p in m.get("packages", [])]
 prefix = "https://github.com/%s/releases/download/%s/" % (sys.argv[3], sys.argv[4])
 for url in urls:
     if url.startswith(prefix):

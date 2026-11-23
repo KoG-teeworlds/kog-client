@@ -40,6 +40,11 @@ cp artifacts/kog-package-linux/*.tar.xz release/KoG-Client-linux.tar.xz
 cp artifacts/kog-package-windows/*.zip release/KoG-Client-windows.zip
 if compgen -G "artifacts/kog-package-macos/*.dmg" >/dev/null; then cp artifacts/kog-package-macos/*.dmg release/KoG-Client-macOS.dmg; fi
 
+package_args=()
+for package in release/KoG-Client-*; do
+  package_args+=(--package "$(basename "$package")=$package")
+done
+
 base_args=(--base work/base.json)
 if ! curl -fsS "$base_url/base/files.json" -o work/base.json; then
   base_args=(--init-base release/base-files.json)
@@ -58,7 +63,7 @@ done <<< "${CHANGES:-}"
 
 python3 scripts/kog/make_manifest.py draft --channel "$channel" --version "$version" --repo "$repo" --tag "$tag" --data work/linux \
   "${base_args[@]}" "${previous_args[@]}" "${extra[@]}" \
-  --client linux-x86_64=work/linux/DDNet --client win64=work/windows/DDNet.exe \
+  "${package_args[@]}" --client linux-x86_64=work/linux/DDNet --client win64=work/windows/DDNet.exe \
   --out release/update.draft.json --uploads work/uploads.json
 
 python3 - <<'PY'

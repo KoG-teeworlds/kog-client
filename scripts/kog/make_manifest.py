@@ -108,6 +108,12 @@ def cmd_draft(args):
             sys.exit("a server executable cannot be the client: " + path)
         platforms[platform] = {"client": {"sha256": sha256_file(path), "size": os.path.getsize(path), "url": asset_url(args.repo, args.tag, name)}}
         uploads.append({"asset": name, "source": path})
+    packages = []
+    for spec in sorted(args.package):
+        name, _, path = spec.partition("=")
+        if is_server(path) or is_server(name) or not re.fullmatch(r"KoG-Client-[A-Za-z0-9._-]+", name):
+            sys.exit("not an allowed package: " + spec)
+        packages.append({"name": name, "sha256": sha256_file(path), "size": os.path.getsize(path), "url": asset_url(args.repo, args.tag, name)})
     if len(files) > MAX_FILES or len(uploads) > MAX_UPLOADS:
         sys.exit("too many changed files for one release (%d files, %d uploads): publish a new base" % (len(files), len(uploads)))
     manifest = {
@@ -121,6 +127,8 @@ def cmd_draft(args):
         "platforms": platforms,
         "remove": remove,
     }
+    if packages:
+        manifest["packages"] = packages
     if args.rollout_percent is not None:
         manifest["rollout_percent"] = args.rollout_percent
     if args.min_version:
@@ -192,6 +200,7 @@ def cmd_check(args):
     for platform in manifest.get("platforms", {}).values():
         if "client" in platform:
             entries.append(platform["client"])
+    entries += manifest.get("packages", [])
     bad = 0
     for entry in entries:
         path = os.path.join(args.assets, entry["url"].rsplit("/", 1)[1])
@@ -215,6 +224,7 @@ def main():
     draft.add_argument("--base")
     draft.add_argument("--init-base")
     draft.add_argument("--previous")
+    draft.add_argument("--package", action="append", default=[], metavar="NAME=PATH")
     draft.add_argument("--rollout-percent", type=int, choices=range(0, 101), metavar="0-100")
     draft.add_argument("--min-version")
     draft.add_argument("--notes-url")

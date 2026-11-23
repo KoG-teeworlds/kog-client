@@ -666,8 +666,10 @@ TEST(KogUpdate, PathsAndUrls)
 	for(const char *pBad : {"data/", "data", "data/a/", "data/a/../b", "data/C:/a", "data/a.SH", "other/a", "data//a", "data/.hidden"})
 		EXPECT_FALSE(IsAllowedPath(pBad)) << pBad;
 	EXPECT_TRUE(IsAllowedUrl("https://client.kog.tw/notes/0.2.0"));
-	EXPECT_TRUE(IsAllowedUrl("https://kog-teeworlds.github.io/kog-client-updates/stable/update.json"));
+	EXPECT_TRUE(IsAllowedUrl("https://raw.githubusercontent.com/KoG-teeworlds/kog-client-updates/published/stable/update.json"));
 	EXPECT_TRUE(IsAllowedUrl("https://github.com/KoG-teeworlds/kog-client/releases/download/v0.2.0/x"));
+	EXPECT_FALSE(IsAllowedUrl("https://kog-teeworlds.github.io/kog-client-updates/stable/update.json"));
+	EXPECT_FALSE(IsAllowedUrl("https://raw.githubusercontent.com/KoG-teeworlds/other/published/a"));
 	for(const char *pBad : {"https://client.kog.tw/a?b=c", "https://user@client.kog.tw/a", "https://github.com/KoG-teeworlds/other/releases/download/x", "http://client.kog.tw/a"})
 		EXPECT_FALSE(IsAllowedUrl(pBad)) << pBad;
 	EXPECT_TRUE(IsAllowedNotesUrl("https://github.com/KoG-teeworlds/kog-client/releases/tag/v1"));

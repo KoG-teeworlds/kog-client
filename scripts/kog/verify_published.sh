@@ -5,7 +5,7 @@ set -euo pipefail
 # usage: verify_published.sh [CHANNEL]      needs curl, python3, ssh-keygen, cc; gh for the attestation check (optional)
 channel=${1:-stable}
 root=$(cd "$(dirname "$0")/../.." && pwd -P)
-hosts=(https://client.kog.tw https://kog-teeworlds.github.io/kog-client-updates)
+hosts=(https://client.kog.tw https://raw.githubusercontent.com/KoG-teeworlds/kog-client-updates/published)
 work=$(mktemp -d)
 trap 'rm -rf "$work"' EXIT
 cd "$root"

@@ -3,7 +3,7 @@ set -euo pipefail
 
 # Emergency stop: a signed manifest with halted=true, signed here with the hardware key and the offline backup CI key,
 # published straight to the updates repo without waiting for CI.
-# usage: halt_release.sh CHANNEL     (stable only: the other channels are halted by a CI run of the workflow "Halt")
+# usage: halt_release.sh CHANNEL     (stable only: canary and dev builds are replaced by the next push)
 channel=${1:?channel}
 [ "$channel" = stable ] || { echo "only the stable channel is halted from here" >&2; exit 2; }
 dir="${KOG_SIGNING_DIR:-$HOME/.config/kog-client-signing}"

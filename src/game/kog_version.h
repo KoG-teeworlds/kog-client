@@ -24,6 +24,6 @@
 #define KOG_UPSTREAM_TCLIENT_URL "https://github.com/TaterClient/TClient"
 
 #define KOG_UPDATE_BASE_URL "https://client.kog.tw"
-#define KOG_UPDATE_FALLBACK_URL "https://kog-teeworlds.github.io/kog-client-updates"
+#define KOG_UPDATE_FALLBACK_URL "https://raw.githubusercontent.com/KoG-teeworlds/kog-client-updates/published"
 
 #endif

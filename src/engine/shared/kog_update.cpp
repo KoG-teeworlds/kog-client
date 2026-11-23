@@ -13,7 +13,7 @@ namespace KogUpdate
 static const char *const ALLOWED_URL_PREFIXES[] = {
 	"https://github.com/KoG-teeworlds/kog-client/releases/download/",
 	"https://client.kog.tw/",
-	"https://kog-teeworlds.github.io/kog-client-updates/",
+	"https://raw.githubusercontent.com/KoG-teeworlds/kog-client-updates/published/",
 };
 
 static const char *const ALLOWED_NOTES_PREFIXES[] = {

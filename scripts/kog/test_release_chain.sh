@@ -26,7 +26,7 @@ echo three > "$tree/data/c.txt"
 rm "$tree/data/sub/b.txt"
 echo binary2 > "$work/client2"
 "${tool[@]}" draft --base "$work/base.json" --version 0.2.0 --tag v0.2.0 --data "$tree" --client linux-x86_64="$work/client2" \
-  --rollout-percent 25 --min-version 0.1.0 --notes-url https://client.kog.tw/notes/0.2.0 --change "Faster start" --change "Fixes a crash" \
+  --package KoG-Client-linux.tar.xz="$work/client2" --rollout-percent 25 --min-version 0.1.0 --notes-url https://client.kog.tw/notes/0.2.0 --change "Faster start" --change "Fixes a crash" \
   --out "$work/draft2.json" --uploads "$work/uploads2.json" 2>/dev/null
 python3 - "$work/draft2.json" <<'PY'
 import json, sys
@@ -34,6 +34,8 @@ m = json.load(open(sys.argv[1]))
 assert [f["path"] for f in m["files"]] == ["data/a.txt", "data/c.txt"], m["files"]
 assert m["remove"] == ["data/sub/b.txt"], m["remove"]
 assert m["sequence"] == 0 and m["rollout_percent"] == 25 and m["min_version"] == "0.1.0" and len(m["changes"]) == 2
+p = m["packages"][0]
+assert p["name"] == "KoG-Client-linux.tar.xz" and len(p["sha256"]) == 64 and p["size"] > 0 and p["url"].endswith("/v0.2.0/KoG-Client-linux.tar.xz"), p
 PY
 
 echo "the manifest builder refuses what it must"
@@ -48,6 +50,7 @@ refused "${tool[@]}" draft --base "$work/base.json" --version 0.2.0 --tag t --da
 rm -r "$tree/data/server"
 cp "$work/client2" "$work/DDNet-Server"
 refused "${tool[@]}" draft --base "$work/base.json" --version 0.2.0 --tag t --data "$tree" --client linux-x86_64="$work/DDNet-Server" --out "$work/x.json" --uploads "$work/x2.json"
+refused "${tool[@]}" draft --base "$work/base.json" --version 0.2.0 --tag t --data "$tree" --client linux-x86_64="$work/client2" --package evil.exe="$work/client2" --out "$work/x.json" --uploads "$work/x2.json"
 refused "${tool[@]}" finalize --draft "$work/draft2.json" --sequence 1 --days 91 --out "$work/x.json"
 refused "${tool[@]}" finalize --draft "$work/draft2.json" --sequence 0 --out "$work/x.json"
 sed 's/"channel": "stable"/"channel": "dev"/;s/"version": "0.2.0"/"version": "0.2.0-dev.3"/' "$work/draft2.json" > "$work/draft_dev.json"
