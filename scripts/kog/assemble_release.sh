@@ -7,6 +7,8 @@ channel=${1:?channel}
 version=${2:?version}
 repo=${GITHUB_REPOSITORY:-KoG-teeworlds/kog-client}
 base_url=${KOG_PUBLISHED_URL:-https://client.kog.tw}
+exe=$(sed -n 's/^#define KOG_CLIENT_EXECUTABLE "\(.*\)"$/\1/p' src/game/kog_version.h)
+[ -n "$exe" ] || { echo "KOG_CLIENT_EXECUTABLE is not in src/game/kog_version.h" >&2; exit 1; }
 if [ "$channel" = stable ]; then
   grep -q "#define KOG_CLIENT_VERSION \"$version\"" src/game/kog_version.h || { echo "KOG_CLIENT_VERSION is not $version" >&2; exit 1; }
   tag="v$version"
@@ -23,7 +25,7 @@ if [ "$(find work/windows -mindepth 1 -maxdepth 1 | wc -l)" = 1 ] && [ -d "$(fin
 fi
 
 # the client only: a server executable anywhere in a package stops the release
-servers=$(find work artifacts -iname 'DDNet-Server*' -o -iname 'kog-server*' | head -5)
+servers=$(find work artifacts -iname 'DDNet-Server*' -o -iname '*-server' -o -iname '*-server.exe' | head -5)
 if [ -n "$servers" ]; then
   echo "a server is in the packages:" >&2
   echo "$servers" >&2
@@ -63,7 +65,7 @@ done <<< "${CHANGES:-}"
 
 python3 scripts/kog/make_manifest.py draft --channel "$channel" --version "$version" --repo "$repo" --tag "$tag" --data work/linux \
   "${base_args[@]}" "${previous_args[@]}" "${extra[@]}" \
-  "${package_args[@]}" --client linux-x86_64=work/linux/DDNet --client win64=work/windows/DDNet.exe \
+  "${package_args[@]}" --client "linux-x86_64=work/linux/$exe" --client "win64=work/windows/$exe.exe" \
   --out release/update.draft.json --uploads work/uploads.json
 
 python3 - <<'PY'

@@ -127,14 +127,16 @@ echo "the release assembly refuses a package with a server"
 run="$work/run"
 mkdir -p "$run/artifacts/kog-package-linux" "$run/artifacts/kog-package-windows" "$run/pkg/linux/data" "$run/pkg/windows/data"
 ln -s "$root/scripts" "$run/scripts"
-echo client > "$run/pkg/linux/DDNet"
+mkdir -p "$run/src/game"
+cp "$root/src/game/kog_version.h" "$run/src/game/"
+echo client > "$run/pkg/linux/KoG-Client"
 echo data > "$run/pkg/linux/data/a.txt"
-echo client > "$run/pkg/windows/DDNet.exe"
-(cd "$run/pkg" && tar -cJf "$run/artifacts/kog-package-linux/DDNet-1-linux_x86_64.tar.xz" --transform 's,^linux,DDNet-1-linux_x86_64,' linux && cd windows && python3 -c 'import zipfile; z=zipfile.ZipFile("../../artifacts/kog-package-windows/DDNet-1-win64.zip","w"); z.write("DDNet.exe")')
+echo client > "$run/pkg/windows/KoG-Client.exe"
+(cd "$run/pkg" && tar -cJf "$run/artifacts/kog-package-linux/KoGClient-1-linux_x86_64.tar.xz" --transform 's,^linux,KoGClient-1-linux_x86_64,' linux && cd windows && python3 -c 'import zipfile; z=zipfile.ZipFile("../../artifacts/kog-package-windows/KoGClient-1-win64.zip","w"); z.write("KoG-Client.exe")')
 (cd "$run" && KOG_PUBLISHED_URL=http://127.0.0.1:9 bash scripts/kog/assemble_release.sh canary 0.1.0-canary.5 >/dev/null 2>&1) || fail "a clean client package was refused"
 test -f "$run/release/update.draft.json" || fail "no draft"
 echo server > "$run/pkg/linux/DDNet-Server"
-(cd "$run/pkg" && tar -cJf "$run/artifacts/kog-package-linux/DDNet-1-linux_x86_64.tar.xz" --transform 's,^linux,DDNet-1-linux_x86_64,' linux)
+(cd "$run/pkg" && tar -cJf "$run/artifacts/kog-package-linux/KoGClient-1-linux_x86_64.tar.xz" --transform 's,^linux,KoGClient-1-linux_x86_64,' linux)
 if (cd "$run" && KOG_PUBLISHED_URL=http://127.0.0.1:9 bash scripts/kog/assemble_release.sh canary 0.1.0-canary.5 >/dev/null 2>&1); then fail "a server in the package was accepted"; fi
 
 if [ -n "${KOG_TESTRUNNER:-}" ]; then
