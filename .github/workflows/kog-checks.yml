@@ -18,6 +18,19 @@ jobs:
       - run: bash scripts/kog/test_release_chain.sh
       - run: bash scripts/kog/check_brand.sh
 
+  hosted-runners:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Only GitHub-hosted runners
+        run: |
+          if grep -rnE 'self-hosted' .github/workflows --include='*.yml' | grep -v 'hosted-runners:' | grep -v "grep -rnE"; then
+            echo "workflows must use GitHub-hosted runners" >&2
+            exit 1
+          fi
+
   gitleaks:
     runs-on: ubuntu-latest
     steps:

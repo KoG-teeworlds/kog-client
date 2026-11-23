@@ -1,0 +1,147 @@
+name: KoG channel build
+
+on:
+  workflow_call:
+    inputs:
+      channel:
+        type: string
+        required: true
+
+permissions: {}
+
+jobs:
+  prepare:
+    name: Version and source check
+    runs-on: ubuntu-latest
+    if: github.repository == 'KoG-teeworlds/kog-client'
+    permissions:
+      contents: read
+    outputs:
+      current: ${{ steps.check.outputs.current }}
+      version: ${{ steps.check.outputs.version }}
+      number: ${{ steps.check.outputs.number }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - id: check
+        env:
+          CHANNEL: ${{ inputs.channel }}
+          NUMBER: ${{ github.run_number }}
+        run: |
+          branch=main
+          [ "$CHANNEL" = dev ] && branch=dev
+          [ "$GITHUB_REF" = "refs/heads/$branch" ] || { echo "the $CHANNEL channel is built from $branch only" >&2; exit 1; }
+          git fetch --quiet origin "$branch"
+          current=true
+          [ "$(git rev-parse "origin/$branch")" = "$GITHUB_SHA" ] || current=false
+          base=$(sed -n 's/^#define KOG_CLIENT_VERSION "\([0-9]*\.[0-9]*\.[0-9]*\)"$/\1/p' src/game/kog_version.h)
+          {
+            echo "current=$current"
+            echo "number=$NUMBER"
+            echo "version=$base-$CHANNEL.$NUMBER"
+          } >> "$GITHUB_OUTPUT"
+
+  package:
+    needs: prepare
+    if: needs.prepare.outputs.current == 'true'
+    uses: ./.github/workflows/kog-package.yml
+    with:
+      channel: ${{ inputs.channel }}
+      build_number: ${{ needs.prepare.outputs.number }}
+    permissions:
+      contents: read
+
+  release:
+    needs: [prepare, package]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      id-token: write
+      attestations: write
+    env:
+      GH_TOKEN: ${{ github.token }}
+      CHANNEL: ${{ inputs.channel }}
+      VERSION: ${{ needs.prepare.outputs.version }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          pattern: kog-package-*
+          path: artifacts
+      - name: Assemble
+        run: bash scripts/kog/assemble_release.sh "$CHANNEL" "$VERSION"
+      - uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4.2.2
+        with:
+          subject-path: release/*
+      - name: Create the prerelease
+        run: |
+          tag=$(cat work/tag.txt)
+          gh release create "$tag" release/* --target "$GITHUB_SHA" --prerelease --title "KoG Client $VERSION" \
+            --notes "Unstable $CHANNEL build, best effort."
+      - name: Keep the last 10 builds of this channel
+        run: |
+          gh release list --limit 200 --json tagName,createdAt --jq "[.[] | select(.tagName | startswith(\"$CHANNEL-\"))] | sort_by(.createdAt) | reverse | .[10:] | .[].tagName" |
+            while read -r old; do
+              gh release delete "$old" --yes --cleanup-tag || echo "::warning::could not delete $old"
+            done
+
+  manifest:
+    name: Manifest from the verified release
+    needs: [prepare, release]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    env:
+      GH_TOKEN: ${{ github.token }}
+      CHANNEL: ${{ inputs.channel }}
+      VERSION: ${{ needs.prepare.outputs.version }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - name: Verify and make the manifest
+        run: |
+          tag="$CHANNEL-${VERSION##*.}"
+          bash scripts/kog/verify_release.sh "$CHANNEL" "$tag" verified
+          days=30
+          [ "$CHANNEL" = dev ] && days=14
+          previous=0
+          [ -f verified/previous.json ] && previous=$(python3 -c 'import json,sys; print(json.load(open(sys.argv[1]))["sequence"])' verified/previous.json)
+          mkdir out
+          python3 scripts/kog/make_manifest.py finalize --draft verified/update.draft.json --sequence "$((previous + 1))" --days "$days" --out out/update.json
+          cp verified/source.txt out/source.txt
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: manifest-${{ needs.prepare.outputs.version }}
+          path: out
+          if-no-files-found: error
+          retention-days: 7
+
+  sign:
+    name: Sign and publish
+    needs: [prepare, manifest]
+    runs-on: ubuntu-latest
+    environment: ${{ inputs.channel }}-signing
+    permissions:
+      contents: read
+    env:
+      CHANNEL: ${{ inputs.channel }}
+      VERSION: ${{ needs.prepare.outputs.version }}
+      RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: manifest-${{ needs.prepare.outputs.version }}
+          path: out
+      - name: Sign and publish
+        env:
+          SIGNING_KEY: ${{ secrets.SIGNING_KEY }}
+          UPDATES_DEPLOY_KEY: ${{ secrets.UPDATES_DEPLOY_KEY }}
+        run: bash scripts/kog/sign_and_publish.sh "$CHANNEL" "$VERSION" out

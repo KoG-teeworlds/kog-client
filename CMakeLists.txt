@@ -78,6 +78,19 @@ file(STRINGS src/game/kog_version.h KOG_CLIENT_ID_LINE LIMIT_COUNT 1 REGEX "^#de
 string(REGEX REPLACE "^[^\"]*\"([^\"]*)\".*$" "\\1" KOG_CLIENT_ID "${KOG_CLIENT_ID_LINE}")
 string(TOLOWER "${KOG_CLIENT_ID}" KOG_CLIENT_ID_LOWER)
 
+set(KOG_CHANNEL "stable" CACHE STRING "Update channel of this build: stable, canary or dev")
+set(KOG_BUILD_NUMBER "" CACHE STRING "Build number of a canary or dev build")
+if(NOT KOG_CHANNEL MATCHES "^(stable|canary|dev)$")
+  message(FATAL_ERROR "KOG_CHANNEL must be stable, canary or dev")
+endif()
+add_compile_definitions(KOG_CLIENT_CHANNEL="${KOG_CHANNEL}")
+if(NOT KOG_CHANNEL STREQUAL "stable")
+  if(NOT KOG_BUILD_NUMBER MATCHES "^[0-9]+$")
+    message(FATAL_ERROR "A ${KOG_CHANNEL} build needs -DKOG_BUILD_NUMBER=<number>")
+  endif()
+  add_compile_definitions(KOG_CLIENT_VERSION="${KOG_CLIENT_VERSION_MAJOR}.${KOG_CLIENT_VERSION_MINOR}.${KOG_CLIENT_VERSION_PATCH}-${KOG_CHANNEL}.${KOG_BUILD_NUMBER}")
+endif()
+
 # </KoG>
 
 set(ORIGINAL_CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH})
@@ -1011,9 +1024,10 @@ if(NOT(GTEST_FOUND) AND DOWNLOAD_GTEST)
   endif()
 endif()
 
-file(STRINGS src/engine/client/kog_update_pubkey.h KOG_PUBKEY_PLACEHOLDER_LINE REGEX "^#define KOG_UPDATE_PUBKEY_PLACEHOLDER 1")
+string(TOUPPER "${KOG_CHANNEL}" KOG_CHANNEL_UPPER)
+file(STRINGS src/engine/client/kog_update_pubkey.h KOG_PUBKEY_PLACEHOLDER_LINE REGEX "^#define KOG_UPDATE_KEYS_PLACEHOLDER_${KOG_CHANNEL_UPPER} 1")
 if(KOG_PUBKEY_PLACEHOLDER_LINE AND AUTOUPDATE AND NOT DEV AND NOT KOG_ALLOW_PLACEHOLDER_KEY AND CMAKE_BUILD_TYPE MATCHES "^(Release|RelWithDebInfo|MinSizeRel)$")
-  message(FATAL_ERROR "The update signing key is still the placeholder: run scripts/kog/gen_signing_key.sh, or pass -DKOG_ALLOW_PLACEHOLDER_KEY=ON")
+  message(FATAL_ERROR "The ${KOG_CHANNEL} update keys are still the placeholder: merge the key pull request from infra-github (stable also needs scripts/kog/gen_signing_key.sh), or pass -DKOG_ALLOW_PLACEHOLDER_KEY=ON")
 endif()
 
 ########################################################################
@@ -2501,6 +2515,8 @@ set_src(ENGINE_SHARED GLOB_RECURSE src/engine/shared
   jsonwriter.cpp
   jsonwriter.h
   kernel.cpp
+  kog_failsafe.cpp
+  kog_failsafe.h
   kog_protocol.h
   kog_update.cpp
   kog_update.h
@@ -3645,6 +3661,7 @@ if(GTEST_FOUND OR DOWNLOAD_GTEST)
     jobs_test.cpp
     json_test.cpp
     jsonwriter_test.cpp
+    kog_failsafe_test.cpp
     kog_update_test.cpp
     linereader_test.cpp
     localization_test.cpp

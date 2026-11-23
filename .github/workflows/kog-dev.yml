@@ -1,0 +1,21 @@
+name: KoG dev
+
+on:
+  push:
+    branches: [dev]
+
+permissions: {}
+
+concurrency:
+  group: kog-channel-dev
+  cancel-in-progress: false
+
+jobs:
+  dev:
+    uses: ./.github/workflows/kog-channel.yml
+    with:
+      channel: dev
+    permissions:
+      contents: write
+      id-token: write
+      attestations: write
