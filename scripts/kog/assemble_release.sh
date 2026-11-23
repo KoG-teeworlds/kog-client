@@ -34,7 +34,7 @@ fi
 
 python3 scripts/kog/make_manifest.py draft --version "$version" --repo "$repo" --tag "v$version" --data work/linux \
   "${base_args[@]}" "${previous_args[@]}" \
-  --client linux-x86_64=work/linux/$exe --client win64=work/windows/$exe.exe \
+  --client linux-x86_64=work/linux/"$exe" --client win64=work/windows/"$exe".exe \
   --out release/update.draft.json --uploads work/uploads.json
 
 python3 - <<'PY'
