@@ -40,39 +40,45 @@ else()
   message(FATAL_ERROR "Couldn't parse version from src/game/version.h")
 endif()
 
-# <TClient>
+# <KoG>
 
 set(DATA_VERSION_FILE "${CMAKE_BINARY_DIR}/data/data_version.txt")
 file(MAKE_DIRECTORY "${CMAKE_BINARY_DIR}/data")
 
 file(WRITE "${DATA_VERSION_FILE}" "DDNet ${VERSION_MAJOR}.${VERSION_MINOR}.${VERSION_PATCH}\n")
 
-file(STRINGS src/game/kog_version.h TCLIENT_VERSION_LINE
+file(STRINGS src/game/kog_version.h KOG_CLIENT_VERSION_LINE
   LIMIT_COUNT 1
   REGEX "^#define KOG_CLIENT_VERSION "
 )
 
-if(TCLIENT_VERSION_LINE MATCHES "([0-9]+)\\.([0-9]+)\\.([0-9]+)")
-  set(TCLIENT_VERSION_MAJOR ${CMAKE_MATCH_1})
-  set(TCLIENT_VERSION_MINOR ${CMAKE_MATCH_2})
-  set(TCLIENT_VERSION_PATCH ${CMAKE_MATCH_3})
-elseif(TCLIENT_VERSION_LINE MATCHES "([0-9]+)\\.([0-9]+)")
-  set(TCLIENT_VERSION_MAJOR ${CMAKE_MATCH_1})
-  set(TCLIENT_VERSION_MINOR ${CMAKE_MATCH_2})
-  set(TCLIENT_VERSION_PATCH "0")
+if(KOG_CLIENT_VERSION_LINE MATCHES "([0-9]+)\\.([0-9]+)\\.([0-9]+)")
+  set(KOG_CLIENT_VERSION_MAJOR ${CMAKE_MATCH_1})
+  set(KOG_CLIENT_VERSION_MINOR ${CMAKE_MATCH_2})
+  set(KOG_CLIENT_VERSION_PATCH ${CMAKE_MATCH_3})
+elseif(KOG_CLIENT_VERSION_LINE MATCHES "([0-9]+)\\.([0-9]+)")
+  set(KOG_CLIENT_VERSION_MAJOR ${CMAKE_MATCH_1})
+  set(KOG_CLIENT_VERSION_MINOR ${CMAKE_MATCH_2})
+  set(KOG_CLIENT_VERSION_PATCH "0")
 else()
   message(FATAL_ERROR "Couldn't parse the KoG client version from src/game/kog_version.h")
 endif()
 
-if(TCLIENT_VERSION_PATCH STREQUAL "0")
-  project(KoGClient VERSION ${TCLIENT_VERSION_MAJOR}.${TCLIENT_VERSION_MINOR})
+if(KOG_CLIENT_VERSION_PATCH STREQUAL "0")
+  project(KoGClient VERSION ${KOG_CLIENT_VERSION_MAJOR}.${KOG_CLIENT_VERSION_MINOR})
 else()
-  project(KoGClient VERSION ${TCLIENT_VERSION_MAJOR}.${TCLIENT_VERSION_MINOR}.${TCLIENT_VERSION_PATCH})
+  project(KoGClient VERSION ${KOG_CLIENT_VERSION_MAJOR}.${KOG_CLIENT_VERSION_MINOR}.${KOG_CLIENT_VERSION_PATCH})
 endif()
 
-file(APPEND "${DATA_VERSION_FILE}" "KoGClient ${TCLIENT_VERSION_MAJOR}.${TCLIENT_VERSION_MINOR}.${TCLIENT_VERSION_PATCH}\n")
+file(APPEND "${DATA_VERSION_FILE}" "KoGClient ${KOG_CLIENT_VERSION_MAJOR}.${KOG_CLIENT_VERSION_MINOR}.${KOG_CLIENT_VERSION_PATCH}\n")
 
-# </TClient>
+file(STRINGS src/game/kog_version.h KOG_CLIENT_NAME_LINE LIMIT_COUNT 1 REGEX "^#define KOG_CLIENT_NAME ")
+string(REGEX REPLACE "^[^\"]*\"([^\"]*)\".*$" "\\1" KOG_CLIENT_DISPLAY_NAME "${KOG_CLIENT_NAME_LINE}")
+file(STRINGS src/game/kog_version.h KOG_CLIENT_ID_LINE LIMIT_COUNT 1 REGEX "^#define KOG_CLIENT_EXECUTABLE ")
+string(REGEX REPLACE "^[^\"]*\"([^\"]*)\".*$" "\\1" KOG_CLIENT_ID "${KOG_CLIENT_ID_LINE}")
+string(TOLOWER "${KOG_CLIENT_ID}" KOG_CLIENT_ID_LOWER)
+
+# </KoG>
 
 set(ORIGINAL_CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH})
 set(OWN_CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} ${PROJECT_SOURCE_DIR}/cmake)
@@ -236,7 +242,7 @@ if(NOT "${CMAKE_CURRENT_BINARY_DIR}" STREQUAL "${CMAKE_CURRENT_SOURCE_DIR}")
 endif()
 
 set(SERVER_EXECUTABLE DDNet-Server CACHE STRING "Name of the built server executable")
-set(CLIENT_EXECUTABLE DDNet CACHE STRING "Name of the build client executable")
+set(CLIENT_EXECUTABLE ${KOG_CLIENT_ID} CACHE STRING "Name of the build client executable")
 set(IOS_BUNDLE_IDENTIFIER "org.ddnet.client" CACHE STRING "iOS bundle identifier")
 
 ########################################################################
@@ -2216,7 +2222,7 @@ set(COPY_FILES
 if(TARGET_OS STREQUAL "emscripten")
   list(APPEND COPY_FILES other/emscripten/background.png)
   list(APPEND COPY_FILES other/emscripten/index.html)
-  list(APPEND COPY_FILES other/icons/DDNet.ico)
+  list(APPEND COPY_FILES other/icons/${CLIENT_EXECUTABLE}.ico)
 endif()
 file(COPY ${COPY_FILES} DESTINATION .)
 
@@ -3126,11 +3132,11 @@ if(CLIENT)
   endif()
 
   if(TARGET_OS STREQUAL "windows")
-    set(VERSION_EXECUTABLE "${CLIENT_EXECUTABLE}")
-    set(VERSION_COMPANY "${CLIENT_EXECUTABLE} Team")
+    set(VERSION_EXECUTABLE "${KOG_CLIENT_DISPLAY_NAME}")
+    set(VERSION_COMPANY "KoG")
     configure_file("other/versioninfo/versioninfo.rc.in" "client.versioninfo.rc")
     configure_file("other/manifest/client.manifest.in" "client.manifest")
-    set(CLIENT_ICON "other/icons/DDNet.rc")
+    set(CLIENT_ICON "other/icons/${CLIENT_EXECUTABLE}.rc")
     set(CLIENT_VERSIONINFO "${CMAKE_CURRENT_BINARY_DIR}/client.versioninfo.rc")
     if(NOT MINGW)
       set(CLIENT_MANIFEST "${CMAKE_CURRENT_BINARY_DIR}/client.manifest")
@@ -4004,11 +4010,11 @@ if(NOT DEV)
   endif()
   install(TARGETS ${TARGETS_TOOLS} DESTINATION ${CMAKE_INSTALL_LIBDIR}/ddnet COMPONENT tools)
   if(TARGET game-client)
-    install(FILES other/ddnet.desktop DESTINATION ${CMAKE_INSTALL_DATAROOTDIR}/applications COMPONENT client)
+    install(FILES other/${KOG_CLIENT_ID_LOWER}.desktop DESTINATION ${CMAKE_INSTALL_DATAROOTDIR}/applications COMPONENT client)
   endif()
   foreach(SIZE 16 32 48 256)
     if(TARGET game-client)
-      install(FILES other/icons/DDNet_${SIZE}x${SIZE}x32.png DESTINATION ${CMAKE_INSTALL_DATAROOTDIR}/icons/hicolor/${SIZE}x${SIZE}/apps RENAME ddnet.png COMPONENT client)
+      install(FILES other/icons/${CLIENT_EXECUTABLE}_${SIZE}x${SIZE}x32.png DESTINATION ${CMAKE_INSTALL_DATAROOTDIR}/icons/hicolor/${SIZE}x${SIZE}/apps RENAME ${KOG_CLIENT_ID_LOWER}.png COMPONENT client)
     endif()
     if(TARGET game-server)
       install(FILES other/icons/DDNet-Server_${SIZE}x${SIZE}x32.png DESTINATION ${CMAKE_INSTALL_DATAROOTDIR}/icons/hicolor/${SIZE}x${SIZE}/apps RENAME ddnet-server.png COMPONENT server)

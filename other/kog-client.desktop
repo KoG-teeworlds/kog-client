@@ -1,0 +1,10 @@
+[Desktop Entry]
+Type=Application
+Name=KoG Client
+GenericName=Platform Game
+Exec=KoG-Client %u
+Icon=kog-client
+Terminal=false
+Keywords=game;multiplayer;teeworlds;kog;
+Categories=Game;ArcadeGame;
+Comment=Launch KoG Client

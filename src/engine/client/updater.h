@@ -6,12 +6,13 @@
 
 #include <engine/shared/kog_update.h>
 #include <engine/updater.h>
+#include <game/kog_version.h>
 
 #include <memory>
 #include <string>
 #include <vector>
 
-#define CLIENT_EXEC "DDNet"
+#define CLIENT_EXEC KOG_CLIENT_EXECUTABLE
 #define SERVER_EXEC "DDNet-Server"
 
 #if defined(CONF_FAMILY_WINDOWS)

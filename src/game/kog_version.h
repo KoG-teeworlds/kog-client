@@ -1,8 +1,10 @@
 #ifndef GAME_KOG_VERSION_H
 #define GAME_KOG_VERSION_H
 
-// Placeholder brand. Must not be "TClient" or "DDNet" (zlib condition 2).
+// Placeholder brand: the only place to rename it. Must not be "TClient" or "DDNet" (zlib condition 2).
 #define KOG_CLIENT_NAME "KoG Client"
+#define KOG_CLIENT_EXECUTABLE "KoG-Client"
+#define KOG_STORAGE_NAME "KoG-Client"
 
 // CMakeLists.txt reads the version from this line
 #ifndef KOG_CLIENT_VERSION

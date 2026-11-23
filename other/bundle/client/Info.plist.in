@@ -4,6 +4,10 @@
 	<dict>
 		<key>CFBundleDevelopmentRegion</key>
 		<string>English</string>
+		<key>CFBundleName</key>
+		<string>${KOG_CLIENT_DISPLAY_NAME}</string>
+		<key>CFBundleDisplayName</key>
+		<string>${KOG_CLIENT_DISPLAY_NAME}</string>
 		<key>CFBundleExecutable</key>
 		<string>${CLIENT_EXECUTABLE}</string>
 		<key>CFBundleIconFile</key>
@@ -17,7 +21,7 @@
 		<key>CFBundleVersion</key>
 		<string>${PROJECT_VERSION}</string>
 		<key>CFBundleIdentifier</key>
-		<string>org.DDNetClient.app</string>
+		<string>tw.kog.client</string>
 		<key>CFBundleURLTypes</key>
 		<array>
 			<dict>
