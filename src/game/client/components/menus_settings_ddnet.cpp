@@ -5,6 +5,7 @@
 #include <base/dbg.h>
 #include <base/fs.h>
 #include <base/str.h>
+#include <base/time.h>
 
 #include <engine/font_icons.h>
 #include <engine/graphics.h>
@@ -19,6 +20,8 @@
 #include <game/client/gameclient.h>
 #include <game/client/ui.h>
 #include <game/client/ui_listbox.h>
+#include <game/client/ui_scrollregion.h>
+#include <game/kog_version.h>
 #include <game/localization.h>
 
 #include <algorithm>
@@ -29,7 +32,7 @@ void CMenus::RenderSettingsDDNet(CUIRect MainView)
 
 #if defined(CONF_AUTOUPDATE)
 	CUIRect UpdaterRect;
-	MainView.HSplitBottom(20.0f, &MainView, &UpdaterRect);
+	MainView.HSplitBottom(62.0f, &MainView, &UpdaterRect);
 	MainView.HSplitBottom(5.0f, &MainView, nullptr);
 #endif
 
@@ -302,41 +305,90 @@ void CMenus::RenderSettingsDDNet(CUIRect MainView)
 	// Updater
 #if defined(CONF_AUTOUPDATE)
 	{
+		CUIRect Status, Controls, Notice;
+		UpdaterRect.HSplitTop(20.0f, &Status, &UpdaterRect);
+		UpdaterRect.HSplitTop(20.0f, &Controls, &Notice);
 		const bool NeedUpdate = GameClient()->m_TClient.NeedUpdate();
-		IUpdater::EUpdaterState State = Updater()->GetCurrentState();
+		const IUpdater::EUpdaterState State = Updater()->GetCurrentState();
+		IUpdater::SUpdateInfo Info;
+		const bool HasInfo = Updater()->GetUpdateInfo(&Info);
 
-		// Update Button
 		char aBuf[256];
-		if(NeedUpdate && State <= IUpdater::CLEAN)
+		char aResult[64];
+		Updater()->LastCheckResult(aResult, sizeof(aResult));
+		const int64_t LastCheck = Updater()->LastCheckTime();
+		if(LastCheck == 0)
 		{
-			str_format(aBuf, sizeof(aBuf), Localize("KoG Client %s is available:"), GameClient()->m_TClient.m_aVersionStr);
-			UpdaterRect.VSplitLeft(TextRender()->TextWidth(14.0f, aBuf, -1, -1.0f) + 10.0f, &UpdaterRect, &Button);
-			Button.VSplitLeft(100.0f, &Button, nullptr);
+			str_format(aBuf, sizeof(aBuf), Localize("%s %s, %s channel. Not checked yet."), KOG_CLIENT_NAME, KOG_CLIENT_VERSION, Updater()->Channel());
+		}
+		else
+		{
+			const int64_t Minutes = std::max<int64_t>(0, (time_timestamp() - LastCheck) / 60);
+			if(Minutes < 1)
+				str_format(aBuf, sizeof(aBuf), Localize("%s %s, %s channel. Checked just now: %s"), KOG_CLIENT_NAME, KOG_CLIENT_VERSION, Updater()->Channel(), aResult);
+			else if(Minutes < 120)
+				str_format(aBuf, sizeof(aBuf), Localize("%s %s, %s channel. Checked %d min ago: %s"), KOG_CLIENT_NAME, KOG_CLIENT_VERSION, Updater()->Channel(), (int)Minutes, aResult);
+			else
+				str_format(aBuf, sizeof(aBuf), Localize("%s %s, %s channel. Checked %d h ago: %s"), KOG_CLIENT_NAME, KOG_CLIENT_VERSION, Updater()->Channel(), (int)(Minutes / 60), aResult);
+		}
+		Ui()->DoLabel(&Status, aBuf, 12.0f, TEXTALIGN_ML);
+
+		CUIRect ChannelLabel, ChannelBox, Action;
+		Controls.VSplitLeft(110.0f, &ChannelLabel, &Controls);
+		Controls.VSplitLeft(100.0f, &ChannelBox, &Controls);
+		Controls.VSplitLeft(10.0f, nullptr, &Action);
+		Ui()->DoLabel(&ChannelLabel, Localize("Update channel:"), 14.0f, TEXTALIGN_ML);
+		static const char *s_apChannels[] = {"stable", "canary", "dev"};
+		int Selected = 0;
+		for(int i = 0; i < 3; i++)
+		{
+			if(str_comp(Updater()->Channel(), s_apChannels[i]) == 0)
+				Selected = i;
+		}
+		static CUi::SDropDownState s_ChannelDropDown;
+		static CScrollRegion s_ChannelDropDownScrollRegion;
+		s_ChannelDropDown.m_SelectionPopupContext.m_pScrollRegion = &s_ChannelDropDownScrollRegion;
+		const int NewSelected = Ui()->DoDropDown(&ChannelBox, Selected, s_apChannels, 3, s_ChannelDropDown);
+		if(NewSelected != Selected)
+		{
+			str_copy(g_Config.m_KogUpdateChannel, s_apChannels[NewSelected]);
+			GameClient()->m_TClient.FetchTClientInfo();
+		}
+
+		if(HasInfo && State <= IUpdater::CLEAN && (NeedUpdate || Info.m_NeedsConfirmation))
+		{
+			str_format(aBuf, sizeof(aBuf), Info.m_NeedsConfirmation ? Localize("%s %s is on that channel (older):") : Localize("%s %s is available:"), KOG_CLIENT_NAME, Info.m_aVersion);
+			CUIRect Text, UpdateButton;
+			Action.VSplitLeft(TextRender()->TextWidth(14.0f, aBuf, -1, -1.0f) + 10.0f, &Text, &UpdateButton);
+			Ui()->DoLabel(&Text, aBuf, 14.0f, TEXTALIGN_ML);
+			UpdateButton.VSplitLeft(170.0f, &UpdateButton, nullptr);
 			static CButtonContainer s_ButtonUpdate;
-			if(DoButton_Menu(&s_ButtonUpdate, Localize("Update now"), 0, &Button))
-			{
-				Updater()->InitiateUpdate();
-			}
+			if(DoButton_Menu(&s_ButtonUpdate, Info.m_NeedsConfirmation ? Localize("Switch and downgrade") : Localize("Update now"), 0, &UpdateButton))
+				ShowUpdateDialog();
 		}
 		else if(State >= IUpdater::GETTING_MANIFEST && State < IUpdater::NEED_RESTART)
-			str_copy(aBuf, Localize("Updating…"));
+		{
+			Ui()->DoLabel(&Action, Localize("Updating…"), 14.0f, TEXTALIGN_ML);
+		}
 		else if(State == IUpdater::NEED_RESTART)
 		{
-			str_copy(aBuf, Localize("KoG Client updated!"));
+			Ui()->DoLabel(&Action, Localize("KoG Client updated!"), 14.0f, TEXTALIGN_ML);
 			m_NeedRestartUpdate = true;
 		}
 		else
 		{
-			str_copy(aBuf, Localize("No updates available"));
-			UpdaterRect.VSplitLeft(TextRender()->TextWidth(14.0f, aBuf, -1, -1.0f) + 10.0f, &UpdaterRect, &Button);
-			Button.VSplitLeft(100.0f, &Button, nullptr);
-			static CButtonContainer s_ButtonUpdate;
-			if(DoButton_Menu(&s_ButtonUpdate, Localize("Check now"), 0, &Button))
-			{
+			CUIRect CheckButton;
+			Action.VSplitLeft(100.0f, &CheckButton, nullptr);
+			static CButtonContainer s_ButtonCheck;
+			if(DoButton_Menu(&s_ButtonCheck, Localize("Check now"), 0, &CheckButton))
 				GameClient()->m_TClient.FetchTClientInfo();
-			}
 		}
-		Ui()->DoLabel(&UpdaterRect, aBuf, 14.0f, TEXTALIGN_ML);
+
+		if(str_comp(Updater()->Channel(), "stable") != 0)
+		{
+			TextRender()->TextColor(1.0f, 0.4f, 0.4f, 1.0f);
+			Ui()->DoLabel(&Notice, Localize("Unstable build, best effort. It may corrupt your config, you may need to reinstall stable."), 12.0f, TEXTALIGN_ML);
+		}
 		TextRender()->TextColor(1.0f, 1.0f, 1.0f, 1.0f);
 	}
 #endif

@@ -658,6 +658,12 @@ protected:
 	IGraphics::CTextureHandle m_TextureBlob;
 
 public:
+#if defined(CONF_AUTOUPDATE)
+	void ShowUpdateDialog();
+	void PopupConfirmUpdate();
+	void PopupQuitUpdateRequired();
+	bool m_UpdateRequiredShown = false;
+#endif
 	void RenderBackground();
 
 	CMenus();

@@ -23,6 +23,9 @@
 
 void CMenusStart::RenderStartMenu(CUIRect MainView)
 {
+#if defined(CONF_AUTOUPDATE)
+	Updater()->OnStartupComplete();
+#endif
 	GameClient()->m_MenuBackground.ChangePosition(CMenuBackground::POS_START);
 
 	// render logo
@@ -196,13 +199,19 @@ void CMenusStart::RenderStartMenu(CUIRect MainView)
 	char aBuf[128];
 	const IUpdater::EUpdaterState State = Updater()->GetCurrentState();
 	const bool NeedUpdate = GameClient()->m_TClient.NeedUpdate();
+	IUpdater::SUpdateInfo RequiredInfo;
+	if(State == IUpdater::CLEAN && !GameClient()->m_Menus.m_UpdateRequiredShown && Updater()->GetUpdateInfo(&RequiredInfo) && RequiredInfo.m_Required)
+	{
+		GameClient()->m_Menus.m_UpdateRequiredShown = true;
+		GameClient()->m_Menus.ShowUpdateDialog();
+	}
 
 	if(State == IUpdater::CLEAN && NeedUpdate)
 	{
 		static CButtonContainer s_VersionUpdate;
 		if(GameClient()->m_Menus.DoButton_Menu(&s_VersionUpdate, Localize("Update now"), 0, &UpdateButton, BUTTONFLAG_LEFT, nullptr, IGraphics::CORNER_ALL, 5.0f, 0.0f, ColorRGBA(0.0f, 0.0f, 0.0f, 0.25f)))
 		{
-			Updater()->InitiateUpdate();
+			GameClient()->m_Menus.ShowUpdateDialog();
 		}
 	}
 	else if(State == IUpdater::NEED_RESTART)
@@ -279,3 +288,60 @@ bool CMenusStart::CheckHotKey(int Key) const
 	       Input()->KeyPress(Key) &&
 	       !GameClient()->m_GameConsole.IsActive();
 }
+
+#if defined(CONF_AUTOUPDATE)
+void CMenus::ShowUpdateDialog()
+{
+	IUpdater::SUpdateInfo Info;
+	if(!Updater()->GetUpdateInfo(&Info))
+		return;
+	char aMessage[1024];
+	str_format(aMessage, sizeof(aMessage), "%s %s (%s), %.1f MB", CLIENT_NAME, Info.m_aVersion, Info.m_aChannel, Info.m_Size / 1048576.0);
+	for(int i = 0; i < Info.m_NumChanges; i++)
+	{
+		str_append(aMessage, "\n- ");
+		str_append(aMessage, Info.m_aChanges[i]);
+	}
+	if(Info.m_aNotesUrl[0] != '\0')
+	{
+		str_append(aMessage, "\n");
+		str_append(aMessage, Localize("Release notes:"));
+		str_append(aMessage, " ");
+		str_append(aMessage, Info.m_aNotesUrl);
+	}
+	if(str_comp(Info.m_aChannel, "stable") != 0)
+	{
+		str_append(aMessage, "\n\n");
+		str_append(aMessage, Localize("Unstable build, best effort."));
+	}
+	if(Info.m_NeedsConfirmation)
+	{
+		str_append(aMessage, "\n\n");
+		str_append(aMessage, Localize("This is older than the version you run. Switching replaces it with this version."));
+		PopupConfirm(Localize("Switch and downgrade"), aMessage, Localize("Switch"), Localize("Cancel"), &CMenus::PopupConfirmUpdate);
+	}
+	else if(Info.m_Required)
+	{
+		str_append(aMessage, "\n\n");
+		str_append(aMessage, Localize("The version you run is below the minimum version that is still supported. Update to continue."));
+		PopupConfirm(Localize("Update required"), aMessage, Localize("Update now"), Localize("Quit"), &CMenus::PopupConfirmUpdate, POPUP_NONE, &CMenus::PopupQuitUpdateRequired);
+	}
+	else
+	{
+		PopupConfirm(Localize("Update available"), aMessage, Localize("Update now"), Localize("Later"), &CMenus::PopupConfirmUpdate);
+	}
+}
+
+void CMenus::PopupConfirmUpdate()
+{
+	IUpdater::SUpdateInfo Info;
+	if(Updater()->GetUpdateInfo(&Info) && Info.m_NeedsConfirmation)
+		Updater()->ConfirmChannelSwitch();
+	Updater()->InitiateUpdate();
+}
+
+void CMenus::PopupQuitUpdateRequired()
+{
+	Client()->Quit();
+}
+#endif
