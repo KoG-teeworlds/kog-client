@@ -50,7 +50,7 @@ jobs:
       if: runner.os == 'Linux'
       run: |
         sudo apt-get update -y
-        sudo apt-get install -y cmake glslang-tools libavcodec-dev libavformat-dev libavutil-dev libcurl4-openssl-dev libfreetype6-dev libglew-dev libnotify-dev libogg-dev libopus-dev libopusfile-dev libpng-dev libsdl2-dev libsqlite3-dev libssl-dev libswresample-dev libswscale-dev libvulkan-dev libwavpack-dev libx264-dev ninja-build pkg-config spirv-tools zlib1g-dev
+        sudo apt-get install -y cmake glslang-tools libavcodec-dev libavformat-dev libavutil-dev libcurl4-openssl-dev libfreetype6-dev libglew-dev libnotify-dev libogg-dev libopus-dev libopusfile-dev libpng-dev libsdl2-dev libsqlite3-dev libssl-dev libswresample-dev libswscale-dev libvulkan-dev libwavpack-dev libx264-dev ninja-build pkg-config spirv-tools zlib1g-dev xvfb xauth libgl1-mesa-dri libglx-mesa0
 
     - name: Prepare macOS
       if: runner.os == 'macOS'
@@ -69,6 +69,7 @@ jobs:
         if command -v ninja >/dev/null; then ninja --version; fi
         if command -v c++ >/dev/null; then c++ --version | head -1; fi
         rustc --version
+        echo "KOG_EXE=$(sed -n 's/^#define KOG_CLIENT_EXECUTABLE "\(.*\)"$/\1/p' src/game/kog_version.h)" >> "$GITHUB_ENV"
         # CMake 4.5 turns include_directories() in the downloaded googletest into an error under -Werror=dev; older CMake rejects the category
         echo "message(STATUS ok)" > "$RUNNER_TEMP/probe.cmake"
         if cmake -Wno-error=non-target-directive -P "$RUNNER_TEMP/probe.cmake" >/dev/null 2>&1; then
@@ -87,11 +88,12 @@ jobs:
         restore-keys: cargo-${{ runner.os }}-
 
     - name: Build in debug mode
+      shell: bash
       run: |
         mkdir debug
         cd debug
         cmake --version
-        cmake -E env ${{ matrix.cmake-init-env }} cmake ${{ matrix.cmake-args }} -DCMAKE_BUILD_TYPE=Debug -Werror=dev ${{ env.CMAKE_EXTRA }} -DCLIENT=ON -DSERVER=OFF -DTOOLS=OFF -DDOWNLOAD_GTEST=ON -DDEV=ON -DCMAKE_RUNTIME_OUTPUT_DIRECTORY_DEBUG=. ..
+        cmake -E env ${{ matrix.cmake-init-env }} cmake ${{ matrix.cmake-args }} -DCMAKE_BUILD_TYPE=Debug -Werror=dev ${CMAKE_EXTRA:+"$CMAKE_EXTRA"} -DCLIENT=ON -DSERVER=OFF -DTOOLS=OFF -DDOWNLOAD_GTEST=ON -DDEV=ON -DCMAKE_RUNTIME_OUTPUT_DIRECTORY_DEBUG=. ..
         cmake --build . --config Debug --target game-client
 
     - name: Test debug
@@ -100,16 +102,31 @@ jobs:
         cmake --build . --config Debug --target run_tests
 
     - name: Build in release mode
+      shell: bash
       run: |
         mkdir release
         cd release
-        cmake -E env ${{ matrix.cmake-init-env }} cmake ${{ matrix.cmake-args }} ${{ matrix.cmake-args-release }} -DCMAKE_BUILD_TYPE=Release -Werror=dev ${{ env.CMAKE_EXTRA }} -DCLIENT=ON -DSERVER=OFF -DTOOLS=OFF -DDOWNLOAD_GTEST=ON -DCMAKE_RUNTIME_OUTPUT_DIRECTORY_RELEASE=. ..
+        cmake -E env ${{ matrix.cmake-init-env }} cmake ${{ matrix.cmake-args }} ${{ matrix.cmake-args-release }} -DCMAKE_BUILD_TYPE=Release -Werror=dev ${CMAKE_EXTRA:+"$CMAKE_EXTRA"} -DCLIENT=ON -DSERVER=OFF -DTOOLS=OFF -DDOWNLOAD_GTEST=ON -DCMAKE_RUNTIME_OUTPUT_DIRECTORY_RELEASE=. ..
         cmake --build . --config Release --target game-client
 
     - name: Test release
       run: |
         cd release
         cmake --build . --config Release --target run_tests
+
+    # The Windows and macOS runners have no GPU, so only Linux starts the client
+    - name: Smoke test
+      if: runner.os == 'Linux'
+      run: bash scripts/kog/smoke_test.sh release "$KOG_EXE" 25
+
+    - name: Upload smoke test logs
+      if: runner.os == 'Linux' && always()
+      uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+      with:
+        name: kog-smoke-logs
+        path: release/smoke-results
+        if-no-files-found: ignore
+        retention-days: 14
 
     - name: Package
       run: |

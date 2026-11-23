@@ -14,7 +14,7 @@ permissions: {}
 
 jobs:
   release:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04
     permissions:
       contents: write
       id-token: write
@@ -36,6 +36,12 @@ jobs:
           repository: ${{ github.repository }}
       - name: Assemble
         run: bash scripts/kog/assemble_release.sh "$VERSION"
+      - name: Install runtime libraries and Xvfb
+        run: |
+          sudo apt-get update -y
+          sudo apt-get install -y cmake glslang-tools libavcodec-dev libavformat-dev libavutil-dev libcurl4-openssl-dev libfreetype6-dev libglew-dev libnotify-dev libogg-dev libopus-dev libopusfile-dev libpng-dev libsdl2-dev libsqlite3-dev libssl-dev libswresample-dev libswscale-dev libvulkan-dev libwavpack-dev libx264-dev ninja-build pkg-config spirv-tools zlib1g-dev xvfb xauth libgl1-mesa-dri libglx-mesa0
+      - name: Smoke test the packaged client
+        run: bash scripts/kog/smoke_test.sh work/linux "$(sed -n 's/^#define KOG_CLIENT_EXECUTABLE "\(.*\)"$/\1/p' src/game/kog_version.h)" 25
       - uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4.2.2
         with:
           subject-path: release/*
