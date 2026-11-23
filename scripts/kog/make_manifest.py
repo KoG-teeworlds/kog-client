@@ -71,6 +71,19 @@ def write_json(path, value):
         f.write("\n")
 
 
+def apply_optional(manifest, args):
+    if args.rollout_percent is not None:
+        manifest["rollout_percent"] = args.rollout_percent
+    if args.min_version:
+        manifest["min_version"] = args.min_version
+    if args.notes_url:
+        manifest["notes_url"] = args.notes_url
+    if args.change:
+        if len(args.change) > 3 or any(len(c) > 120 or len(c) == 0 for c in args.change):
+            sys.exit("at most 3 changes of at most 120 characters")
+        manifest["changes"] = args.change
+
+
 def cmd_draft(args):
     check_version(args.channel, args.version)
     tree, skipped = tree_hashes(args.data)
@@ -129,16 +142,7 @@ def cmd_draft(args):
     }
     if packages:
         manifest["packages"] = packages
-    if args.rollout_percent is not None:
-        manifest["rollout_percent"] = args.rollout_percent
-    if args.min_version:
-        manifest["min_version"] = args.min_version
-    if args.notes_url:
-        manifest["notes_url"] = args.notes_url
-    if args.change:
-        if len(args.change) > 3 or any(len(c) > 120 or len(c) == 0 for c in args.change):
-            sys.exit("at most 3 changes of at most 120 characters")
-        manifest["changes"] = args.change
+    apply_optional(manifest, args)
     write_json(args.out, manifest)
     write_json(args.uploads, uploads)
     print("draft: %d changed files, %d removals, %d uploads" % (len(files), len(remove), len(uploads)))
@@ -155,6 +159,7 @@ def cmd_finalize(args):
         sys.exit("--days must be between 1 and %d for the %s channel" % (limit, manifest["channel"]))
     if args.sequence < 1:
         sys.exit("--sequence must be at least 1")
+    apply_optional(manifest, args)
     manifest["sequence"] = args.sequence
     manifest["issued"] = now
     manifest["expires"] = now + args.days * 86400
@@ -237,6 +242,10 @@ def main():
     final.add_argument("--sequence", type=int, required=True)
     final.add_argument("--days", type=int, default=30)
     final.add_argument("--now", type=int)
+    final.add_argument("--rollout-percent", type=int, choices=range(0, 101), metavar="0-100")
+    final.add_argument("--min-version")
+    final.add_argument("--notes-url")
+    final.add_argument("--change", action="append", default=[])
     final.add_argument("--out", required=True)
     newer = sub.add_parser("newer")
     newer.add_argument("--manifest", required=True)

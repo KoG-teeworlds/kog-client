@@ -15,6 +15,8 @@ case "$channel" in
   dev) workflow=kog-channel.yml branch=dev ;;
   *) echo "unknown channel" >&2; exit 2 ;;
 esac
+source_ref="refs/heads/$branch"
+[ "$channel" != stable ] || source_ref="refs/tags/$tag"
 mkdir -p "$out/assets"
 tool="python3 $root/scripts/kog/make_manifest.py"
 
@@ -36,7 +38,7 @@ PY
 
 verify() {
   gh attestation verify "$1" --repo "$repo" --signer-workflow "$repo/.github/workflows/$workflow" \
-    --source-ref "refs/heads/$branch" --deny-self-hosted-runners --format json
+    --source-ref "$source_ref" --deny-self-hosted-runners --format json
 }
 sources=""
 for name in update.draft.json $(sort -u "$out/asset_names.txt"); do

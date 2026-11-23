@@ -66,6 +66,8 @@ echo '{"channel": "dev", "version": "0.1.0-dev.1", "sequence": 1}' > "$work/othe
 refused "${tool[@]}" newer --manifest "$work/update.json" --previous "$work/other.json"
 echo '{"channel": "stable", "version": "0.1.0", "sequence": 1}' > "$work/older.json"
 "${tool[@]}" newer --manifest "$work/update.json" --previous "$work/older.json"
+"${tool[@]}" finalize --draft "$work/draft2.json" --sequence 1 --days 5 --rollout-percent 10 --min-version 0.1.0 --change "One" --out "$work/opt.json"
+python3 -c 'import json,sys; m=json.load(open(sys.argv[1])); assert m["rollout_percent"]==10 and m["min_version"]=="0.1.0" and m["changes"]==["One"], m' "$work/opt.json"
 "${tool[@]}" halt --previous "$work/update.json" --now 2000000 --out "$work/halt.json"
 python3 -c 'import json,sys; m=json.load(open(sys.argv[1])); assert m["halted"] is True and m["sequence"]==5, m' "$work/halt.json"
 

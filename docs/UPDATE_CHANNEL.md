@@ -54,11 +54,11 @@ A key that is not shipped in a client release is never made active. After a loss
 
 Stable:
 
-1. `KoG release` (workflow dispatch on `main`): refuses unless the commit is the head of `main`, the required checks passed, and
-   the version equals `KOG_CLIENT_VERSION`. It builds the client only (`-DSERVER=OFF -DTOOLS=OFF`), fails if a server is in a
-   package, attests the files (provenance, source ref `refs/heads/main`) and makes an immutable prerelease with `update.draft.json`.
+1. `KoG release` starts when the owner pushes a signed tag `vX.Y.Z` (only a repository admin can create `v*` tags, and tags never change). It refuses unless the tag's commit is the head of `main`, the required checks passed, and
+   the version equals `KOG_CLIENT_VERSION`. Rollout, minimum version, notes and changes are given to `Sign release`. It builds the client only (`-DSERVER=OFF -DTOOLS=OFF`), fails if a server is in a
+   package, attests the files (provenance, source ref the tag) and makes an immutable prerelease with `update.draft.json`.
 2. `Sign release` in `kog-client-updates`, three jobs: *verify* (no secrets) checks every asset with
-   `gh attestation verify --signer-workflow .../kog-release.yml --source-ref refs/heads/main`, the hashes, that the release is
+   `gh attestation verify --signer-workflow .../kog-release.yml --source-ref refs/tags/vX.Y.Z`, the hashes, that the release is
    immutable, that the version is higher than the published one and that the commit is on `main`, and makes the manifest;
    *sign* (environment `release-signing`) signs only that manifest; *publish* (environment `release-publish`, reviewer) needs both signatures.
 3. The owner runs `scripts/kog/approve_release.sh stable <version> <run id>`: it verifies the release again on the owner's machine,
