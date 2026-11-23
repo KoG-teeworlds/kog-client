@@ -1,3 +1,12 @@
+> [!WARNING]
+> # Best effort only
+>
+> **The KoG client is maintained on a best-effort basis by volunteers.** There is no warranty, no support guarantee and no release schedule. It can break, change or disappear without notice. Security fixes are made as time allows. Builds from `main` are not releases and can be broken.
+>
+> **You do not need this client to play on KoG.** Stock DDNet clients keep working. If you want guaranteed support or a stable experience, use the official DDNet client.
+>
+> Use at your own risk. Bug reports and pull requests are welcome, but please do not expect an answer within any time frame.
+
 # KoG Client
 
 An open-source fork of [TClient](https://github.com/TaterClient/TClient), which is a fork of the
