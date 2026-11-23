@@ -365,7 +365,7 @@ if(NOT MSVC AND NOT HAIKU)
     endif()
   endif()
 
-  # TClient needs exceptions for ChaiScript and regex.
+  # The client needs exceptions for regex.
   add_cxx_compiler_flag_if_supported(OUR_FLAGS_SERVER -fno-exceptions)
 
   # Inaccurate floating point numbers cause problems on mingw-w64-gcc when
@@ -2100,7 +2100,6 @@ set(EXPECTED_DATA
   skins7/x_ninja.json
   skins7/xmas_hat.png
   strong_weak.png
-  tclient/builtinscripts/sayemoticon.chai
   tclient/fonts/Cabin-Regular.ttf
   tclient/fonts/FreeSansBold.ttf
   tclient/fonts/GoogleSans-Regular.ttf
@@ -2173,7 +2172,7 @@ set(EXPECTED_DATA
   # tidy-alphabetical-end
 )
 
-set_glob(DATA GLOB_RECURSE "cfg;chai;frag;json;map;otf;png;rules;ttc;ttf;txt;vert;wv" data ${EXPECTED_DATA})
+set_glob(DATA GLOB_RECURSE "cfg;frag;json;map;otf;png;rules;ttc;ttf;txt;vert;wv" data ${EXPECTED_DATA})
 
 ########################################################################
 # COPY DATA AND SHARED LIBS
@@ -2545,12 +2544,6 @@ set_src(ENGINE_EXTERNAL GLOB src/engine/external
   tinyexpr.h
 )
 
-# ChaiScript for tclient
-file(GLOB_RECURSE ENGINE_EXTERNAL_CHAISCRIPT
-  "${PROJECT_SOURCE_DIR}/src/engine/external/chaiscript/*.hpp"
-)
-list(APPEND ENGINE_EXTERNAL ${ENGINE_EXTERNAL_CHAISCRIPT})
-
 set_src(ENGINE_GFX GLOB src/engine/gfx
   # tidy-alphabetical-start
   image.cpp
@@ -2895,10 +2888,6 @@ if(CLIENT)
     components/tclient/player_indicator.h
     components/tclient/rainbow.cpp
     components/tclient/rainbow.h
-    components/tclient/scripting.cpp
-    components/tclient/scripting.h
-    components/tclient/scripting/impl.cpp
-    components/tclient/scripting/impl.h
     components/tclient/skinprofiles.cpp
     components/tclient/skinprofiles.h
     components/tclient/statusbar.cpp
@@ -3212,17 +3201,8 @@ if(CLIENT)
   endif()
 
   if(MSVC)
-    target_compile_options(game-client PRIVATE /bigobj) # TClient, required for ChaiScript
     target_link_options(game-client PRIVATE /ENTRY:mainCRTStartup)
   endif()
-
-  if(WIN32 AND NOT MSVC)
-    target_compile_options(game-client PRIVATE -Wa,-mbig-obj) # TClient, required for ChaiScript
-  endif()
-
-  # Silence warnings from ChaiScript
-  target_include_directories(game-client SYSTEM PRIVATE
-    ${PROJECT_SOURCE_DIR}/src/engine/external/chaiscript)
 
   target_include_directories(game-client SYSTEM PRIVATE
     # tidy-alphabetical-start

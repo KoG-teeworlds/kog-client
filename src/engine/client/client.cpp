@@ -4892,7 +4892,7 @@ extern "C" int SDL_main(int argc, char *argv[]);
 int SDL_main(int argc, char *argv2[])
 #else
 // TClient
-// The embedded scripting engine uses exceptions internally.
+// The regex component uses exceptions internally.
 // NOLINTNEXTLINE(bugprone-exception-escape)
 int main(int argc, const char **argv)
 #endif

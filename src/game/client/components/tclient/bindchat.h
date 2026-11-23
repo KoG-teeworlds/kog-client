@@ -42,6 +42,7 @@ private:
 	static void ConRemoveBindchat(IConsole::IResult *pResult, void *pUserData);
 	static void ConRemoveBindchatAll(IConsole::IResult *pResult, void *pUserData);
 	static void ConBindchatDefaults(IConsole::IResult *pResult, void *pUserData);
+	static void ConSayEmoticon(IConsole::IResult *pResult, void *pUserData);
 
 	static void ConfigSaveCallback(IConfigManager *pConfigManager, void *pUserData);
 

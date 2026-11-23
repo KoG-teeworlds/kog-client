@@ -25,11 +25,11 @@ bool CBindChat::CBind::CompContent(const CBind &Other) const
 
 decltype(CBindChat::BIND_DEFAULTS) CBindChat::BIND_DEFAULTS = {
 	{TCLocalizable("Kaomoji"), {
-					   {TCLocalizable("Shrug:"), {"!shrug", "chai tclient/builtinscripts/sayemoticon.chai ¯\\_(ツ)_/¯D"}},
-					   {TCLocalizable("Flip:"), {"!flip", "chai tclient/builtinscripts/sayemoticon.chai (╯°□°)╯︵ ┻━┻D"}},
-					   {TCLocalizable("Unflip:"), {"!unflip", "chai tclient/builtinscripts/sayemoticon.chai ┬─┬ノ( º _ ºノ)D"}},
-					   {TCLocalizable("Cute:"), {"!cute", "chai tclient/builtinscripts/sayemoticon.chai ૮ ˶ᵔ ᵕ ᵔ˶ აD"}},
-					   {TCLocalizable("Lenny:"), {"!lenny", "chai tclient/builtinscripts/sayemoticon.chai ( ͡° ͜ʖ ͡°)D"}},
+					   {TCLocalizable("Shrug:"), {"!shrug", "say_emoticon ¯\\_(ツ)_/¯D"}},
+					   {TCLocalizable("Flip:"), {"!flip", "say_emoticon (╯°□°)╯︵ ┻━┻D"}},
+					   {TCLocalizable("Unflip:"), {"!unflip", "say_emoticon ┬─┬ノ( º _ ºノ)D"}},
+					   {TCLocalizable("Cute:"), {"!cute", "say_emoticon ૮ ˶ᵔ ᵕ ᵔ˶ აD"}},
+					   {TCLocalizable("Lenny:"), {"!lenny", "say_emoticon ( ͡° ͜ʖ ͡°)D"}},
 				   }},
 	{TCLocalizable("Warlist"), {
 					   {TCLocalizable("Add war name:"), {"!war", "war_name_index 1"}},
@@ -113,6 +113,35 @@ void CBindChat::ConBindchatDefaults(IConsole::IResult *pResult, void *pUserData)
 			pThis->AddBind(BindDefault.m_Bind);
 }
 
+void CBindChat::ConSayEmoticon(IConsole::IResult *pResult, void *pUserData)
+{
+	// Syntax of the removed built-in script: "<emoticon>D<message>", sent as "<message> <emoticon>"
+	CBindChat *pThis = static_cast<CBindChat *>(pUserData);
+	const char *pArgs = pResult->GetString(0);
+	const char *pSeparator = str_find(pArgs, "D");
+	if(pSeparator == nullptr)
+	{
+		pThis->Console()->Print(IConsole::OUTPUT_LEVEL_STANDARD, "say_emoticon", "Invalid emoticon");
+		return;
+	}
+
+	char aEmoticon[256];
+	str_truncate(aEmoticon, sizeof(aEmoticon), pArgs, pSeparator - pArgs);
+	str_utf8_trim_right(aEmoticon);
+	const char *pEmoticon = str_utf8_skip_whitespaces(aEmoticon);
+
+	char aMessage[256];
+	str_copy(aMessage, str_utf8_skip_whitespaces(pSeparator + 1));
+	str_utf8_trim_right(aMessage);
+
+	char aLine[512];
+	if(aMessage[0] == '\0')
+		str_copy(aLine, pEmoticon);
+	else
+		str_format(aLine, sizeof(aLine), "%s %s", aMessage, pEmoticon);
+	pThis->GameClient()->m_Chat.SendChat(0, aLine);
+}
+
 void CBindChat::AddBind(const CBind &Bind)
 {
 	RemoveBind(Bind.m_aName); // Prevent duplicates
@@ -158,6 +187,7 @@ void CBindChat::OnConsoleInit()
 	Console()->Register("unbindchat", "s[name]", CFGFLAG_CLIENT, ConRemoveBindchat, this, "Remove a chat bind");
 	Console()->Register("unbindchatall", "", CFGFLAG_CLIENT, ConRemoveBindchatAll, this, "Removes all chat binds");
 	Console()->Register("bindchatdefaults", "", CFGFLAG_CLIENT, ConBindchatDefaults, this, "Adds default chat binds");
+	Console()->Register("say_emoticon", "r[emoticon-D-message]", CFGFLAG_CLIENT, ConSayEmoticon, this, "Say a message followed by an emoticon: <emoticon>D<message>");
 
 	ConBindchatDefaults(nullptr, this);
 }
@@ -165,7 +195,17 @@ void CBindChat::OnConsoleInit()
 void CBindChat::ExecuteBind(const CBindChat::CBind &Bind, const char *pArgs)
 {
 	char aBuf[BINDCHAT_MAX_CMD] = "";
-	str_append(aBuf, Bind.m_aCommand);
+	// Binds saved by T-Client still call the removed "chai" script
+	static const char LEGACY_EMOTICON_COMMAND[] = "chai tclient/builtinscripts/sayemoticon.chai ";
+	if(const char *pLegacyArgs = str_startswith(Bind.m_aCommand, LEGACY_EMOTICON_COMMAND))
+	{
+		str_append(aBuf, "say_emoticon ");
+		str_append(aBuf, pLegacyArgs);
+	}
+	else
+	{
+		str_append(aBuf, Bind.m_aCommand);
+	}
 	if(pArgs && pArgs[0] != '\0')
 	{
 		str_append(aBuf, " ");
