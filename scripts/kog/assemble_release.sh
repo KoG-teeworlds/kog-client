@@ -42,4 +42,4 @@ import json, shutil
 for upload in json.load(open("work/uploads.json")):
     shutil.copyfile(upload["source"], "release/" + upload["asset"])
 PY
-ls release | wc -l
+find release -type f | wc -l
