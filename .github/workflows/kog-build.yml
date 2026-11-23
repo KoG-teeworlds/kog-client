@@ -1,0 +1,181 @@
+name: KoG build
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions: {}
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+jobs:
+  build:
+    name: Build (${{ matrix.name }})
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 90
+    permissions:
+      contents: read
+    env:
+      CARGO_HTTP_MULTIPLEXING: false
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+        - name: linux
+          os: ubuntu-latest
+          cmake-args: -G Ninja
+          cmake-args-release: -DIPO=ON
+          cmake-init-env: CXXFLAGS=-Werror
+          package-file: "*-linux_x86_64.tar.xz"
+        - name: macos
+          os: macos-latest
+          cmake-args: -G Ninja
+          cmake-args-release: -DIPO=ON
+          cmake-init-env: CXXFLAGS=-Werror
+          package-file: "*-macos.dmg"
+        - name: windows
+          os: windows-latest
+          cmake-args: -A x64 -DEXCEPTION_HANDLING=ON
+          cmake-init-env: CXXFLAGS=/WX LDFLAGS=/WX
+          package-file: "*-win64.zip"
+          executable-suffix: .exe
+
+    steps:
+    - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      with:
+        submodules: recursive
+        persist-credentials: false
+
+    - name: Prepare Linux
+      if: runner.os == 'Linux'
+      run: |
+        sudo apt-get update -y
+        sudo apt-get install -y cmake glslang-tools libavcodec-dev libavformat-dev libavutil-dev libfreetype6-dev libglew-dev libmariadb-dev libnotify-dev libpng-dev libsdl2-dev libsqlite3-dev libswresample-dev libswscale-dev libvulkan-dev libwebsockets-dev libx264-dev mariadb-server ninja-build pkg-config spirv-tools
+        sudo systemctl stop mysql
+        sudo rm -rf /var/lib/mysql/
+        sudo mysql_install_db --user=mysql --datadir=/var/lib/mysql/
+        cd /usr; sudo mysqld_safe --datadir='/var/lib/mysql/' --no-watch
+        sleep 10
+        sudo mysql <<EOF
+        CREATE DATABASE ddnet;
+        CREATE USER 'ddnet'@'localhost' IDENTIFIED BY 'thebestpassword';
+        GRANT ALL PRIVILEGES ON ddnet.* TO 'ddnet'@'localhost';
+        FLUSH PRIVILEGES;
+        EOF
+
+    - name: Prepare macOS
+      if: runner.os == 'macOS'
+      run: |
+        brew update
+        brew install ffmpeg molten-vk ninja pkg-config sdl2
+        brew upgrade freetype
+        pip3 install --break-system-packages dmgbuild==1.6.7 pyobjc-framework-Quartz==12.2.2
+        echo /Library/Frameworks/Python.framework/Versions/3.12/bin >> "$GITHUB_PATH"
+        sudo rm -rf /Library/Developer/CommandLineTools
+
+    - name: Cache Rust dependencies
+      uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
+      with:
+        path: |
+          ~/.cargo/registry/index
+          ~/.cargo/registry/cache
+          ~/.cargo/git/db
+          src/mastersrv/target
+          src/masterping/target
+          target
+        key: cargo-${{ runner.os }}-${{ hashFiles('**/Cargo.lock') }}
+        restore-keys: cargo-${{ runner.os }}-
+
+    - name: Build mastersrv
+      run: |
+        cd src/mastersrv
+        cargo build
+
+    - name: Build masterping
+      run: |
+        cd src/masterping
+        cargo build
+
+    - name: Build in debug mode
+      run: |
+        mkdir debug
+        cd debug
+        cmake --version
+        cmake -E env ${{ matrix.cmake-init-env }} cmake ${{ matrix.cmake-args }} -DCMAKE_BUILD_TYPE=Debug -Werror=dev -DDOWNLOAD_GTEST=ON -DDEV=ON -DCMAKE_RUNTIME_OUTPUT_DIRECTORY_DEBUG=. ..
+        cmake --build . --config Debug --target everything
+
+    - name: Test debug
+      run: |
+        cd debug
+        cmake --build . --config Debug --target run_tests
+
+    - name: Run debug server
+      run: |
+        cd debug
+        ./DDNet-Server shutdown
+
+    - name: Build in release mode
+      run: |
+        mkdir release
+        cd release
+        cmake -E env ${{ matrix.cmake-init-env }} cmake ${{ matrix.cmake-args }} ${{ matrix.cmake-args-release }} -DCMAKE_BUILD_TYPE=Release -Werror=dev -DDOWNLOAD_GTEST=ON -DCMAKE_RUNTIME_OUTPUT_DIRECTORY_RELEASE=. ..
+        cmake --build . --config Release --target everything
+
+    - name: Test release
+      run: |
+        cd release
+        cmake --build . --config Release --target run_tests
+
+    - name: Run release server
+      run: |
+        cd release
+        ./DDNet-Server shutdown
+
+    - name: Build headless client
+      run: |
+        mkdir headless
+        cd headless
+        cmake -E env ${{ matrix.cmake-init-env }} cmake ${{ matrix.cmake-args }} -DHEADLESS_CLIENT=ON -DWEBSOCKETS=${{ runner.os == 'Linux' && 'ON' || 'OFF' }} -DCMAKE_BUILD_TYPE=Debug -Werror=dev -DDOWNLOAD_GTEST=ON -DDEV=ON -DCMAKE_RUNTIME_OUTPUT_DIRECTORY_DEBUG=. ..
+        cmake --build . --config Debug
+
+    - name: Test headless client
+      run: |
+        cd headless
+        cmake --build . --config Debug --target run_tests
+
+    - name: Run integration tests
+      id: integration_test
+      continue-on-error: true
+      run: |
+        cp src/mastersrv/target/debug/mastersrv${{ matrix.executable-suffix }} headless
+        python scripts/integration_test.py --show-full-output --test-mastersrv headless
+
+    - name: Upload integration test results
+      if: steps.integration_test.outcome == 'failure'
+      uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+      with:
+        name: kog-${{ matrix.name }}-integration-test-results
+        path: headless/integration_*
+        if-no-files-found: error
+        retention-days: 14
+
+    - name: Fail on integration test failure
+      if: steps.integration_test.outcome == 'failure'
+      run: exit 1
+
+    - name: Package
+      run: |
+        cd release
+        cmake --build . --config Release --target package_default
+        mkdir artifacts
+        mv ${{ matrix.package-file }} artifacts
+
+    - name: Upload build
+      uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+      with:
+        name: kog-${{ matrix.name }}
+        path: release/artifacts
+        retention-days: 14
