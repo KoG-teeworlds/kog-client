@@ -47,9 +47,9 @@ file(MAKE_DIRECTORY "${CMAKE_BINARY_DIR}/data")
 
 file(WRITE "${DATA_VERSION_FILE}" "DDNet ${VERSION_MAJOR}.${VERSION_MINOR}.${VERSION_PATCH}\n")
 
-file(STRINGS src/game/version.h TCLIENT_VERSION_LINE
+file(STRINGS src/game/kog_version.h TCLIENT_VERSION_LINE
   LIMIT_COUNT 1
-  REGEX "^#define TCLIENT_VERSION "
+  REGEX "^#define KOG_CLIENT_VERSION "
 )
 
 if(TCLIENT_VERSION_LINE MATCHES "([0-9]+)\\.([0-9]+)\\.([0-9]+)")
@@ -61,16 +61,16 @@ elseif(TCLIENT_VERSION_LINE MATCHES "([0-9]+)\\.([0-9]+)")
   set(TCLIENT_VERSION_MINOR ${CMAKE_MATCH_2})
   set(TCLIENT_VERSION_PATCH "0")
 else()
-  message(FATAL_ERROR "Couldn't parse TClient version from src/game/version.h")
+  message(FATAL_ERROR "Couldn't parse the KoG client version from src/game/kog_version.h")
 endif()
 
 if(TCLIENT_VERSION_PATCH STREQUAL "0")
-  project(TClient VERSION ${TCLIENT_VERSION_MAJOR}.${TCLIENT_VERSION_MINOR})
+  project(KoGClient VERSION ${TCLIENT_VERSION_MAJOR}.${TCLIENT_VERSION_MINOR})
 else()
-  project(TClient VERSION ${TCLIENT_VERSION_MAJOR}.${TCLIENT_VERSION_MINOR}.${TCLIENT_VERSION_PATCH})
+  project(KoGClient VERSION ${TCLIENT_VERSION_MAJOR}.${TCLIENT_VERSION_MINOR}.${TCLIENT_VERSION_PATCH})
 endif()
 
-file(APPEND "${DATA_VERSION_FILE}" "TClient ${TCLIENT_VERSION_MAJOR}.${TCLIENT_VERSION_MINOR}.${TCLIENT_VERSION_PATCH}\n")
+file(APPEND "${DATA_VERSION_FILE}" "KoGClient ${TCLIENT_VERSION_MAJOR}.${TCLIENT_VERSION_MINOR}.${TCLIENT_VERSION_PATCH}\n")
 
 # </TClient>
 
@@ -2452,6 +2452,7 @@ set_src(ENGINE_SHARED GLOB_RECURSE src/engine/shared
   config_domains.h
   config_includes.h
   config_variables.h
+  config_variables_kog.h
   config_variables_tclient.h
   console.cpp
   console.h
@@ -2484,6 +2485,7 @@ set_src(ENGINE_SHARED GLOB_RECURSE src/engine/shared
   jsonwriter.cpp
   jsonwriter.h
   kernel.cpp
+  kog_protocol.h
   linereader.cpp
   linereader.h
   localization.h
@@ -2562,6 +2564,7 @@ set_src(GAME_SHARED GLOB src/game
   collision.h
   gamecore.cpp
   gamecore.h
+  kog_version.h
   layers.cpp
   layers.h
   localization.cpp
@@ -2808,6 +2811,8 @@ if(CLIENT)
     components/items.h
     components/key_binder.cpp
     components/key_binder.h
+    components/kog/kog_hello.cpp
+    components/kog/kog_hello.h
     components/local_server.cpp
     components/local_server.h
     components/mapimages.cpp

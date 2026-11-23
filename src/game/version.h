@@ -25,8 +25,11 @@ extern const char *GIT_SHORTREV_HASH;
 #define TCLIENT_VERSION "10.9.0"
 #endif
 
+// KoG
+#include "kog_version.h"
+
 // custom
-#define CLIENT_NAME "TClient"
-#define CLIENT_RELEASE_VERSION TCLIENT_VERSION
+#define CLIENT_NAME KOG_CLIENT_NAME
+#define CLIENT_RELEASE_VERSION KOG_CLIENT_VERSION
 
 #endif

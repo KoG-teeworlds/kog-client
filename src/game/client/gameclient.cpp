@@ -147,6 +147,7 @@ void CGameClient::OnConsoleInit()
 					      &m_Trails, // TClient
 					      &m_Ghost,
 					      &m_TClient, // TClient (Must be before chat and players)
+					      &m_KogHello, // KoG
 					      &m_Players,
 					      &m_MovingTilesBackground, // TClient
 					      &m_MapLayersForeground,

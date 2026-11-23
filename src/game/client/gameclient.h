@@ -49,6 +49,7 @@
 #include "components/infomessages.h"
 #include "components/items.h"
 #include "components/key_binder.h"
+#include "components/kog/kog_hello.h"
 #include "components/local_server.h"
 #include "components/mapimages.h"
 #include "components/maplayers.h"
@@ -228,6 +229,7 @@ public:
 	CBindWheel m_BindWheel;
 	CBgDraw m_BgDraw;
 	CTClient m_TClient;
+	CKogHello m_KogHello;
 	CTrails m_Trails;
 	CPet m_Pet;
 	CPlayerIndicator m_PlayerIndicator;
