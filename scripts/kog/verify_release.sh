@@ -56,9 +56,9 @@ status=$(gh api "repos/$repo/compare/$branch...$source" --jq .status)
 case "$status" in behind | identical) ;; *) echo "commit $source is not on $branch" >&2; exit 1 ;; esac
 
 $tool check --manifest "$out/update.draft.json" --assets "$out/assets"
-for name in $(sort -u "$out/asset_names.txt"); do
+while read -r name; do
   [ -f "$out/assets/$name" ] || { echo "missing asset $name" >&2; exit 1; }
-done
+done < <(sort -u "$out/asset_names.txt")
 rm -f "$out/previous.json"
 curl -fsS "$base_url/$channel/update.json" -o "$out/previous.json" 2>/dev/null || rm -f "$out/previous.json"
 $tool newer --manifest "$out/update.draft.json" --previous "$out/previous.json"
