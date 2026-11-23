@@ -1,0 +1,32 @@
+name: Bug report
+description: Something does not work
+body:
+  - type: input
+    id: version
+    attributes:
+      label: Version
+      description: Output of the console command kog_version
+    validations:
+      required: true
+  - type: input
+    id: system
+    attributes:
+      label: Operating system
+    validations:
+      required: true
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened and what did you expect
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+  - type: textarea
+    id: log
+    attributes:
+      label: Log
+      description: Relevant lines from the console or the log file. Remove personal information first.
+      render: text
