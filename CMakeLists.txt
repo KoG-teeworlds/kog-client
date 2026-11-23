@@ -1027,7 +1027,7 @@ endif()
 string(TOUPPER "${KOG_CHANNEL}" KOG_CHANNEL_UPPER)
 file(STRINGS src/engine/client/kog_update_pubkey.h KOG_PUBKEY_PLACEHOLDER_LINE REGEX "^#define KOG_UPDATE_KEYS_PLACEHOLDER_${KOG_CHANNEL_UPPER} 1")
 if(KOG_PUBKEY_PLACEHOLDER_LINE AND AUTOUPDATE AND NOT DEV AND NOT KOG_ALLOW_PLACEHOLDER_KEY AND CMAKE_BUILD_TYPE MATCHES "^(Release|RelWithDebInfo|MinSizeRel)$")
-  message(FATAL_ERROR "The ${KOG_CHANNEL} update keys are still the placeholder: run scripts/kog/gen_signing_key.sh, or pass -DKOG_ALLOW_PLACEHOLDER_KEY=ON")
+  message(FATAL_ERROR "The ${KOG_CHANNEL} update keys are still the placeholder: merge the key pull request from infra-github (stable also needs scripts/kog/gen_signing_key.sh), or pass -DKOG_ALLOW_PLACEHOLDER_KEY=ON")
 endif()
 
 ########################################################################
