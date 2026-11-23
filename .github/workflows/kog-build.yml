@@ -53,7 +53,7 @@ jobs:
       if: runner.os == 'Linux'
       run: |
         sudo apt-get update -y
-        sudo apt-get install -y cmake glslang-tools libavcodec-dev libavformat-dev libavutil-dev libfreetype6-dev libglew-dev libmariadb-dev libnotify-dev libpng-dev libsdl2-dev libsqlite3-dev libswresample-dev libswscale-dev libvulkan-dev libwebsockets-dev libx264-dev mariadb-server ninja-build pkg-config spirv-tools
+        sudo apt-get install -y cmake glslang-tools libavcodec-dev libavformat-dev libavutil-dev libfreetype6-dev libglew-dev libmariadb-dev libnotify-dev libogg-dev libopus-dev libopusfile-dev libpng-dev libsdl2-dev libsqlite3-dev libswresample-dev libswscale-dev libvulkan-dev libwebsockets-dev libx264-dev mariadb-server ninja-build pkg-config spirv-tools
         sudo systemctl stop mysql
         sudo rm -rf /var/lib/mysql/
         sudo mysql_install_db --user=mysql --datadir=/var/lib/mysql/

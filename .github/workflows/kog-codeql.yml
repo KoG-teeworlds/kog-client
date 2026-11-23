@@ -38,10 +38,10 @@ jobs:
       if: matrix.language == 'cpp'
       run: |
         sudo apt-get update -y
-        sudo apt-get install -y cmake glslang-tools libavcodec-dev libavformat-dev libavutil-dev libfreetype6-dev libglew-dev libmariadb-dev libnotify-dev libsdl2-dev libsqlite3-dev libswresample-dev libswscale-dev libvulkan-dev libwebsockets-dev libx264-dev ninja-build pkg-config spirv-tools
+        sudo apt-get install -y cmake glslang-tools libavcodec-dev libavformat-dev libavutil-dev libfreetype6-dev libglew-dev libmariadb-dev libnotify-dev libogg-dev libopus-dev libopusfile-dev libpng-dev libsdl2-dev libsqlite3-dev libswresample-dev libswscale-dev libvulkan-dev libwebsockets-dev libx264-dev ninja-build pkg-config spirv-tools
 
     - name: Initialize CodeQL
-      uses: github/codeql-action/init@1bd86f2fdb4b86187fa4059f16f31a3202acc9ea # v4.39.4
+      uses: github/codeql-action/init@1fc58d04a4d4374f921bdac573c3811c240f9c26 # v4.39.2
       with:
         languages: ${{ matrix.language }}
         trap-caching: false
@@ -67,4 +67,4 @@ jobs:
         cmake --build . --config RelWithDebInfo --target everything
 
     - name: Analyze
-      uses: github/codeql-action/analyze@1bd86f2fdb4b86187fa4059f16f31a3202acc9ea # v4.39.4
+      uses: github/codeql-action/analyze@1fc58d04a4d4374f921bdac573c3811c240f9c26 # v4.39.2
