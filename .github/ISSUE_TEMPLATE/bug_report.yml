@@ -1,6 +1,9 @@
 name: Bug report
 description: Something does not work
 body:
+  - type: markdown
+    attributes:
+      value: "Best effort: no response time is guaranteed."
   - type: input
     id: version
     attributes:
