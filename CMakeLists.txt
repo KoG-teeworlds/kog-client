@@ -3616,7 +3616,7 @@ add_custom_command(OUTPUT ${PROJECT_BINARY_DIR}/src/generated/checksum.cpp
 # TESTS
 ########################################################################
 
-if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
+if(GTEST_FOUND OR DOWNLOAD_GTEST)
   set_src(TESTS GLOB src/test
     # tidy-alphabetical-start
     aio_test.cpp
@@ -3675,6 +3675,9 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
     windows_test.cpp
     # tidy-alphabetical-end
   )
+  if(NOT SERVER)
+    list(FILTER TESTS EXCLUDE REGEX "/(gameworld|mutes|name_ban|score|server|teehistorian)_test\\.cpp$")
+  endif()
   set(TESTS_EXTRA
     # tidy-alphabetical-start
     src/engine/client/blocklist_driver.cpp
@@ -3691,6 +3694,13 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
     # tidy-alphabetical-end
   )
 
+  set(TESTS_SERVER_OBJECTS)
+  set(TESTS_LIBS ${LIBS})
+  if(SERVER)
+    set(TESTS_SERVER_OBJECTS $<TARGET_OBJECTS:game-server-without-main>)
+    set(TESTS_LIBS ${LIBS_SERVER})
+  endif()
+
   set(TARGET_TESTRUNNER testrunner)
   add_executable(${TARGET_TESTRUNNER} EXCLUDE_FROM_ALL
     ${TESTS}
@@ -3698,13 +3708,13 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
     # tidy-alphabetical-start
     $<TARGET_OBJECTS:engine-gfx>
     $<TARGET_OBJECTS:engine-shared>
-    $<TARGET_OBJECTS:game-server-without-main>
+    ${TESTS_SERVER_OBJECTS}
     $<TARGET_OBJECTS:game-shared>
     $<TARGET_OBJECTS:rust-bridge-shared>
     # tidy-alphabetical-end
     ${DEPS}
   )
-  target_link_libraries(${TARGET_TESTRUNNER} ${PNG_LIBRARIES} ${GTEST_LIBRARIES} ${LIBS_SERVER})
+  target_link_libraries(${TARGET_TESTRUNNER} ${PNG_LIBRARIES} ${GTEST_LIBRARIES} ${TESTS_LIBS})
   target_include_directories(${TARGET_TESTRUNNER} SYSTEM PRIVATE ${GTEST_INCLUDE_DIRS})
 
   list(APPEND TARGETS_OWN ${TARGET_TESTRUNNER})
