@@ -839,7 +839,7 @@ if(TARGET_OS STREQUAL "windows")
   list(APPEND PLATFORM_LIBS version.lib) # GetFileVersionInfoSizeW
   list(APPEND PLATFORM_LIBS ws2_32.lib) # Windows sockets
   list(APPEND PLATFORM_LIBS advapi32.lib) # Reg* and Crypt* functions
-  list(APPEND PLATFORM_LIBS bcrypt.lib userenv.lib) # for Rust (https://github.com/rust-lang/rust/issues/91974)
+  list(APPEND PLATFORM_LIBS bcrypt.lib dbghelp.lib synchronization.lib userenv.lib) # for Rust, newer versions may need more: rustc --print native-static-libs (https://github.com/rust-lang/rust/issues/91974)
   list(APPEND PLATFORM_LIBS ole32.lib) # CoInitialize(Ex)
   list(APPEND PLATFORM_LIBS shell32.lib)
   list(APPEND PLATFORM_LIBS ntdll.lib) # https://github.com/ddnet/ddnet/issues/6725
