@@ -2896,8 +2896,6 @@ if(CLIENT)
     components/tclient/tclient.h
     components/tclient/trails.cpp
     components/tclient/trails.h
-    components/tclient/translate.cpp
-    components/tclient/translate.h
     components/tclient/warlist.cpp
     components/tclient/warlist.h
     components/tooltips.cpp
