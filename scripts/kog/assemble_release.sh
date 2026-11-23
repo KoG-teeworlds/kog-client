@@ -9,16 +9,15 @@ repo=${GITHUB_REPOSITORY:-KoG-teeworlds/kog-client}
 rm -rf release work
 mkdir -p release work/linux work/windows
 
-tar -xf artifacts/ddnet-ubuntu-22.04/*-linux_x86_64.tar.xz -C work/linux --strip-components=1
-unzip -q artifacts/ddnet-windows-latest/*-win64.zip -d work/windows
+tar -xf artifacts/kog-linux/*-linux_x86_64.tar.xz -C work/linux --strip-components=1
+unzip -q artifacts/kog-windows/*-win64.zip -d work/windows
 if [ "$(find work/windows -mindepth 1 -maxdepth 1 | wc -l)" = 1 ] && [ -d "$(find work/windows -mindepth 1 -maxdepth 1)" ]; then
   mv "$(find work/windows -mindepth 1 -maxdepth 1)"/* work/windows/ 2>/dev/null || true
 fi
 
-cp artifacts/ddnet-ubuntu-22.04/*.tar.xz release/KoG-Client-linux.tar.xz
-cp artifacts/ddnet-windows-latest/*.zip release/KoG-Client-windows.zip
-cp artifacts/ddnet-macOS-latest/*.dmg release/KoG-Client-macOS.dmg
-cp artifacts/ddnet-android/*.apk release/KoG-Client-android.apk
+cp artifacts/kog-linux/*.tar.xz release/KoG-Client-linux.tar.xz
+cp artifacts/kog-windows/*.zip release/KoG-Client-windows.zip
+cp artifacts/kog-macos/*.dmg release/KoG-Client-macOS.dmg
 
 base_args=(--base work/base.json)
 if curl -fsS https://client.kog.tw/base/files.json -o work/base.json; then

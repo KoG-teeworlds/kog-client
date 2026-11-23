@@ -4,11 +4,13 @@ Our workflows are the `kog-*.yml` files. The upstream T-Client/DDNet workflows s
 
 | Workflow | Trigger | What it does |
 | --- | --- | --- |
-| `kog-build.yml` | pull request, push to `main` | Linux, macOS and Windows: debug and release builds, unit tests, headless client, integration tests, packaged artifacts (kept 14 days) |
+| `kog-build.yml` | pull request, push to `main` | The client only, on Ubuntu 22.04 (older glibc for the release binary), macOS and Windows: debug and release builds, unit tests that do not need the server, packaged artifacts (kept 14 days) |
 | `kog-codeql.yml` | pull request, push to `main`, manual | CodeQL for C++ and Python |
 | `kog-spelling.yml` | pull request, push to `main` | typos |
 | `kog-checks.yml` | pull request, push to `main` | Release chain checks: manifest, signing, verifier |
 | `kog-release.yml` | manual | Builds release files and a draft manifest. It never signs: signing runs in the protected `release-signing` environment of `kog-client-updates` |
+
+The server is not built here. Use upstream DDNet or the KoG server repository for servers.
 
 Rules for every workflow here: `permissions: {}` at the top and minimal grants per job, `persist-credentials: false` on checkout, a `timeout-minutes` on every job, `cancel-in-progress` for pull requests, no `pull_request_target`, and every `uses:` pinned to a full commit SHA with the version in a comment.
 
@@ -24,4 +26,4 @@ Dependabot opens one grouped pull request a week for the `github-actions` ecosys
 
 ## Not enabled yet
 
-Upstream's Android, iOS and Emscripten builds, clang-tidy, the sanitizers, style checks and the Rust checks. Each needs its own pinned copy; none should be switched on as is.
+Upstream's Android, iOS and Emscripten builds, clang-tidy, the sanitizers, style checks and the Rust checks. The release has no Android package until an Android build is added. Each needs its own pinned copy; none should be switched on as is.
