@@ -13,6 +13,8 @@
 #include <engine/shared/linereader.h>
 #include <engine/storage.h>
 
+#include <game/kog_version.h>
+
 #include <unordered_set>
 
 #ifdef CONF_PLATFORM_HAIKU
@@ -260,19 +262,15 @@ public:
 		// on Android. The user data is stored within a folder "user" in the external storage.
 		str_copy(m_aUserdir, "user");
 #else
-		char aFallbackUserdir[IO_MAX_PATH_LENGTH];
-		if(fs_storage_path("DDNet", m_aUserdir, sizeof(m_aUserdir)))
+		if(fs_storage_path(KOG_STORAGE_NAME, m_aUserdir, sizeof(m_aUserdir)))
 		{
 			log_error("storage", "could not determine user directory");
 		}
-		if(fs_storage_path("Teeworlds", aFallbackUserdir, sizeof(aFallbackUserdir)))
-		{
-			log_error("storage", "could not determine fallback user directory");
-		}
 
-		if((m_aUserdir[0] == '\0' || !fs_is_dir(m_aUserdir)) && aFallbackUserdir[0] != '\0' && fs_is_dir(aFallbackUserdir))
+		char aImportDir[IO_MAX_PATH_LENGTH];
+		if(!fs_is_dir(m_aUserdir) && !fs_storage_path("DDNet", aImportDir, sizeof(aImportDir)) && fs_is_dir(aImportDir))
 		{
-			str_copy(m_aUserdir, aFallbackUserdir);
+			log_info("storage", "No settings in \"%s\" yet. To use your DDNet settings, copy settings_ddnet.cfg from \"%s\".", m_aUserdir, aImportDir);
 		}
 #endif
 	}
