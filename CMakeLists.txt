@@ -1020,7 +1020,7 @@ add_library(json EXCLUDE_FROM_ALL OBJECT ${DEP_JSON_SRC})
 set_src(DEP_MD5_SRC GLOB src/engine/external/md5 md5.c md5.h)
 add_library(md5 EXCLUDE_FROM_ALL OBJECT ${DEP_MD5_SRC})
 
-set_src(DEP_MONOCYPHER_SRC GLOB src/engine/external/monocypher monocypher.c monocypher.h monocypher-ed25519.c monocypher-ed25519.h)
+set_src(DEP_MONOCYPHER_SRC GLOB src/engine/external/monocypher monocypher-ed25519.c monocypher-ed25519.h monocypher.c monocypher.h)
 add_library(monocypher EXCLUDE_FROM_ALL OBJECT ${DEP_MONOCYPHER_SRC})
 
 list(APPEND TARGETS_DEP json md5 monocypher)
