@@ -154,7 +154,9 @@ option(CLIENT "Compile client" ON)
 option(SERVER "Compile server" ON)
 option(TOOLS "Compile tools" ON)
 option(DOWNLOAD_GTEST "Download and compile GTest" ${AUTO_DEPENDENCIES_DEFAULT})
-option(STEAM "Build the Steam release version" ON)
+option(STEAM "Build the Steam release version (needs STEAM_API_DLL and STEAM_APPID_FILE: neither is shipped in this repository)" OFF)
+set(STEAM_API_DLL "" CACHE FILEPATH "Path to Valve's steam_api.dll (Steamworks redistributable), copied next to the Windows client when STEAM is ON")
+set(STEAM_APPID_FILE "" CACHE FILEPATH "Path to the steam_appid.txt to package when STEAM is ON")
 option(DISCORD "Enable Discord rich presence support" OFF)
 option(DISCORD_DYNAMIC "Enable discovering Discord rich presence libraries at runtime (Linux only)" OFF)
 option(PREFER_BUNDLED_LIBS "Prefer bundled libraries over system libraries" ${AUTO_DEPENDENCIES_DEFAULT})
@@ -3937,9 +3939,11 @@ endif()
 list(APPEND CPACK_DIRS ${COPY_DIRS})
 set(CPACK_FILES
   license.txt
-  steam_appid.txt
   ${COPY_FILES}
 )
+if(STEAM AND STEAM_APPID_FILE)
+  list(APPEND CPACK_FILES ${STEAM_APPID_FILE})
+endif()
 if(NOT TARGET_OS STREQUAL "emscripten")
   list(APPEND CPACK_FILES storage.cfg)
 endif()
@@ -4472,13 +4476,16 @@ foreach(target game-server game-server-without-main)
 endforeach()
 
 if(TARGET_OS STREQUAL "windows" AND STEAM AND NOT CMAKE_BUILD_TYPE STREQUAL Debug)
+  if(NOT STEAM_API_DLL OR NOT STEAM_APPID_FILE)
+    message(FATAL_ERROR "STEAM=ON needs -DSTEAM_API_DLL=<steam_api.dll of the Steamworks SDK> and -DSTEAM_APPID_FILE=<steam_appid.txt>: neither file is shipped in this repository")
+  endif()
   add_custom_command(
     TARGET game-client POST_BUILD
     COMMAND ${CMAKE_COMMAND} -E copy_if_different
-      "${CMAKE_SOURCE_DIR}/steam_api.dll"
+      "${STEAM_API_DLL}"
       "$<TARGET_FILE_DIR:game-client>"
     COMMAND ${CMAKE_COMMAND} -E copy_if_different
-      "${CMAKE_SOURCE_DIR}/steam_appid.txt"
+      "${STEAM_APPID_FILE}"
       "$<TARGET_FILE_DIR:game-client>"
   )
 endif()

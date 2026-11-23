@@ -159,4 +159,6 @@ tags
 # tidy-alphabetical-end
 
 # TClient
-!steam_api.dll
+
+/steam_api.dll
+/steam_appid.txt
