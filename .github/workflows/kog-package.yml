@@ -1,0 +1,85 @@
+name: KoG package
+
+on:
+  workflow_call:
+    inputs:
+      channel:
+        type: string
+        required: true
+      build_number:
+        type: string
+        default: ""
+
+permissions: {}
+
+jobs:
+  package:
+    name: Package (${{ matrix.name }})
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 90
+    permissions:
+      contents: read
+    strategy:
+      fail-fast: true
+      matrix:
+        include:
+        - name: linux
+          os: ubuntu-latest
+          cmake-args: -G Ninja -DIPO=ON
+          package-file: "*-linux_x86_64.tar.xz"
+        - name: macos
+          os: macos-latest
+          cmake-args: -G Ninja -DIPO=ON
+          package-file: "*-macos.dmg"
+        - name: windows
+          os: windows-latest
+          cmake-args: -A x64 -DEXCEPTION_HANDLING=ON
+          package-file: "*-win64.zip"
+    steps:
+    - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      with:
+        submodules: recursive
+        persist-credentials: false
+
+    - name: Prepare Linux
+      if: runner.os == 'Linux'
+      run: |
+        sudo apt-get update -y
+        sudo apt-get install -y cmake glslang-tools libavcodec-dev libavformat-dev libavutil-dev libcurl4-openssl-dev libfreetype6-dev libglew-dev libnotify-dev libogg-dev libopus-dev libopusfile-dev libpng-dev libsdl2-dev libsqlite3-dev libssl-dev libswresample-dev libswscale-dev libvulkan-dev libwavpack-dev libx264-dev ninja-build pkg-config spirv-tools zlib1g-dev
+
+    - name: Prepare macOS
+      if: runner.os == 'macOS'
+      run: |
+        brew update
+        brew install ffmpeg molten-vk ninja pkg-config sdl2
+        brew upgrade freetype
+        pip3 install --break-system-packages dmgbuild==1.6.7 pyobjc-framework-Quartz==12.2.2
+        echo /Library/Frameworks/Python.framework/Versions/3.12/bin >> "$GITHUB_PATH"
+        sudo rm -rf /Library/Developer/CommandLineTools
+
+    - name: Build the client
+      shell: bash
+      env:
+        CHANNEL: ${{ inputs.channel }}
+        BUILD_NUMBER: ${{ inputs.build_number }}
+      run: |
+        mkdir release
+        cd release
+        cmake ${{ matrix.cmake-args }} -DCMAKE_BUILD_TYPE=Release -DSERVER=OFF -DTOOLS=OFF -DAUTOUPDATE=ON \
+          -DKOG_CHANNEL="$CHANNEL" -DKOG_BUILD_NUMBER="$BUILD_NUMBER" -DCMAKE_RUNTIME_OUTPUT_DIRECTORY_RELEASE=. ..
+        cmake --build . --config Release --target package_default
+
+    - name: Check that no server was built
+      shell: bash
+      run: |
+        cd release
+        if find . -iname 'DDNet-Server*' | grep -q .; then echo "a server was built" >&2; exit 1; fi
+        mkdir artifacts
+        mv ${{ matrix.package-file }} artifacts
+
+    - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+      with:
+        name: kog-package-${{ matrix.name }}
+        path: release/artifacts
+        if-no-files-found: error
+        retention-days: 7
