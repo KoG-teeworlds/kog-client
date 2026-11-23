@@ -11,6 +11,7 @@
 #include <engine/graphics.h>
 #include <engine/shared/config.h>
 #include <engine/shared/json.h>
+#include <engine/updater.h>
 
 #include <generated/client_data.h>
 
@@ -546,14 +547,14 @@ bool CTClient::ServerCommandExists(const char *pCommand)
 
 void CTClient::OnRender()
 {
-	if(m_pTClientInfoTask)
+#if defined(CONF_AUTOUPDATE)
+	if(!m_FetchedTClientInfo && g_Config.m_KogCheckUpdates && Updater()->CheckFinished())
 	{
-		if(m_pTClientInfoTask->State() == EHttpState::DONE)
-		{
-			FinishTClientInfo();
-			ResetTClientInfoTask();
-		}
+		const char *pLatest = Updater()->LatestVersion();
+		str_copy(m_aVersionStr, pLatest[0] != '\0' ? pLatest : "0");
+		m_FetchedTClientInfo = true;
 	}
+#endif
 
 	DoFinishCheck();
 }
@@ -563,70 +564,15 @@ bool CTClient::NeedUpdate()
 	return str_comp(m_aVersionStr, "0") != 0;
 }
 
-void CTClient::ResetTClientInfoTask()
-{
-	if(m_pTClientInfoTask)
-	{
-		m_pTClientInfoTask->Abort();
-		m_pTClientInfoTask = nullptr;
-	}
-}
-
 void CTClient::FetchTClientInfo()
 {
-	// New versions are announced by the signed update manifest (updater.cpp)
-}
-
-typedef std::tuple<int, int, int> TVersion;
-static const TVersion gs_InvalidTCVersion = std::make_tuple(-1, -1, -1);
-
-static TVersion ToTCVersion(char *pStr)
-{
-	int aVersion[3] = {0, 0, 0};
-	const char *p = strtok(pStr, ".");
-
-	for(int i = 0; i < 3 && p; ++i)
+#if defined(CONF_AUTOUPDATE)
+	if(g_Config.m_KogCheckUpdates)
 	{
-		if(!str_isallnum(p))
-			return gs_InvalidTCVersion;
-
-		aVersion[i] = str_toint(p);
-		p = strtok(nullptr, ".");
+		m_FetchedTClientInfo = false;
+		Updater()->CheckForUpdate();
 	}
-
-	if(p)
-		return gs_InvalidTCVersion;
-
-	return std::make_tuple(aVersion[0], aVersion[1], aVersion[2]);
-}
-
-void CTClient::FinishTClientInfo()
-{
-	json_value *pJson = m_pTClientInfoTask->ResultJson();
-	if(!pJson)
-		return;
-	const json_value &Json = *pJson;
-	const json_value &CurrentVersion = Json["version"];
-
-	if(CurrentVersion.type == json_string)
-	{
-		char aNewVersionStr[64];
-		str_copy(aNewVersionStr, CurrentVersion);
-		char aCurVersionStr[64];
-		str_copy(aCurVersionStr, TCLIENT_VERSION);
-		if(ToTCVersion(aNewVersionStr) > ToTCVersion(aCurVersionStr))
-		{
-			str_copy(m_aVersionStr, CurrentVersion);
-		}
-		else
-		{
-			m_aVersionStr[0] = '0';
-			m_aVersionStr[1] = '\0';
-		}
-		m_FetchedTClientInfo = true;
-	}
-
-	json_value_free(pJson);
+#endif
 }
 
 void CTClient::SetForcedAspect()

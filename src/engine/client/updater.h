@@ -4,11 +4,12 @@
 #include <base/detect.h>
 #include <base/lock.h>
 
+#include <engine/shared/kog_update.h>
 #include <engine/updater.h>
 
-#include <forward_list>
 #include <memory>
 #include <string>
+#include <vector>
 
 #define CLIENT_EXEC "DDNet"
 #define SERVER_EXEC "DDNet-Server"
@@ -40,6 +41,7 @@
 #define PLAT_SERVER_EXEC SERVER_EXEC PLAT_EXT
 
 class CUpdaterFetchTask;
+class IHttpRequest;
 
 class CUpdater : public IUpdater
 {
@@ -56,29 +58,53 @@ class CUpdater : public IUpdater
 	char m_aStatus[256] GUARDED_BY(m_Lock);
 	int m_Percent GUARDED_BY(m_Lock);
 	char m_aClientExecTmp[64];
-	char m_aServerExecTmp[64];
 
-	std::forward_list<std::pair<std::string, bool>> m_FileJobs;
+	struct SJob
+	{
+		KogUpdate::SFile m_File;
+		bool m_Download;
+	};
+	std::vector<SJob> m_vJobs;
+	size_t m_CurrentJob = 0;
 	std::shared_ptr<CUpdaterFetchTask> m_pCurrentTask;
-	decltype(m_FileJobs)::iterator m_CurrentJob;
+	std::shared_ptr<IHttpRequest> m_pManifestTask;
+	std::shared_ptr<IHttpRequest> m_pSignatureTask;
 
-	bool m_ClientUpdate;
-	bool m_ServerUpdate;
+	bool m_ClientUpdate = false;
+	bool m_ClientFetched = false;
+	KogUpdate::SFile m_ClientFile;
 
-	bool m_ClientFetched;
-	bool m_ServerFetched;
+	enum class ECheck
+	{
+		IDLE,
+		RUNNING,
+		DONE,
+	};
+	ECheck m_Check = ECheck::IDLE;
+	std::shared_ptr<IHttpRequest> m_pCheckManifest;
+	std::shared_ptr<IHttpRequest> m_pCheckSignature;
+	char m_aLatestVersion[32] = "";
 
-	void AddFileJob(const char *pFile, bool Job);
-	void FetchFile(const char *pFile, const char *pDestPath = nullptr) REQUIRES(!m_Lock);
+	void StartManifestFetch(std::shared_ptr<IHttpRequest> &pManifest, std::shared_ptr<IHttpRequest> &pSignature);
+	bool VerifyManifest(const IHttpRequest &Manifest, const IHttpRequest &Signature, KogUpdate::SManifest *pOut, bool *pNewer);
+	int64_t LoadLastSequence();
+	void SaveLastSequence(int64_t Sequence);
+	bool IsCurrent(const char *pPath, const SHA256_DIGEST &Sha256);
+	void BuildJobs(const KogUpdate::SManifest &Manifest);
+	void RemoveDownloads();
+	void Fail();
+
+	void FetchFile(const KogUpdate::SFile &File, const char *pDestPath) REQUIRES(!m_Lock);
 	bool MoveFile(const char *pFile);
+	void RestoreFile(const char *pFile);
 
-	void ParseUpdate() REQUIRES(!m_Lock);
+	void UpdateCheck();
+	void ProcessManifestTasks() REQUIRES(!m_Lock);
 	void PerformUpdate() REQUIRES(!m_Lock);
 	void RunningUpdate() REQUIRES(!m_Lock);
 	void CommitUpdate() REQUIRES(!m_Lock);
 
 	bool ReplaceClient();
-	bool ReplaceServer();
 
 	void SetCurrentState(EUpdaterState NewState) REQUIRES(!m_Lock);
 
@@ -90,6 +116,9 @@ public:
 	int GetCurrentPercent() override REQUIRES(!m_Lock);
 
 	void InitiateUpdate() REQUIRES(!m_Lock) override;
+	void CheckForUpdate() override;
+	bool CheckFinished() override { return m_Check == ECheck::DONE; }
+	const char *LatestVersion() override { return m_aLatestVersion; }
 	void Init();
 	void Update() REQUIRES(!m_Lock) override;
 };

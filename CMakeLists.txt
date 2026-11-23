@@ -146,6 +146,7 @@ option(MYSQL "Enable mysql support" OFF)
 option(TEST_MYSQL "Test mysql support in unit tests (also sets -DMYSQL=ON)" OFF)
 option(AUTOUPDATE "Enable the autoupdater" OFF)
 option(INFORM_UPDATE "Inform about available updates" ON)
+option(KOG_ALLOW_PLACEHOLDER_KEY "Allow a release build with the update signing key still being the placeholder" OFF)
 option(VIDEORECORDER "Enable video recording support via FFmpeg" ON)
 option(UPNP "Enable UPnP support" OFF)
 option(ANTIBOT "Enable support for a dynamic anticheat library (not provided, see src/antibot for interface if you want to implement your own)" OFF)
@@ -1004,6 +1005,11 @@ if(NOT(GTEST_FOUND) AND DOWNLOAD_GTEST)
   endif()
 endif()
 
+file(STRINGS src/engine/client/kog_update_pubkey.h KOG_PUBKEY_PLACEHOLDER_LINE REGEX "^#define KOG_UPDATE_PUBKEY_PLACEHOLDER 1")
+if(KOG_PUBKEY_PLACEHOLDER_LINE AND AUTOUPDATE AND NOT DEV AND NOT KOG_ALLOW_PLACEHOLDER_KEY AND CMAKE_BUILD_TYPE MATCHES "^(Release|RelWithDebInfo|MinSizeRel)$")
+  message(FATAL_ERROR "The update signing key is still the placeholder: run scripts/kog/gen_signing_key.sh, or pass -DKOG_ALLOW_PLACEHOLDER_KEY=ON")
+endif()
+
 ########################################################################
 # DEPENDENCY COMPILATION
 ########################################################################
@@ -1014,8 +1020,12 @@ add_library(json EXCLUDE_FROM_ALL OBJECT ${DEP_JSON_SRC})
 set_src(DEP_MD5_SRC GLOB src/engine/external/md5 md5.c md5.h)
 add_library(md5 EXCLUDE_FROM_ALL OBJECT ${DEP_MD5_SRC})
 
-list(APPEND TARGETS_DEP json md5)
+set_src(DEP_MONOCYPHER_SRC GLOB src/engine/external/monocypher monocypher.c monocypher.h monocypher-ed25519.c monocypher-ed25519.h)
+add_library(monocypher EXCLUDE_FROM_ALL OBJECT ${DEP_MONOCYPHER_SRC})
+
+list(APPEND TARGETS_DEP json md5 monocypher)
 set(DEP_JSON $<TARGET_OBJECTS:json>)
+set(DEP_MONOCYPHER $<TARGET_OBJECTS:monocypher>)
 set(DEP_MD5)
 if(NOT CRYPTO_FOUND)
   set(DEP_MD5 $<TARGET_OBJECTS:md5>)
@@ -2486,6 +2496,8 @@ set_src(ENGINE_SHARED GLOB_RECURSE src/engine/shared
   jsonwriter.h
   kernel.cpp
   kog_protocol.h
+  kog_update.cpp
+  kog_update.h
   linereader.cpp
   linereader.h
   localization.h
@@ -2620,7 +2632,7 @@ set(GAME_GENERATED_SHARED
   src/generated/protocolglue.h
   # tidy-alphabetical-end
 )
-set(DEPS ${DEP_JSON} ${DEP_MD5} ${ZLIB_DEP})
+set(DEPS ${DEP_JSON} ${DEP_MD5} ${DEP_MONOCYPHER} ${ZLIB_DEP})
 
 # Libraries
 set(LIBS
@@ -2736,6 +2748,7 @@ if(CLIENT)
     input.h
     keynames.cpp
     keynames.h
+    kog_update_pubkey.h
     notifications.cpp
     notifications.h
     serverbrowser.cpp
@@ -3626,6 +3639,7 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
     jobs_test.cpp
     json_test.cpp
     jsonwriter_test.cpp
+    kog_update_test.cpp
     linereader_test.cpp
     localization_test.cpp
     mapbugs_test.cpp
@@ -3716,7 +3730,7 @@ if((GTEST_FOUND OR DOWNLOAD_GTEST) AND SERVER)
 endif()
 
 if(ENABLE_IPO AND CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
-  foreach(target engine-gfx engine-shared game-shared rust-bridge-shared json md5 zlib)
+  foreach(target engine-gfx engine-shared game-shared rust-bridge-shared json md5 monocypher zlib)
     if(TARGET ${target})
       target_compile_options(${target} PRIVATE -ffat-lto-objects)
     endif()

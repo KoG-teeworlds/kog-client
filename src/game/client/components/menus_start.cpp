@@ -220,7 +220,7 @@ void CMenusStart::RenderStartMenu(CUIRect MainView)
 
 	if(State == IUpdater::CLEAN && NeedUpdate)
 	{
-		str_format(aBuf, sizeof(aBuf), Localize("TClient %s is out!"), GameClient()->m_TClient.m_aVersionStr);
+		str_format(aBuf, sizeof(aBuf), Localize("KoG Client %s is out!"), GameClient()->m_TClient.m_aVersionStr);
 		TextRender()->TextColor(1.0f, 0.4f, 0.4f, 1.0f);
 	}
 	else if(State == IUpdater::CLEAN)
@@ -240,7 +240,7 @@ void CMenusStart::RenderStartMenu(CUIRect MainView)
 	}
 	else if(State == IUpdater::NEED_RESTART)
 	{
-		str_copy(aBuf, Localize("DDNet Client updated!"));
+		str_copy(aBuf, Localize("KoG Client updated!"));
 		TextRender()->TextColor(1.0f, 0.4f, 0.4f, 1.0f);
 	}
 	Ui()->DoLabel(&VersionUpdate, aBuf, 14.0f, TEXTALIGN_ML);

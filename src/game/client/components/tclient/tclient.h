@@ -53,10 +53,7 @@ public:
 	void OnNewSnapshot() override;
 	void SetForcedAspect();
 
-	std::shared_ptr<IHttpRequest> m_pTClientInfoTask = nullptr;
 	void FetchTClientInfo();
-	void FinishTClientInfo();
-	void ResetTClientInfoTask();
 	bool NeedUpdate();
 
 	void RenderMiniVoteHud();
@@ -64,9 +61,8 @@ public:
 	void RenderCtfFlag(vec2 Pos, float Alpha);
 
 	bool ChatDoSpecId(const char *pInput);
-	bool InfoTaskDone() { return m_pTClientInfoTask && m_pTClientInfoTask->State() == EHttpState::DONE; }
 	bool m_FetchedTClientInfo = false;
-	char m_aVersionStr[10] = "0";
+	char m_aVersionStr[16] = "0";
 
 	Regex m_RegexChatIgnore;
 };
