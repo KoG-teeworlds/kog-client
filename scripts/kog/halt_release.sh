@@ -6,7 +6,6 @@ set -euo pipefail
 # usage: halt_release.sh CHANNEL     (stable only: the other channels are halted by a CI run of the workflow "Halt")
 channel=${1:?channel}
 [ "$channel" = stable ] || { echo "only the stable channel is halted from here" >&2; exit 2; }
-updates=KoG-teeworlds/kog-client-updates
 dir="${KOG_SIGNING_DIR:-$HOME/.config/kog-client-signing}"
 key=${KOG_OWNER_KEY:-$dir/owner_sk_1}
 backup_file="${KOG_BACKUP_KEY_FILE:-$HOME/kog-client-backup-signing-key.txt}"

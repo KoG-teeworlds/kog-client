@@ -1,0 +1,21 @@
+name: KoG canary
+
+on:
+  push:
+    branches: [main]
+
+permissions: {}
+
+concurrency:
+  group: kog-channel-canary
+  cancel-in-progress: false
+
+jobs:
+  canary:
+    uses: ./.github/workflows/kog-channel.yml
+    with:
+      channel: canary
+    permissions:
+      contents: write
+      id-token: write
+      attestations: write

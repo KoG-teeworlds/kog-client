@@ -4,7 +4,7 @@ set -euo pipefail
 root=$(cd "$(dirname "$0")/../.." && pwd -P)
 work=$(mktemp -d)
 trap 'rm -rf "$work"' EXIT
-tool="python3 $root/scripts/kog/make_manifest.py"
+tool=(python3 "$root/scripts/kog/make_manifest.py")
 fail() { echo "FAIL: $*" >&2; exit 1; }
 refused() { if "$@" >/dev/null 2>&1; then fail "accepted: $*"; fi; }
 
@@ -18,14 +18,14 @@ echo one > "$tree/data/a.txt"
 echo two > "$tree/data/sub/b.txt"
 echo evil > "$tree/data/bad.dll"
 echo binary1 > "$work/client1"
-$tool draft --init-base "$work/base.json" --version 0.1.0 --tag v0.1.0 --data "$tree" --client linux-x86_64="$work/client1" --out "$work/draft1.json" --uploads "$work/uploads1.json" 2>/dev/null
+"${tool[@]}" draft --init-base "$work/base.json" --version 0.1.0 --tag v0.1.0 --data "$tree" --client linux-x86_64="$work/client1" --out "$work/draft1.json" --uploads "$work/uploads1.json" 2>/dev/null
 python3 -c 'import json,sys; m=json.load(open(sys.argv[1])); assert m["files"]==[] and m["remove"]==[], m' "$work/draft1.json"
 
 echo changed > "$tree/data/a.txt"
 echo three > "$tree/data/c.txt"
 rm "$tree/data/sub/b.txt"
 echo binary2 > "$work/client2"
-$tool draft --base "$work/base.json" --version 0.2.0 --tag v0.2.0 --data "$tree" --client linux-x86_64="$work/client2" \
+"${tool[@]}" draft --base "$work/base.json" --version 0.2.0 --tag v0.2.0 --data "$tree" --client linux-x86_64="$work/client2" \
   --rollout-percent 25 --min-version 0.1.0 --notes-url https://client.kog.tw/notes/0.2.0 --change "Faster start" --change "Fixes a crash" \
   --out "$work/draft2.json" --uploads "$work/uploads2.json" 2>/dev/null
 python3 - "$work/draft2.json" <<'PY'
@@ -37,33 +37,33 @@ assert m["sequence"] == 0 and m["rollout_percent"] == 25 and m["min_version"] ==
 PY
 
 echo "the manifest builder refuses what it must"
-refused $tool draft --base "$work/base.json" --version 0.2.0-canary.1 --tag t --data "$tree" --client linux-x86_64="$work/client2" --out "$work/x.json" --uploads "$work/x2.json"
-refused $tool draft --base "$work/base.json" --channel canary --version 0.2.0 --tag t --data "$tree" --client linux-x86_64="$work/client2" --out "$work/x.json" --uploads "$work/x2.json"
-refused $tool draft --base "$work/base.json" --channel dev --version 0.2.0-canary.1 --tag t --data "$tree" --client linux-x86_64="$work/client2" --out "$work/x.json" --uploads "$work/x2.json"
-refused $tool draft --base "$work/base.json" --version 0.2.0 --tag t --data "$tree" --client linux-x86_64="$work/client2" --change a --change b --change c --change d --out "$work/x.json" --uploads "$work/x2.json"
-refused $tool draft --base "$work/base.json" --version 0.2.0 --tag t --data "$tree" --client linux-x86_64="$work/client2" --rollout-percent 101 --out "$work/x.json" --uploads "$work/x2.json"
+refused "${tool[@]}" draft --base "$work/base.json" --version 0.2.0-canary.1 --tag t --data "$tree" --client linux-x86_64="$work/client2" --out "$work/x.json" --uploads "$work/x2.json"
+refused "${tool[@]}" draft --base "$work/base.json" --channel canary --version 0.2.0 --tag t --data "$tree" --client linux-x86_64="$work/client2" --out "$work/x.json" --uploads "$work/x2.json"
+refused "${tool[@]}" draft --base "$work/base.json" --channel dev --version 0.2.0-canary.1 --tag t --data "$tree" --client linux-x86_64="$work/client2" --out "$work/x.json" --uploads "$work/x2.json"
+refused "${tool[@]}" draft --base "$work/base.json" --version 0.2.0 --tag t --data "$tree" --client linux-x86_64="$work/client2" --change a --change b --change c --change d --out "$work/x.json" --uploads "$work/x2.json"
+refused "${tool[@]}" draft --base "$work/base.json" --version 0.2.0 --tag t --data "$tree" --client linux-x86_64="$work/client2" --rollout-percent 101 --out "$work/x.json" --uploads "$work/x2.json"
 mkdir -p "$tree/data/server"
 echo server > "$tree/data/server/DDNet-Server"
-refused $tool draft --base "$work/base.json" --version 0.2.0 --tag t --data "$tree" --client linux-x86_64="$work/client2" --out "$work/x.json" --uploads "$work/x2.json"
+refused "${tool[@]}" draft --base "$work/base.json" --version 0.2.0 --tag t --data "$tree" --client linux-x86_64="$work/client2" --out "$work/x.json" --uploads "$work/x2.json"
 rm -r "$tree/data/server"
 cp "$work/client2" "$work/DDNet-Server"
-refused $tool draft --base "$work/base.json" --version 0.2.0 --tag t --data "$tree" --client linux-x86_64="$work/DDNet-Server" --out "$work/x.json" --uploads "$work/x2.json"
-refused $tool finalize --draft "$work/draft2.json" --sequence 1 --days 91 --out "$work/x.json"
-refused $tool finalize --draft "$work/draft2.json" --sequence 0 --out "$work/x.json"
+refused "${tool[@]}" draft --base "$work/base.json" --version 0.2.0 --tag t --data "$tree" --client linux-x86_64="$work/DDNet-Server" --out "$work/x.json" --uploads "$work/x2.json"
+refused "${tool[@]}" finalize --draft "$work/draft2.json" --sequence 1 --days 91 --out "$work/x.json"
+refused "${tool[@]}" finalize --draft "$work/draft2.json" --sequence 0 --out "$work/x.json"
 sed 's/"channel": "stable"/"channel": "dev"/;s/"version": "0.2.0"/"version": "0.2.0-dev.3"/' "$work/draft2.json" > "$work/draft_dev.json"
-refused $tool finalize --draft "$work/draft_dev.json" --sequence 1 --days 15 --out "$work/x.json"
-$tool finalize --draft "$work/draft_dev.json" --sequence 1 --days 14 --out "$work/dev.json"
+refused "${tool[@]}" finalize --draft "$work/draft_dev.json" --sequence 1 --days 15 --out "$work/x.json"
+"${tool[@]}" finalize --draft "$work/draft_dev.json" --sequence 1 --days 14 --out "$work/dev.json"
 
-$tool finalize --draft "$work/draft2.json" --sequence 4 --days 30 --now 1000000 --out "$work/update.json"
+"${tool[@]}" finalize --draft "$work/draft2.json" --sequence 4 --days 30 --now 1000000 --out "$work/update.json"
 echo '{"channel": "stable", "version": "0.2.0", "sequence": 4}' > "$work/same.json"
 echo '{"channel": "stable", "version": "0.3.0", "sequence": 4}' > "$work/newer.json"
-refused $tool newer --manifest "$work/update.json" --previous "$work/same.json"
-refused $tool newer --manifest "$work/update.json" --previous "$work/newer.json"
+refused "${tool[@]}" newer --manifest "$work/update.json" --previous "$work/same.json"
+refused "${tool[@]}" newer --manifest "$work/update.json" --previous "$work/newer.json"
 echo '{"channel": "dev", "version": "0.1.0-dev.1", "sequence": 1}' > "$work/other.json"
-refused $tool newer --manifest "$work/update.json" --previous "$work/other.json"
+refused "${tool[@]}" newer --manifest "$work/update.json" --previous "$work/other.json"
 echo '{"channel": "stable", "version": "0.1.0", "sequence": 1}' > "$work/older.json"
-$tool newer --manifest "$work/update.json" --previous "$work/older.json"
-$tool halt --previous "$work/update.json" --now 2000000 --out "$work/halt.json"
+"${tool[@]}" newer --manifest "$work/update.json" --previous "$work/older.json"
+"${tool[@]}" halt --previous "$work/update.json" --now 2000000 --out "$work/halt.json"
 python3 -c 'import json,sys; m=json.load(open(sys.argv[1])); assert m["halted"] is True and m["sequence"]==5, m' "$work/halt.json"
 
 echo "signatures A and B"

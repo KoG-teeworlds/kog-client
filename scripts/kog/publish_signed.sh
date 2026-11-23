@@ -3,7 +3,7 @@ set -euo pipefail
 
 # Puts a signed manifest into the published branch of the updates repo, after checking both signatures once more.
 # usage: publish_signed.sh CHANNEL VERSION DIR MESSAGE     (DIR: update.json, update.json.sig, update.json.sigb)
-# env: GH_TOKEN with write access to the updates repo; SOURCE_COMMIT, RUN_URL for the audit record; SITE_DIR for the site files
+# env: GH_TOKEN with write access to the updates repo, or UPDATES_DEPLOY_KEY (a private key with write access); SOURCE_COMMIT, RUN_URL for the audit record; SITE_DIR for the site files
 channel=${1:?channel}
 version=${2:?version}
 dir=${3:?dir}
@@ -32,14 +32,24 @@ m = json.load(open(sys.argv[1]))
 assert m["channel"] == sys.argv[2] and m["version"] == sys.argv[3], "channel or version of the manifest differ"
 PY
 
-header="AUTHORIZATION: basic $(printf 'x-access-token:%s' "$GH_TOKEN" | base64 | tr -d '\n')"
-echo "::add-mask::$header"
-git_remote() { git -c "http.https://github.com/.extraheader=$header" "$@"; }
-if git_remote ls-remote --exit-code --heads "https://github.com/$repo" published >/dev/null 2>&1; then
-  git_remote clone --quiet --branch published "https://github.com/$repo" "$work/published"
+if [ -n "${UPDATES_DEPLOY_KEY:-}" ]; then
+  umask 077
+  printf '%s\n' "$UPDATES_DEPLOY_KEY" > "$work/deploy_key"
+  echo "github.com ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIOMqqnkVzrm0SdG6UOoqKLsabgH5C9okWi0dh2l9GKJl" > "$work/known_hosts"
+  export GIT_SSH_COMMAND="ssh -i $work/deploy_key -o IdentitiesOnly=yes -o StrictHostKeyChecking=yes -o UserKnownHostsFile=$work/known_hosts"
+  remote="git@github.com:$repo.git"
+  git_remote() { git "$@"; }
+else
+  header="AUTHORIZATION: basic $(printf 'x-access-token:%s' "$GH_TOKEN" | base64 | tr -d '\n')"
+  echo "::add-mask::$header"
+  remote="https://github.com/$repo"
+  git_remote() { git -c "http.https://github.com/.extraheader=$header" "$@"; }
+fi
+if git_remote ls-remote --exit-code --heads "$remote" published >/dev/null 2>&1; then
+  git_remote clone --quiet --branch published "$remote" "$work/published"
 else
   git init --quiet -b published "$work/published"
-  git -C "$work/published" remote add origin "https://github.com/$repo"
+  git -C "$work/published" remote add origin "$remote"
 fi
 published="$work/published"
 if [ -f "$published/$channel/update.json" ]; then
