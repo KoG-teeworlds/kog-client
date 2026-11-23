@@ -57,6 +57,15 @@ jobs:
         echo /Library/Frameworks/Python.framework/Versions/3.12/bin >> "$GITHUB_PATH"
         sudo rm -rf /Library/Developer/CommandLineTools
 
+    - name: Toolchain probe
+      shell: bash
+      run: |
+        # CMake 4.5 turns include_directories() in a downloaded dependency into an error under -Werror=dev; older CMake rejects the category
+        echo "message(STATUS ok)" > "$RUNNER_TEMP/probe.cmake"
+        if cmake -Wno-error=non-target-directive -P "$RUNNER_TEMP/probe.cmake" >/dev/null 2>&1; then
+          echo "CMAKE_EXTRA=-Wno-error=non-target-directive" >> "$GITHUB_ENV"
+        fi
+
     - name: Build the client
       shell: bash
       env:
@@ -65,7 +74,7 @@ jobs:
       run: |
         mkdir release
         cd release
-        cmake ${{ matrix.cmake-args }} -DCMAKE_BUILD_TYPE=Release -DSERVER=OFF -DTOOLS=OFF -DAUTOUPDATE=ON \
+        cmake ${{ matrix.cmake-args }} -DCMAKE_BUILD_TYPE=Release -Werror=dev ${{ env.CMAKE_EXTRA }} -DSERVER=OFF -DTOOLS=OFF -DAUTOUPDATE=ON \
           -DKOG_CHANNEL="$CHANNEL" -DKOG_BUILD_NUMBER="$BUILD_NUMBER" -DCMAKE_RUNTIME_OUTPUT_DIRECTORY_RELEASE=. ..
         cmake --build . --config Release --target package_default
 
