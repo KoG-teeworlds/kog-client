@@ -4,6 +4,7 @@
 #include <base/detect.h>
 #include <base/lock.h>
 
+#include <engine/shared/kog_failsafe.h>
 #include <engine/shared/kog_update.h>
 #include <engine/updater.h>
 #include <game/kog_version.h>
@@ -60,6 +61,20 @@ class CUpdater : public IUpdater
 	int m_Percent GUARDED_BY(m_Lock);
 	char m_aClientExecTmp[64];
 
+	KogUpdate::SState m_Persist;
+	bool m_StartupReported = false;
+	bool m_RestartAfterRollback = false;
+
+	struct SFetch
+	{
+		std::shared_ptr<IHttpRequest> m_apRequests[3];
+		int m_NumRequests = 0;
+		int m_Attempt = 0;
+		bool m_Ok = false;
+	};
+	SFetch m_CheckFetch;
+	SFetch m_DownloadFetch;
+
 	struct SJob
 	{
 		KogUpdate::SFile m_File;
@@ -67,13 +82,14 @@ class CUpdater : public IUpdater
 	};
 	std::vector<SJob> m_vJobs;
 	size_t m_CurrentJob = 0;
+	size_t m_UrlIndex = 0;
 	std::shared_ptr<CUpdaterFetchTask> m_pCurrentTask;
-	std::shared_ptr<IHttpRequest> m_pManifestTask;
-	std::shared_ptr<IHttpRequest> m_pSignatureTask;
-
+	KogUpdate::SFile m_CurrentFile;
+	std::string m_CurrentDest;
+	KogUpdate::SManifest m_Manifest;
 	bool m_ClientUpdate = false;
 	bool m_ClientFetched = false;
-	KogUpdate::SFile m_ClientFile;
+	bool m_SwitchConfirmed = false;
 
 	enum class ECheck
 	{
@@ -82,30 +98,38 @@ class CUpdater : public IUpdater
 		DONE,
 	};
 	ECheck m_Check = ECheck::IDLE;
-	std::shared_ptr<IHttpRequest> m_pCheckManifest;
-	std::shared_ptr<IHttpRequest> m_pCheckSignature;
+	SUpdateInfo m_Info = {};
+	bool m_HasInfo = false;
 	char m_aLatestVersion[32] = "";
 
-	void StartManifestFetch(std::shared_ptr<IHttpRequest> &pManifest, std::shared_ptr<IHttpRequest> &pSignature);
-	bool VerifyManifest(const IHttpRequest &Manifest, const IHttpRequest &Signature, KogUpdate::SManifest *pOut, bool *pNewer);
-	int64_t LoadLastSequence();
-	void SaveLastSequence(int64_t Sequence);
-	bool IsCurrent(const char *pPath, const SHA256_DIGEST &Sha256);
+	struct SChecked
+	{
+		KogUpdate::SManifest m_Manifest;
+		KogUpdate::EVerdict m_Verdict = KogUpdate::EVerdict::UP_TO_DATE;
+	};
+
+	void LoadState();
+	void SaveState();
+	void RecordCheck(const char *pResult);
+	void BackupConfig();
+	void EnsureInstallId();
+
+	void GetUrl(char *pBuf, int BufSize, int Attempt, const char *pFile);
+	void StartFetch(SFetch &Fetch);
+	bool PollFetch(SFetch &Fetch);
+	bool Verify(const SFetch &Fetch, bool Quiet, SChecked *pOut);
+	void SetInfo(const SChecked &Checked);
+
 	void BuildJobs(const KogUpdate::SManifest &Manifest);
 	void RemoveDownloads();
 	void Fail();
-
-	void FetchFile(const KogUpdate::SFile &File, const char *pDestPath) REQUIRES(!m_Lock);
-	bool MoveFile(const char *pFile);
-	void RestoreFile(const char *pFile);
+	void FetchCurrentJob() REQUIRES(!m_Lock);
 
 	void UpdateCheck();
 	void ProcessManifestTasks() REQUIRES(!m_Lock);
 	void PerformUpdate() REQUIRES(!m_Lock);
 	void RunningUpdate() REQUIRES(!m_Lock);
 	void CommitUpdate() REQUIRES(!m_Lock);
-
-	bool ReplaceClient();
 
 	void SetCurrentState(EUpdaterState NewState) REQUIRES(!m_Lock);
 
@@ -120,7 +144,14 @@ public:
 	void CheckForUpdate() override;
 	bool CheckFinished() override { return m_Check == ECheck::DONE; }
 	const char *LatestVersion() override { return m_aLatestVersion; }
+	bool GetUpdateInfo(SUpdateInfo *pInfo) override;
+	void ConfirmChannelSwitch() override { m_SwitchConfirmed = true; }
+	const char *Channel() override;
+	int64_t LastCheckTime() override { return m_Persist.m_LastCheck; }
+	void LastCheckResult(char *pBuf, int BufSize) override;
+	void OnStartupComplete() override;
 	void Init();
+	void OnLaunch();
 	void Update() REQUIRES(!m_Lock) override;
 };
 

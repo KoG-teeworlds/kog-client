@@ -3204,6 +3204,7 @@ void CClient::InitInterfaces()
 
 #if defined(CONF_AUTOUPDATE)
 	m_Updater.Init();
+	m_Updater.OnLaunch();
 #endif
 
 	m_pConfigManager->RegisterCallback(IFavorites::ConfigSaveCallback, m_pFavorites);
