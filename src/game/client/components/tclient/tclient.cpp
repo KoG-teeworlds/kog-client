@@ -22,8 +22,6 @@
 #include <game/localization.h>
 #include <game/version.h>
 
-static constexpr const char *TCLIENT_INFO_URL = "https://update.tclient.app/info.json";
-
 CTClient::CTClient()
 {
 	OnReset();
@@ -576,14 +574,7 @@ void CTClient::ResetTClientInfoTask()
 
 void CTClient::FetchTClientInfo()
 {
-	if(m_pTClientInfoTask && !m_pTClientInfoTask->Done())
-		return;
-	char aUrl[256];
-	str_copy(aUrl, TCLIENT_INFO_URL);
-	m_pTClientInfoTask = HttpGet(aUrl);
-	m_pTClientInfoTask->Timeout(CTimeout{10000, 0, 500, 10});
-	m_pTClientInfoTask->IpResolve(IPRESOLVE::V4);
-	Http()->Run(m_pTClientInfoTask);
+	// New versions are announced by the signed update manifest (updater.cpp)
 }
 
 typedef std::tuple<int, int, int> TVersion;
