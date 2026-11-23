@@ -16,6 +16,7 @@ jobs:
         with:
           persist-credentials: false
       - run: bash scripts/kog/test_release_chain.sh
+      - run: bash scripts/kog/check_brand.sh
 
   gitleaks:
     runs-on: ubuntu-latest
