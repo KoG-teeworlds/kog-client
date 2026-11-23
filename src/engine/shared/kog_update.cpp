@@ -18,10 +18,10 @@ namespace KogUpdate
 
 	static const char *const FORBIDDEN_EXTENSIONS[] = {".exe", ".dll", ".so", ".dylib", ".sh", ".bat", ".cmd", ".ps1", ".app", ".jar", ".py"};
 
-	static void SetError(char *pError, size_t ErrorSize, const char *pFormat, const char *pArg = "")
+	static void SetError(char *pError, size_t ErrorSize, const char *pMessage, const char *pDetail = "")
 	{
 		if(pError && ErrorSize > 0)
-			str_format(pError, ErrorSize, pFormat, pArg);
+			str_format(pError, ErrorSize, "%s%s", pMessage, pDetail);
 	}
 
 	bool ParseSignatureFile(const char *pText, size_t Length, unsigned char (&aSignature)[64], unsigned char (&aKeyId)[4])
@@ -206,7 +206,7 @@ namespace KogUpdate
 			return true;
 		if(pList->type != json_array || pList->u.array.length + pOut->size() > MAX_FILES)
 		{
-			SetError(pError, ErrorSize, "\"%s\" is not an array or has too many entries", pName);
+			SetError(pError, ErrorSize, "list is not an array or has too many entries: ", pName);
 			return false;
 		}
 		for(unsigned int i = 0; i < pList->u.array.length; i++)
@@ -216,7 +216,7 @@ namespace KogUpdate
 				return false;
 			if(!pSeen->insert(File.m_Path).second)
 			{
-				SetError(pError, ErrorSize, "duplicate path %s", File.m_Path.c_str());
+				SetError(pError, ErrorSize, "duplicate path ", File.m_Path.c_str());
 				return false;
 			}
 			pOut->push_back(std::move(File));
@@ -279,7 +279,7 @@ namespace KogUpdate
 			const json_value *pPlatformEntry = json_object_get(json_object_get(pRoot, "platforms"), pPlatform);
 			if(pPlatformEntry->type != json_object)
 			{
-				SetError(pError, ErrorSize, "no entry for platform %s", pPlatform);
+				SetError(pError, ErrorSize, "no entry for platform ", pPlatform);
 				break;
 			}
 			const json_value *pClient = json_object_get(pPlatformEntry, "client");
