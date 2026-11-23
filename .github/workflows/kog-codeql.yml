@@ -38,7 +38,7 @@ jobs:
       if: matrix.language == 'cpp'
       run: |
         sudo apt-get update -y
-        sudo apt-get install -y cmake glslang-tools libavcodec-dev libavformat-dev libavutil-dev libcurl4-openssl-dev libfreetype6-dev libglew-dev libmariadb-dev libnotify-dev libogg-dev libopus-dev libopusfile-dev libpng-dev libsdl2-dev libsqlite3-dev libssl-dev libswresample-dev libswscale-dev libvulkan-dev libwavpack-dev libwebsockets-dev libx264-dev ninja-build pkg-config spirv-tools zlib1g-dev
+        sudo apt-get install -y cmake glslang-tools libavcodec-dev libavformat-dev libavutil-dev libcurl4-openssl-dev libfreetype6-dev libglew-dev libnotify-dev libogg-dev libopus-dev libopusfile-dev libpng-dev libsdl2-dev libsqlite3-dev libssl-dev libswresample-dev libswscale-dev libvulkan-dev libwavpack-dev libx264-dev ninja-build pkg-config spirv-tools zlib1g-dev
 
     - name: Initialize CodeQL
       uses: github/codeql-action/init@1fc58d04a4d4374f921bdac573c3811c240f9c26 # v4.39.2
@@ -63,8 +63,8 @@ jobs:
       run: |
         mkdir release
         cd release
-        cmake -G Ninja -DCMAKE_BUILD_TYPE=RelWithDebInfo -DANTIBOT=ON -DMYSQL=ON -DWEBSOCKETS=ON ..
-        cmake --build . --config RelWithDebInfo --target everything
+        cmake -G Ninja -DCMAKE_BUILD_TYPE=RelWithDebInfo -DCLIENT=ON -DSERVER=OFF -DTOOLS=OFF ..
+        cmake --build . --config RelWithDebInfo --target game-client
 
     - name: Analyze
       uses: github/codeql-action/analyze@1fc58d04a4d4374f921bdac573c3811c240f9c26 # v4.39.2
