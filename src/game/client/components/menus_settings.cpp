@@ -13,6 +13,7 @@
 #include <game/client/gameclient.h>
 #include <game/client/ui.h>
 #include <game/localization.h>
+#include <game/kog_version.h>
 
 void CMenus::SetNeedSendInfo()
 {
@@ -51,7 +52,7 @@ void CMenus::RenderSettings(CUIRect MainView)
 		Localize("Sound"),
 		Localize("DDNet"),
 		Localize("Assets"),
-		TCLocalize("TClient"), // TClient
+		TCLocalize(KOG_CLIENT_NAME), // TClient
 		Localize("Profiles"), // TClient
 		Localize("Configs"), // TClient
 		Localize("Credits")};

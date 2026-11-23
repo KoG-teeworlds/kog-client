@@ -2075,7 +2075,7 @@ void CMenus::RenderSettingsTClientInfo(CUIRect MainView)
 	Button.VSplitMid(&TClientConfig, &ProfilesFile, MarginSmall);
 
 	static CButtonContainer s_Config, s_Profiles, s_Warlist, s_Chatbinds;
-	if(DoButtonLineSize_Menu(&s_Config, TCLocalize("TClient Settings"), 0, &TClientConfig, LineSize, false, nullptr, IGraphics::CORNER_ALL, 5.0f, 0.0f, ColorRGBA(0.0f, 0.0f, 0.0f, 0.25f)))
+	if(DoButtonLineSize_Menu(&s_Config, TCLocalize(KOG_CLIENT_NAME " Settings"), 0, &TClientConfig, LineSize, false, nullptr, IGraphics::CORNER_ALL, 5.0f, 0.0f, ColorRGBA(0.0f, 0.0f, 0.0f, 0.25f)))
 	{
 		Storage()->GetCompletePath(IStorage::TYPE_SAVE, s_aConfigDomains[ConfigDomain::TCLIENT].m_aConfigPath, aBuf, sizeof(aBuf));
 		Client()->ViewFile(aBuf);
