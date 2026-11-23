@@ -34,12 +34,10 @@ jobs:
           os: macos-latest
           cmake-args: -G Ninja
           cmake-args-release: -DIPO=ON
-          cmake-init-env: CXXFLAGS=-Werror
           package-file: "*-macos.dmg"
         - name: windows
           os: windows-latest
           cmake-args: -A x64 -DEXCEPTION_HANDLING=ON
-          cmake-init-env: CXXFLAGS=/WX LDFLAGS=/WX
           package-file: "*-win64.zip"
 
     steps:
@@ -64,6 +62,19 @@ jobs:
         echo /Library/Frameworks/Python.framework/Versions/3.12/bin >> "$GITHUB_PATH"
         sudo rm -rf /Library/Developer/CommandLineTools
 
+    - name: Toolchain versions
+      shell: bash
+      run: |
+        cmake --version | head -1
+        if command -v ninja >/dev/null; then ninja --version; fi
+        if command -v c++ >/dev/null; then c++ --version | head -1; fi
+        rustc --version
+        # CMake 4.5 turns include_directories() in the downloaded googletest into an error under -Werror=dev; older CMake rejects the category
+        echo "message(STATUS ok)" > "$RUNNER_TEMP/probe.cmake"
+        if cmake -Wno-error=non-target-directive -P "$RUNNER_TEMP/probe.cmake" >/dev/null 2>&1; then
+          echo "CMAKE_EXTRA=-Wno-error=non-target-directive" >> "$GITHUB_ENV"
+        fi
+
     - name: Cache Rust dependencies
       uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
       with:
@@ -80,7 +91,7 @@ jobs:
         mkdir debug
         cd debug
         cmake --version
-        cmake -E env ${{ matrix.cmake-init-env }} cmake ${{ matrix.cmake-args }} -DCMAKE_BUILD_TYPE=Debug -Werror=dev -DCLIENT=ON -DSERVER=OFF -DTOOLS=OFF -DDOWNLOAD_GTEST=ON -DDEV=ON -DCMAKE_RUNTIME_OUTPUT_DIRECTORY_DEBUG=. ..
+        cmake -E env ${{ matrix.cmake-init-env }} cmake ${{ matrix.cmake-args }} -DCMAKE_BUILD_TYPE=Debug -Werror=dev ${{ env.CMAKE_EXTRA }} -DCLIENT=ON -DSERVER=OFF -DTOOLS=OFF -DDOWNLOAD_GTEST=ON -DDEV=ON -DCMAKE_RUNTIME_OUTPUT_DIRECTORY_DEBUG=. ..
         cmake --build . --config Debug --target game-client
 
     - name: Test debug
@@ -92,7 +103,7 @@ jobs:
       run: |
         mkdir release
         cd release
-        cmake -E env ${{ matrix.cmake-init-env }} cmake ${{ matrix.cmake-args }} ${{ matrix.cmake-args-release }} -DCMAKE_BUILD_TYPE=Release -Werror=dev -DCLIENT=ON -DSERVER=OFF -DTOOLS=OFF -DDOWNLOAD_GTEST=ON -DCMAKE_RUNTIME_OUTPUT_DIRECTORY_RELEASE=. ..
+        cmake -E env ${{ matrix.cmake-init-env }} cmake ${{ matrix.cmake-args }} ${{ matrix.cmake-args-release }} -DCMAKE_BUILD_TYPE=Release -Werror=dev ${{ env.CMAKE_EXTRA }} -DCLIENT=ON -DSERVER=OFF -DTOOLS=OFF -DDOWNLOAD_GTEST=ON -DCMAKE_RUNTIME_OUTPUT_DIRECTORY_RELEASE=. ..
         cmake --build . --config Release --target game-client
 
     - name: Test release
