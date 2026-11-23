@@ -62,22 +62,73 @@ static unsigned char *read_file(const char *path, size_t *size)
 	return buf;
 }
 
+static int base64_value(char c)
+{
+	if(c >= 'A' && c <= 'Z')
+		return c - 'A';
+	if(c >= 'a' && c <= 'z')
+		return c - 'a' + 26;
+	if(c >= '0' && c <= '9')
+		return c - '0' + 52;
+	if(c == '+')
+		return 62;
+	if(c == '/')
+		return 63;
+	return -1;
+}
+
+static int seed_from_pem(const unsigned char *text, size_t size, unsigned char seed[32])
+{
+	static const char BEGIN[] = "-----BEGIN PRIVATE KEY-----";
+	static const unsigned char PREFIX[16] = {0x30, 0x2e, 0x02, 0x01, 0x00, 0x30, 0x05, 0x06, 0x03, 0x2b, 0x65, 0x70, 0x04, 0x22, 0x04, 0x20};
+	unsigned char der[64];
+	size_t length = 0;
+	unsigned value = 0;
+	int bits = 0;
+	if(size < sizeof(BEGIN) || memcmp(text, BEGIN, sizeof(BEGIN) - 1) != 0)
+		return -1;
+	for(size_t i = sizeof(BEGIN) - 1; i < size && text[i] != '-'; i++)
+	{
+		const int v = base64_value((char)text[i]);
+		if(v < 0)
+			continue;
+		value = (value << 6) | (unsigned)v;
+		bits += 6;
+		if(bits >= 8)
+		{
+			bits -= 8;
+			if(length >= sizeof(der))
+				return -1;
+			der[length++] = (unsigned char)(value >> bits);
+		}
+	}
+	if(length != 48 || memcmp(der, PREFIX, sizeof(PREFIX)) != 0)
+		return -1;
+	memcpy(seed, der + 16, 32);
+	crypto_wipe(der, sizeof(der));
+	return 0;
+}
+
 static int load_seed(const char *path, unsigned char seed[32])
 {
 	size_t size;
 	unsigned char *text = read_file(path, &size);
 	if(!text)
 		return -1;
-	char hex[65] = "";
-	if(size >= 64)
+	int result = seed_from_pem(text, size, seed);
+	if(result != 0)
 	{
-		memcpy(hex, text, 64);
-		hex[64] = '\0';
+		char hex[65] = "";
+		if(size >= 64)
+		{
+			memcpy(hex, text, 64);
+			hex[64] = '\0';
+		}
+		result = from_hex(hex, seed, 32);
+		crypto_wipe(hex, sizeof(hex));
 	}
 	crypto_wipe(text, size);
 	free(text);
-	const int result = from_hex(hex, seed, 32);
-	crypto_wipe(hex, sizeof(hex));
 	return result;
 }
 
