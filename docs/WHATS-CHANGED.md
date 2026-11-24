@@ -12,6 +12,8 @@ default" and "Ignore all changes".
 
 1. A privacy-relevant feature (it sends data, contacts a server, or stores an identity) is never switched on by default, by
    skipping, by closing the page, by "Set to sane default" or by "Ignore all changes". Only an explicit choice on that entry turns it on.
+   In one sentence: "Set to sane default" never turns a privacy feature on; it may leave a feature that is already on and
+   recommended on (the update check is the one such case today).
 2. No page over gameplay. It appears in the menu only, never while connected to a server or in a demo, editor or race.
 3. Works offline. The content is compiled into the client and covered by the signed update. No fetch, no translation service.
 4. Nothing is sent by this feature, not even that a page was shown.
@@ -33,16 +35,20 @@ One table, `src/game/client/kog_changes.cpp`, ordered by id. Each entry:
 | `recommended` | The value "Set to sane default" applies. Ignored for `InfoOnly` |
 | `old_default` | For `ChangedDefault`: the value before, used for pinning (section 2) |
 | `superseded_by` | Id of a later entry that replaces this one. Superseded entries are hidden when the later one is shown |
-| `reason` | Only for `NoDecision`: one line, why no decision is needed |
+| `introduced_in` | The release version that ships the entry (for example `1.4.0`, or `1.4.0-canary.57`) |
+| `reason` | For `NoDecision`: one line, why no decision is needed. For a privacy entry recommended on: why that is allowed (see the rule below) |
 
 Derived, not typed a second time:
 
 - the current value, the new default, minimum, maximum and type come from the config variable itself;
 - `privacy_relevant` is derived from a new flag `CFGFLAG_PRIVACY` on the config declaration (for example on `kog_hello`,
-  `kog_telemetry`, `cl_kog_auto_login`). The flag lives in one place, next to the variable. A test fails when a privacy entry
-  has `recommended` other than off, and when a variable with the flag has no entry or `NoDecision` marker;
-- the page in the docs is generated from the table by a script (`scripts/kog/gen_changes_doc.py`, run by the build, checked in
-  CI by comparing output), not written by hand.
+  `kog_telemetry`, `cl_kog_auto_login`, `kog_check_updates`). The flag lives in one place, next to the variable. Tests: a
+  variable with the flag has an entry or `NoDecision` marker; a privacy entry whose variable is new, or that sends data to a new
+  party, must have `recommended` off and default off; only an existing privacy-relevant default that is already on (the update
+  check) may have `recommended` on, and then the entry must carry a `reason` saying why;
+- the page in the docs, the release notes text, the GitHub release text and the website's per-release changes are generated
+  from the table by a script (`scripts/kog/gen_changes_doc.py`, checked in CI by comparing output), never written by hand a
+  second time.
 
 ### Coverage test (fewer values to maintain)
 
@@ -50,7 +56,9 @@ A generated baseline file lists every config variable of the last release as `na
 workflow rewrites it as part of cutting a release; nobody edits it. The test `kog_changes_test` compares the current
 variables with the baseline and fails when a variable was added, removed, renamed (a removed plus an added one), or had its
 default, range or type changed, unless the table has an entry with an id above the baseline's revision that names it in
-`settings` (any kind, including `NoDecision` with a reason). It also checks: ids ascend and are unique; every
+`settings` (any kind, including `NoDecision` with a reason). It also checks: ids ascend, are unique and are consecutive (no gaps);
+the current version has its entries listed (`introduced_in` equals the build's version for the newest ones, or the version
+has none and says `NoDecision`-only); every
 `superseded_by` points to a later id; every named setting exists or the entry is `Removed`/`Renamed`; a `recommended` value lies
 in the variable's range; no cycles in `superseded_by`; every title and text exists in the source language file.
 
@@ -108,13 +116,29 @@ Global actions at the top:
 
 - **Review each** (default focus): go through the entries one by one or as a list, then "Done" marks everything as seen.
 - **Set to sane default**: applies `recommended` for every entry that is not privacy-relevant and not info only. Privacy-relevant
-  entries stay off and are listed afterwards as "still off, turn on in Settings". Asks for confirmation with a count.
+  entries are never turned on: a new one stays off and is listed afterwards as "still off, turn on in Settings"; an existing
+  one that is already on and declared recommended on (the update check) is left on. Asks for confirmation with a count.
 - **Ignore all changes**: keeps all current values (including pinned old defaults), new features stay off, marks all as seen.
 - **Dismiss for now**: closes the page and does not advance the seen number; the banner returns next start.
 
 After Done, Set to sane default or Ignore all changes the number is set to the newest id and saved. The page stays reachable at
 Settings, "What changed", which shows the same list again for the current table (entries already decided show the current value,
 so it works as a review of the privacy-relevant switches too).
+
+## Release rule
+
+Every release carries its own changes. A release is not cut while the table lacks them.
+
+- The release workflows (`kog-release.yml` for stable, `kog-canary.yml` and `kog-dev.yml` through `kog-package.yml`) run the
+  coverage check against the baseline and fail when a setting was changed, added or removed without a table entry or a
+  `NoDecision` marker. The check is a required step before signing, not a review habit.
+- Each entry gets `introduced_in` with the release version. The release notes, the GitHub release text and the website's
+  changes per release are generated from the table, so there is no hand-written second copy.
+- An entry is never deleted, only superseded by a later one. A player who skips many releases therefore still sees every change
+  that still matters, collapsed to its end state.
+- The test checks that ids are consecutive and that the current version has its entries listed.
+- Entries for a feature the build does not contain (for example login in a stable build) are hidden on that build, but stay in
+  the table, so the same table serves every channel.
 
 ## 4. Hard rules in detail
 
@@ -238,8 +262,9 @@ interaction with the updater restart (checked by hand once).
 
 - `kog_hello` (default 0) and `kog_telemetry` (default 0) are the first real consumers: both privacy-relevant, so the page
   offers them as toggles that never come on by default or by "Set to sane default". `kog_telemetry` is opt-in only.
-- `kog_check_updates` (default 1) is a network request that sends nothing but the signed-manifest fetch (see `docs/PRIVACY.md`);
-  it is listed as a toggle. Whether it counts as privacy-relevant is an open question below.
+- `kog_check_updates` (default 1) contacts a server (see `docs/PRIVACY.md`), so it is privacy-relevant and shown on the page
+  as a toggle. It is the declared exception: its default is already on and its entry says why it may be recommended on, so
+  "Set to sane default" leaves it on. It is never turned on by the page if the player had it off.
 - `cl_kog_auto_login` and the planned key passphrase (stores or unlocks an identity): privacy-relevant. When the passphrase
   arrives, its entry is a `Choice` ("ask each start" / "keep unlocked this session"), recommended is the safer one, and it is
   never switched on by the page.
@@ -250,22 +275,23 @@ interaction with the updater restart (checked by hand once).
 Steps:
 
 1. After the open client pull requests (capability hello, key file and passphrase, user agent) merge: add the table, the flag
-   `CFGFLAG_PRIVACY`, the coverage test and the generated baseline, with entries only for what those pull requests added.
-   No UI yet. This alone stops anyone from adding a setting without a decision.
+   `CFGFLAG_PRIVACY`, the coverage test, the generated baseline and the release-rule enforcement in the release workflows
+   (check before signing, release notes generated from the table), with entries only for what those pull requests added.
+   No UI yet. This alone stops anyone from adding a setting, or cutting a release, without a decision.
 2. Minimal slice of UI: the Settings page "What changed" (a list with Keep and Use recommended per entry, global Ignore all), the
    seen number and fresh-install handling, kill switch.
 3. The start-page banner, collapsing, pinning of changed defaults, "Set to sane default".
-4. Translations, controller polish, docs generation, and the release workflow rewriting the baseline.
+4. Translations, controller polish, and the website's per-release changes generated from the table.
 
-Open questions for the owner, each with a recommendation:
+Decided by the owner:
 
-1. Is `kog_check_updates` privacy-relevant? Recommendation: yes for the page, because it contacts a server; recommended value
-   stays "on" only because it is already the default and is shown, not changed, by "Set to sane default".
-2. Show the page automatically, or only the banner? Recommendation: banner on the start page, never a modal.
-3. Pin old defaults for everyone, or only when the old value is a deliberate-looking choice? Recommendation: pin all, since
-   it cannot be told apart.
-4. One flag on config declarations (`CFGFLAG_PRIVACY`) versus a field in the table? Recommendation: the flag, one place.
-5. Keep the kill switch default 1 in every environment? Recommendation: yes; the feature is read-only until the player acts.
-6. Should "Dismiss for now" expire after a number of starts? Recommendation: no, the banner is small and stays.
-7. Show entries for a switched-off feature the player cannot use (for example login on stable)? Recommendation: hide them
-   when the build does not contain the feature.
+1. `kog_check_updates` is privacy-relevant and shown on the page, but "Set to sane default" keeps it on (rule 1 and the test
+   rule in section 1).
+2. A banner on the start page, never a modal.
+3. Old defaults are pinned for everyone.
+4. The privacy marker is the `CFGFLAG_PRIVACY` flag.
+5. The kill switch `cl_kog_changes_page` defaults to 1 in every environment.
+6. "Dismiss for now" never expires.
+7. Entries for features the build does not contain are hidden, and every release must carry its own changes (Release rule).
+
+Open questions: none.
