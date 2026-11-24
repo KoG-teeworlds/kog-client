@@ -158,9 +158,14 @@ bool CHttpRequestCurl::ConfigureHandle(CURL *pHandle)
 		break;
 	case REQUEST::POST:
 	case REQUEST::POST_JSON:
+	case REQUEST::POST_FORM:
 		if(m_Type == REQUEST::POST_JSON)
 		{
 			Header("Content-Type: application/json");
+		}
+		else if(m_Type == REQUEST::POST_FORM)
+		{
+			Header("Content-Type: application/x-www-form-urlencoded");
 		}
 		else
 		{
@@ -168,6 +173,9 @@ bool CHttpRequestCurl::ConfigureHandle(CURL *pHandle)
 		}
 		curl_easy_setopt(pHandle, CURLOPT_POSTFIELDS, m_pBody);
 		curl_easy_setopt(pHandle, CURLOPT_POSTFIELDSIZE, m_BodyLength);
+		break;
+	case REQUEST::DELETE_:
+		curl_easy_setopt(pHandle, CURLOPT_CUSTOMREQUEST, "DELETE");
 		break;
 	}
 

@@ -82,6 +82,19 @@ void IHttpRequest::PostJson(const char *pJson)
 	mem_copy(m_pBody, pJson, m_BodyLength);
 }
 
+void IHttpRequest::PostForm(const char *pForm)
+{
+	m_Type = REQUEST::POST_FORM;
+	m_BodyLength = str_length(pForm);
+	m_pBody = (unsigned char *)malloc(std::max((size_t)1, m_BodyLength));
+	mem_copy(m_pBody, pForm, m_BodyLength);
+}
+
+void IHttpRequest::Delete()
+{
+	m_Type = REQUEST::DELETE_;
+}
+
 void IHttpRequest::HeaderString(const char *pName, const char *pValue)
 {
 	char aHeader[256];
@@ -221,7 +234,10 @@ const char *IHttpRequest::GetRequestType(REQUEST Type)
 		return "HEAD";
 	case REQUEST::POST:
 	case REQUEST::POST_JSON:
+	case REQUEST::POST_FORM:
 		return "POST";
+	case REQUEST::DELETE_:
+		return "DELETE";
 	default:
 		dbg_assert_failed("Invalid Type: %d", (int)Type);
 	}

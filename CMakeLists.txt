@@ -84,6 +84,11 @@ if(NOT KOG_CHANNEL MATCHES "^(stable|canary|dev)$")
   message(FATAL_ERROR "KOG_CHANNEL must be stable, canary or dev")
 endif()
 add_compile_definitions(KOG_CLIENT_CHANNEL="${KOG_CHANNEL}")
+if(KOG_CHANNEL STREQUAL "stable")
+  add_compile_definitions(KOG_LOGIN_DEFAULT=0)
+else()
+  add_compile_definitions(KOG_LOGIN_DEFAULT=1)
+endif()
 if(NOT KOG_CHANNEL STREQUAL "stable")
   if(NOT KOG_BUILD_NUMBER MATCHES "^[0-9]+$")
     message(FATAL_ERROR "A ${KOG_CHANNEL} build needs -DKOG_BUILD_NUMBER=<number>")
@@ -2517,6 +2522,8 @@ set_src(ENGINE_SHARED GLOB_RECURSE src/engine/shared
   kernel.cpp
   kog_failsafe.cpp
   kog_failsafe.h
+  kog_login.cpp
+  kog_login.h
   kog_protocol.h
   kog_update.cpp
   kog_update.h
@@ -2770,6 +2777,8 @@ if(CLIENT)
     input.h
     keynames.cpp
     keynames.h
+    kog_keystore.cpp
+    kog_keystore.h
     kog_update_pubkey.h
     notifications.cpp
     notifications.h
@@ -2848,6 +2857,8 @@ if(CLIENT)
     components/key_binder.h
     components/kog/kog_hello.cpp
     components/kog/kog_hello.h
+    components/kog/kog_login.cpp
+    components/kog/kog_login.h
     components/local_server.cpp
     components/local_server.h
     components/mapimages.cpp
@@ -3662,6 +3673,7 @@ if(GTEST_FOUND OR DOWNLOAD_GTEST)
     json_test.cpp
     jsonwriter_test.cpp
     kog_failsafe_test.cpp
+    kog_login_test.cpp
     kog_update_test.cpp
     linereader_test.cpp
     localization_test.cpp
