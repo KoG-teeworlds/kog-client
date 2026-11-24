@@ -1097,16 +1097,6 @@ set_src(RUST_BRIDGE_SHARED GLOB_RECURSE src/rust-bridge
   # tidy-alphabetical-end
 )
 
-set_glob(RUST_MASTERSRV GLOB "rs;toml" src/mastersrv/src
-  # tidy-alphabetical-start
-  addr.rs
-  community_token.rs
-  config.rs
-  locations.rs
-  main.rs
-  # tidy-alphabetical-end
-)
-
 add_library(rust-bridge-shared EXCLUDE_FROM_ALL OBJECT ${RUST_BRIDGE_SHARED})
 list(APPEND TARGETS_OWN rust-bridge-shared)
 
