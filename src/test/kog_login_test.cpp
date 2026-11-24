@@ -399,7 +399,9 @@ TEST(KogLogin, DeviceNameIsNeutralAndNotTheHostName)
 	char aHost[256] = "";
 #if defined(CONF_FAMILY_UNIX)
 	if(gethostname(aHost, sizeof(aHost) - 1) == 0 && aHost[0] != '\0')
+	{
 		EXPECT_EQ(str_find_nocase(aName, aHost), nullptr) << aName;
+	}
 #endif
 }
 
