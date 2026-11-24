@@ -29,7 +29,7 @@ FLUSH PRIVILEGES;
 ```
 
 * **-DAUTOUPDATE=[ON|OFF]** <br>
-	Whether to enable the autoupdater. Packagers may want to disable this for their packages. Default value is ON for Windows and Linux.
+	Whether to enable the autoupdater. Default value is OFF on every platform (`CMakeLists.txt`). `kog-package.yml`, which builds the canary, dev and stable packages, passes `-DAUTOUPDATE=ON` on Linux, macOS and Windows; `kog-build.yml` (pull requests and `main`) does not. A Release build with it ON fails while the channel's update keys are placeholders (see `docs/UPDATE_CHANNEL.md`).
 
 * **-DCLIENT=[ON|OFF]** <br>
 	Whether to enable client compilation. If set to OFF, DDNet will not depend on Curl, Freetype, Ogg, Opus, Opusfile, and SDL2. Default value is ON.
