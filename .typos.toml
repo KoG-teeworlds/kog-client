@@ -24,6 +24,8 @@ extend-ignore-re = [
 	# macOS Big Sur, in docs/HOMEBREW.md and the Homebrew symbol :big_sur
 	'Big Sur',
 	'big_sur',
+	# licence name CC BY-NC-ND
+	'NC-ND',
 	'lod',
 	'LOD',
 	'Lod',
