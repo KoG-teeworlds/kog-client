@@ -54,6 +54,7 @@ class IHttpRequest
 	friend class IHttp;
 
 public:
+	static const char *const KOG_USER_AGENT_STRING;
 	IHttpRequest(const char *pUrl);
 	virtual ~IHttpRequest();
 
@@ -63,6 +64,8 @@ public:
 	void LogProgress(HTTPLOG LogProgress) { m_LogProgress = LogProgress; }
 	void SkipByFileTime(bool SkipByFileTime) { m_SkipByFileTime = SkipByFileTime; }
 	void IpResolve(IPRESOLVE IpResolve) { m_IpResolve = IpResolve; }
+	// The product token is the one of this client instead of the DDNet one. For requests made by KoG features only.
+	void KogUserAgent() { m_pUserAgent = KOG_USER_AGENT_STRING; }
 	void FailOnErrorStatus(bool FailOnErrorStatus) { m_FailOnErrorStatus = FailOnErrorStatus; }
 	// On by default. Turn it off for requests that carry a secret (a 307/308 would send the body again). A redirect
 	// then ends the request with its 3xx status. The emscripten backend cannot do this: the browser's fetch follows.
@@ -139,6 +142,7 @@ public:
 
 protected:
 	static const char *const USER_AGENT_STRING;
+	const char *m_pUserAgent = USER_AGENT_STRING;
 	enum class REQUEST
 	{
 		GET,

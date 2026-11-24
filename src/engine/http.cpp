@@ -236,6 +236,8 @@ static bool CalculateSha256(const char *pAbsoluteFilename, SHA256_DIGEST *pSha25
 
 const char *const IHttpRequest::USER_AGENT_STRING = GAME_NAME " " GAME_RELEASE_VERSION " (" CONF_PLATFORM_STRING "; " CONF_ARCH_STRING ")";
 
+const char *const IHttpRequest::KOG_USER_AGENT_STRING = KOG_CLIENT_EXECUTABLE "/" KOG_CLIENT_VERSION " (" CONF_PLATFORM_STRING "; " CONF_ARCH_STRING ")";
+
 const char *IHttpRequest::GetRequestType(REQUEST Type)
 {
 	switch(Type)

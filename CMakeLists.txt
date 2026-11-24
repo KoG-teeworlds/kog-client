@@ -3665,6 +3665,7 @@ if(GTEST_FOUND OR DOWNLOAD_GTEST)
     kog_failsafe_test.cpp
     kog_login_test.cpp
     kog_update_test.cpp
+    kog_user_agent_test.cpp
     linereader_test.cpp
     localization_test.cpp
     mapbugs_test.cpp
