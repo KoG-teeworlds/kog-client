@@ -32,6 +32,7 @@ Done:
 Planned, not built yet:
 
 - stable releases (the stable keys are placeholders)
+- a Homebrew tap for macOS: the design is in [docs/HOMEBREW.md](docs/HOMEBREW.md)
 - KoG messages between client and server, announced with capabilities
 - opt-in client-side network statistics
 
