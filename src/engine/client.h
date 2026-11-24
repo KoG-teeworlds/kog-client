@@ -438,6 +438,10 @@ public:
 	virtual int DDNetVersion() const = 0;
 	virtual const char *DDNetVersionStr() const = 0;
 
+	// KoG hello, see docs/KOG-HELLO.md. MakeHello fills the message and returns whether to send it.
+	virtual bool KogMakeHello(class CAbstractPacker *pPacker) = 0;
+	virtual void KogServerHello(CUnpacker *pUnpacker) = 0;
+
 	virtual void OnDummyDisconnect() = 0;
 	virtual void DummyResetInput() = 0;
 	virtual void Echo(const char *pString) = 0;
