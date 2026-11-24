@@ -19,3 +19,32 @@ jobs:
       contents: write
       id-token: write
       attestations: write
+
+  sign:
+    name: Sign and publish
+    needs: dev
+    if: needs.dev.outputs.manifest_version != ''
+    runs-on: ubuntu-latest
+    environment: dev-signing
+    permissions:
+      contents: read
+    env:
+      CHANNEL: dev
+      VERSION: ${{ needs.dev.outputs.manifest_version }}
+      RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: manifest-${{ needs.dev.outputs.manifest_version }}
+          path: out
+      - name: Sign and publish
+        env:
+          SIGNING_KEY: ${{ secrets.SIGNING_KEY }}
+          UPDATES_DEPLOY_KEY: ${{ secrets.UPDATES_DEPLOY_KEY }}
+        run: |
+          [ -n "$SIGNING_KEY" ] || { echo "::error::SIGNING_KEY is empty: the environment ${CHANNEL}-signing gave this job no secret of that name"; exit 1; }
+          [ -n "$UPDATES_DEPLOY_KEY" ] || { echo "::error::UPDATES_DEPLOY_KEY is empty"; exit 1; }
+          bash scripts/kog/sign_and_publish.sh "$CHANNEL" "$VERSION" out

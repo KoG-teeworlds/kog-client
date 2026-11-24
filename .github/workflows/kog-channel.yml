@@ -6,6 +6,13 @@ on:
       channel:
         type: string
         required: true
+    outputs:
+      manifest_version:
+        description: "The version whose manifest is ready to be signed; empty if nothing was built"
+        value: ${{ jobs.manifest.outputs.version }}
+
+# The signing job is not here: the secrets of an environment do not reach a job of a reusable workflow,
+# so kog-canary.yml and kog-dev.yml sign and publish the artifact manifest-<version>.
 
 permissions: {}
 
@@ -95,6 +102,8 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: read
+    outputs:
+      version: ${{ steps.made.outputs.version }}
     env:
       GH_TOKEN: ${{ github.token }}
       CHANNEL: ${{ inputs.channel }}
@@ -104,6 +113,7 @@ jobs:
         with:
           persist-credentials: false
       - name: Verify and make the manifest
+        id: made
         run: |
           tag="$CHANNEL-${VERSION##*.}"
           bash scripts/kog/verify_release.sh "$CHANNEL" "$tag" verified
@@ -114,37 +124,10 @@ jobs:
           mkdir out
           python3 scripts/kog/make_manifest.py finalize --draft verified/update.draft.json --sequence "$((previous + 1))" --days "$days" --out out/update.json
           cp verified/source.txt out/source.txt
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: manifest-${{ needs.prepare.outputs.version }}
           path: out
           if-no-files-found: error
           retention-days: 7
-
-  sign:
-    name: Sign and publish
-    needs: [prepare, manifest]
-    runs-on: ubuntu-latest
-    environment: ${{ inputs.channel }}-signing
-    permissions:
-      contents: read
-    env:
-      CHANNEL: ${{ inputs.channel }}
-      VERSION: ${{ needs.prepare.outputs.version }}
-      RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          persist-credentials: false
-      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
-        with:
-          name: manifest-${{ needs.prepare.outputs.version }}
-          path: out
-      - name: Sign and publish
-        env:
-          SIGNING_KEY: ${{ secrets.SIGNING_KEY }}
-          UPDATES_DEPLOY_KEY: ${{ secrets.UPDATES_DEPLOY_KEY }}
-        run: |
-          [ -n "$SIGNING_KEY" ] || { echo "::error::SIGNING_KEY is empty: the environment ${CHANNEL}-signing gave this job no secret of that name"; exit 1; }
-          echo "signing key: ${#SIGNING_KEY} characters"
-          bash scripts/kog/sign_and_publish.sh "$CHANNEL" "$VERSION" out
