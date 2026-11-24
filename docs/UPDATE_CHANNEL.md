@@ -68,7 +68,8 @@ Stable:
    `published`. The commit message holds the manifest SHA-256, the source commit and the run URL.
 
 Canary and dev run the same checks in `kog-channel.yml`, with one signature and the environments `canary-signing` and
-`dev-signing` (restricted to `main` and `dev`). They are never built for forks or pull requests.
+`dev-signing` (restricted to `main` and `dev`). The signing job is in `kog-canary.yml` and `kog-dev.yml`, not in the reusable
+workflow: the secrets of an environment do not reach a job of a reusable workflow. They are never built for forks or pull requests.
 
 `scripts/kog/verify_published.sh [channel]` verifies what the servers serve, from the keys in the repository, on both hosts.
 
