@@ -36,6 +36,8 @@ Planned, not built yet:
 Same as DDNet, see [docs/BUILDING.md](docs/BUILDING.md). The updater needs `-DAUTOUPDATE=ON`. Run the tests with
 `cmake --build . --target run_tests`.
 
+How a release is made and signed (owner guide): [docs/RELEASING.md](docs/RELEASING.md).
+
 ## Contributing
 
 See [CONTRIBUTING.md](CONTRIBUTING.md). Security reports: [SECURITY.md](SECURITY.md).
