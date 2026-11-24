@@ -3,7 +3,7 @@ set -euo pipefail
 
 # Puts a signed manifest into the published branch of the updates repo, after checking both signatures once more.
 # usage: publish_signed.sh CHANNEL VERSION DIR MESSAGE     (DIR: update.json, update.json.sig, update.json.sigb)
-# env: GH_TOKEN with write access to the updates repo, or UPDATES_DEPLOY_KEY (a private key with write access); SOURCE_COMMIT, RUN_URL for the audit record; SITE_DIR for the site files
+# env: GH_TOKEN with write access to the updates repo, or UPDATES_DEPLOY_KEY (a private key with write access); SOURCE_COMMIT, RUN_URL for the audit record; SITE_DIR for the site files (default: site/ on main of the updates repo)
 channel=${1:?channel}
 version=${2:?version}
 dir=${3:?dir}
@@ -59,7 +59,11 @@ old, new = (json.load(open(path)) for path in sys.argv[1:3])
 assert new["sequence"] > old["sequence"], "the sequence does not rise: %d after %d" % (new["sequence"], old["sequence"])
 PY
 fi
-if [ -n "${SITE_DIR:-}" ]; then cp -R "$SITE_DIR/." "$published/"; fi
+site_dir=${SITE_DIR:-}
+if [ -z "$site_dir" ] && git_remote clone --quiet --depth 1 --branch main "$remote" "$work/main" 2>/dev/null && [ -d "$work/main/site" ]; then
+  site_dir="$work/main/site"
+fi
+if [ -n "$site_dir" ]; then cp -R "$site_dir/." "$published/"; fi
 mkdir -p "$published/$channel/releases/$version"
 for f in update.json update.json.sig update.json.sigb; do
   [ -f "$dir/$f" ] || continue
