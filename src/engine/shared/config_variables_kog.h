@@ -17,6 +17,7 @@ MACRO_CONFIG_STR(KogUpdateUrl, kog_update_url, 256, "", CFGFLAG_CLIENT | CFGFLAG
 MACRO_CONFIG_INT(ClKogLogin, cl_kog_login, KOG_LOGIN_DEFAULT, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Switch for Log in with KoG (browser login, device key). Off: no browser flow and no automatic login; the /login code still works")
 MACRO_CONFIG_INT(ClKogAutoLogin, cl_kog_auto_login, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Prove this device to KoG servers when joining (needs the login protocol on the server; off until it exists)")
 MACRO_CONFIG_STR(ClKogAccountUrl, cl_kog_account_url, 128, "https://kog.tw", CFGFLAG_CLIENT | CFGFLAG_SAVE, "Base URL of the KoG account server (https), for staging")
-MACRO_CONFIG_STR(ClKogDeviceName, cl_kog_device_name, 161, "", CFGFLAG_CLIENT | CFGFLAG_SAVE, "Name of this device on your account, at most 40 characters (empty = the host name)")
+MACRO_CONFIG_STR(ClKogAccountExtraOrigins, cl_kog_account_extra_origins, 256, "", CFGFLAG_CLIENT | CFGFLAG_SAVE, "Origins besides the account URL's own and *.kog.tw that its login description may name (https://host[:port], separated by spaces)")
+MACRO_CONFIG_STR(ClKogDeviceName, cl_kog_device_name, 161, "", CFGFLAG_CLIENT | CFGFLAG_SAVE, "Name of this device on your account, at most 40 characters (empty = KoG Client plus the system)")
 MACRO_CONFIG_STR(ClKogAccountName, cl_kog_account_name, 64, "", CFGFLAG_CLIENT | CFGFLAG_SAVE, "Account name shown in the settings after Log in with KoG (not a secret)")
 MACRO_CONFIG_STR(KogInstallId, kog_install_id, 40, "", CFGFLAG_CLIENT | CFGFLAG_SAVE, "Random value of this install that picks its place in a staged rollout. Never sent anywhere")

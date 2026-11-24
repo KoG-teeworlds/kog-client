@@ -64,6 +64,13 @@ public:
 	void SkipByFileTime(bool SkipByFileTime) { m_SkipByFileTime = SkipByFileTime; }
 	void IpResolve(IPRESOLVE IpResolve) { m_IpResolve = IpResolve; }
 	void FailOnErrorStatus(bool FailOnErrorStatus) { m_FailOnErrorStatus = FailOnErrorStatus; }
+	// On by default. Turn it off for requests that carry a secret (a 307/308 would send the body again). A redirect
+	// then ends the request with its 3xx status. The emscripten backend cannot do this: the browser's fetch follows.
+	void FollowRedirects(bool FollowRedirects) { m_FollowRedirects = FollowRedirects; }
+	// Overwrite the body, the result and the header copies when the request is freed. For tokens and codes.
+	void Sensitive(bool Sensitive) { m_Sensitive = Sensitive; }
+	// Same, at once. Only call it when the request is done.
+	virtual void WipeSecrets();
 	// Download to memory only. Get the result via `Result*`.
 	void WriteToMemory();
 	// Download to filesystem and memory.
@@ -156,6 +163,8 @@ protected:
 	bool m_SkipByFileTime = true;
 	IPRESOLVE m_IpResolve = IPRESOLVE::WHATEVER;
 	bool m_FailOnErrorStatus = true;
+	bool m_FollowRedirects = true;
+	bool m_Sensitive = false;
 	bool m_ValidateBeforeOverwrite = false;
 	std::optional<SHA256_DIGEST> m_ExpectedSha256 = std::nullopt;
 	int64_t m_IfModifiedSince = -1;

@@ -1,5 +1,6 @@
 #include "kog_login.h"
 
+#include <base/detect.h>
 #include <base/hash.h>
 #include <base/mem.h>
 #include <base/secure.h>
@@ -9,12 +10,6 @@
 #include <engine/external/monocypher/monocypher-ed25519.h>
 
 #include <cstring>
-
-#if defined(CONF_FAMILY_WINDOWS)
-#include <windows.h>
-#elif defined(CONF_FAMILY_UNIX)
-#include <unistd.h>
-#endif
 
 namespace KogLogin {
 
@@ -173,20 +168,15 @@ void CutDeviceName(char *pDst, size_t DstSize, const char *pSrc)
 
 void DefaultDeviceName(char *pBuf, size_t Size)
 {
-	char aHost[256] = "";
-#if defined(CONF_FAMILY_WINDOWS)
-	DWORD Length = sizeof(aHost);
-	if(!GetComputerNameA(aHost, &Length))
-		aHost[0] = '\0';
-#elif defined(CONF_FAMILY_UNIX)
-	if(gethostname(aHost, sizeof(aHost) - 1) != 0)
-		aHost[0] = '\0';
-	aHost[sizeof(aHost) - 1] = '\0';
+#if defined(CONF_PLATFORM_MACOS)
+	CutDeviceName(pBuf, Size, "KoG Client (macOS)");
+#elif defined(CONF_FAMILY_WINDOWS)
+	CutDeviceName(pBuf, Size, "KoG Client (Windows)");
+#elif defined(CONF_PLATFORM_LINUX)
+	CutDeviceName(pBuf, Size, "KoG Client (Linux)");
+#else
+	CutDeviceName(pBuf, Size, "KoG Client");
 #endif
-	if(aHost[0] == '\0')
-		str_copy(aHost, "Unknown device");
-	str_sanitize_cc(aHost);
-	CutDeviceName(pBuf, Size, aHost);
 }
 
 bool BuildAuthorizeUrl(char *pBuf, size_t Size, const char *pAuthorizeEndpoint, const char *pRedirectUri, const char *pState, const char *pChallenge, const char *pDeviceName)
@@ -324,37 +314,65 @@ void PublicKeyFromSeed(const uint8_t (&aSeed)[SEED_SIZE], uint8_t (&aPublicKey)[
 	Wipe(aSeedCopy, sizeof(aSeedCopy));
 }
 
-size_t BuildChallengeMessage(uint8_t *pOut, size_t OutSize, const char *pServerAddress, const uint8_t *pNonce, size_t NonceSize, const char *pDeviceId)
+bool ParseUuid(const char *pText, uint8_t (&aUuid)[UUID_SIZE])
+{
+	if(str_length(pText) != 36)
+		return false;
+	size_t Out = 0;
+	for(size_t i = 0; i < 36; i++)
+	{
+		if(i == 8 || i == 13 || i == 18 || i == 23)
+		{
+			if(pText[i] != '-')
+				return false;
+			continue;
+		}
+		const int Hi = HexValue(pText[i]);
+		const int Lo = HexValue(pText[i + 1]);
+		if(Hi < 0 || Lo < 0)
+			return false;
+		aUuid[Out++] = (uint8_t)(Hi * 16 + Lo);
+		i++;
+	}
+	return Out == UUID_SIZE;
+}
+
+size_t BuildChallengeMessage(uint8_t *pOut, size_t OutSize, const char *pServerAddress, const uint8_t *pNonce, size_t NonceSize, const uint8_t (&aDeviceId)[UUID_SIZE], const uint8_t (&aSessionId)[UUID_SIZE])
 {
 	const size_t PrefixLength = str_length(CHALLENGE_PREFIX);
 	const size_t AddressLength = str_length(pServerAddress);
-	const size_t IdLength = str_length(pDeviceId);
-	const size_t Total = PrefixLength + AddressLength + NonceSize + IdLength;
+	if(AddressLength == 0 || AddressLength > 255 || NonceSize != NONCE_SIZE)
+		return 0;
+	const size_t Total = PrefixLength + 1 + 1 + AddressLength + NONCE_SIZE + UUID_SIZE + UUID_SIZE;
 	if(Total > OutSize)
 		return 0;
 	size_t Pos = 0;
 	mem_copy(pOut + Pos, CHALLENGE_PREFIX, PrefixLength);
 	Pos += PrefixLength;
+	pOut[Pos++] = 0;
+	pOut[Pos++] = (uint8_t)AddressLength;
 	mem_copy(pOut + Pos, pServerAddress, AddressLength);
 	Pos += AddressLength;
-	if(NonceSize)
-		mem_copy(pOut + Pos, pNonce, NonceSize);
-	Pos += NonceSize;
-	mem_copy(pOut + Pos, pDeviceId, IdLength);
+	mem_copy(pOut + Pos, pNonce, NONCE_SIZE);
+	Pos += NONCE_SIZE;
+	mem_copy(pOut + Pos, aDeviceId, UUID_SIZE);
+	Pos += UUID_SIZE;
+	mem_copy(pOut + Pos, aSessionId, UUID_SIZE);
 	return Total;
 }
 
 enum
 {
-	MAX_MESSAGE = 1024,
+	MAX_MESSAGE = 512,
 };
 
-bool SignChallenge(const uint8_t (&aSeed)[SEED_SIZE], const char *pServerAddress, const uint8_t *pNonce, size_t NonceSize, const char *pDeviceId, uint8_t (&aSignature)[SIGNATURE_SIZE])
+bool SignChallenge(const uint8_t (&aSeed)[SEED_SIZE], const char *pServerAddress, const uint8_t *pNonce, size_t NonceSize, const char *pDeviceId, const uint8_t (&aSessionId)[UUID_SIZE], uint8_t (&aSignature)[SIGNATURE_SIZE])
 {
-	if(pServerAddress[0] == '\0' || pDeviceId[0] == '\0')
+	uint8_t aDevice[UUID_SIZE];
+	if(!ParseUuid(pDeviceId, aDevice))
 		return false;
 	uint8_t aMessage[MAX_MESSAGE];
-	const size_t Length = BuildChallengeMessage(aMessage, sizeof(aMessage), pServerAddress, pNonce, NonceSize, pDeviceId);
+	const size_t Length = BuildChallengeMessage(aMessage, sizeof(aMessage), pServerAddress, pNonce, NonceSize, aDevice, aSessionId);
 	if(Length == 0)
 		return false;
 	uint8_t aSeedCopy[SEED_SIZE];
@@ -368,11 +386,144 @@ bool SignChallenge(const uint8_t (&aSeed)[SEED_SIZE], const char *pServerAddress
 	return true;
 }
 
-bool VerifyChallenge(const uint8_t (&aPublicKey)[PUBLIC_KEY_SIZE], const char *pServerAddress, const uint8_t *pNonce, size_t NonceSize, const char *pDeviceId, const uint8_t (&aSignature)[SIGNATURE_SIZE])
+bool VerifyChallenge(const uint8_t (&aPublicKey)[PUBLIC_KEY_SIZE], const char *pServerAddress, const uint8_t *pNonce, size_t NonceSize, const char *pDeviceId, const uint8_t (&aSessionId)[UUID_SIZE], const uint8_t (&aSignature)[SIGNATURE_SIZE])
 {
+	uint8_t aDevice[UUID_SIZE];
+	if(!ParseUuid(pDeviceId, aDevice))
+		return false;
 	uint8_t aMessage[MAX_MESSAGE];
-	const size_t Length = BuildChallengeMessage(aMessage, sizeof(aMessage), pServerAddress, pNonce, NonceSize, pDeviceId);
+	const size_t Length = BuildChallengeMessage(aMessage, sizeof(aMessage), pServerAddress, pNonce, NonceSize, aDevice, aSessionId);
 	return Length != 0 && crypto_ed25519_check(aSignature, aPublicKey, aMessage, Length) == 0;
+}
+
+// Origin of an https/http URL in lower case, with the default port made explicit. False for anything odd.
+static bool ParseOrigin(const char *pUrl, size_t UrlLength, char (&aScheme)[8], char (&aHost)[256], int *pPort, bool *pHasPath)
+{
+	const char *pRest;
+	if(str_startswith(pUrl, "https://"))
+	{
+		str_copy(aScheme, "https");
+		pRest = pUrl + 8;
+		*pPort = 443;
+	}
+	else if(str_startswith(pUrl, "http://"))
+	{
+		str_copy(aScheme, "http");
+		pRest = pUrl + 7;
+		*pPort = 80;
+	}
+	else
+		return false;
+	const char *pEnd = pUrl + UrlLength;
+	const char *pAuthorityEnd = pRest;
+	while(pAuthorityEnd < pEnd && *pAuthorityEnd != '/' && *pAuthorityEnd != '?' && *pAuthorityEnd != '#')
+		pAuthorityEnd++;
+	*pHasPath = pAuthorityEnd < pEnd;
+	for(const char *p = pUrl; p < pEnd; p++)
+	{
+		if((unsigned char)*p <= ' ' || (unsigned char)*p >= 0x7f || *p == '\\')
+			return false;
+	}
+	for(const char *p = pRest; p < pAuthorityEnd; p++)
+	{
+		if(*p == '@')
+			return false;
+	}
+	const char *pHostEnd = pAuthorityEnd;
+	const char *pColon = nullptr;
+	if(pRest < pAuthorityEnd && *pRest == '[')
+	{
+		const char *pClose = static_cast<const char *>(memchr(pRest, ']', pAuthorityEnd - pRest));
+		if(!pClose)
+			return false;
+		pHostEnd = pClose + 1;
+		if(pHostEnd < pAuthorityEnd)
+		{
+			if(*pHostEnd != ':')
+				return false;
+			pColon = pHostEnd;
+		}
+	}
+	else
+	{
+		for(const char *p = pRest; p < pAuthorityEnd; p++)
+		{
+			if(*p == ':')
+			{
+				pColon = p;
+				pHostEnd = p;
+				break;
+			}
+		}
+	}
+	if(pHostEnd == pRest || (size_t)(pHostEnd - pRest) >= sizeof(aHost))
+		return false;
+	for(size_t i = 0; i < (size_t)(pHostEnd - pRest); i++)
+	{
+		const char c = pRest[i];
+		aHost[i] = (c >= 'A' && c <= 'Z') ? (char)(c - 'A' + 'a') : c;
+	}
+	aHost[pHostEnd - pRest] = '\0';
+	if(pColon)
+	{
+		const char *pDigits = pColon + 1;
+		if(pDigits == pAuthorityEnd || pAuthorityEnd - pDigits > 5)
+			return false;
+		int Port = 0;
+		for(const char *p = pDigits; p < pAuthorityEnd; p++)
+		{
+			if(*p < '0' || *p > '9')
+				return false;
+			Port = Port * 10 + (*p - '0');
+		}
+		if(Port < 1 || Port > 65535)
+			return false;
+		*pPort = Port;
+	}
+	return true;
+}
+
+static bool OriginAllowedByList(const char *pScheme, const char *pHost, int Port, const char *pList)
+{
+	const char *p = pList;
+	while(*p)
+	{
+		while(*p == ' ' || *p == ',')
+			p++;
+		const char *pEnd = p;
+		while(*pEnd && *pEnd != ' ' && *pEnd != ',')
+			pEnd++;
+		if(pEnd > p)
+		{
+			char aScheme[8], aHost[256];
+			int ListPort;
+			bool HasPath;
+			if(ParseOrigin(p, pEnd - p, aScheme, aHost, &ListPort, &HasPath) && !HasPath && str_comp(aScheme, "https") == 0 &&
+				str_comp(aScheme, pScheme) == 0 && str_comp(aHost, pHost) == 0 && ListPort == Port)
+				return true;
+		}
+		p = pEnd;
+	}
+	return false;
+}
+
+bool EndpointAllowed(const char *pBaseUrl, const char *pEndpoint, const char *pExtraOrigins)
+{
+	char aBaseScheme[8], aBaseHost[256], aScheme[8], aHost[256];
+	int BasePort, Port;
+	bool HasPath;
+	if(!ParseOrigin(pBaseUrl, str_length(pBaseUrl), aBaseScheme, aBaseHost, &BasePort, &HasPath) ||
+		!ParseOrigin(pEndpoint, str_length(pEndpoint), aScheme, aHost, &Port, &HasPath))
+		return false;
+	if(str_comp(aBaseScheme, aScheme) == 0 && str_comp(aBaseHost, aHost) == 0 && BasePort == Port)
+		return true;
+	if(str_comp(aScheme, "https") != 0)
+		return false;
+	const size_t HostLength = str_length(aHost);
+	static const char SUFFIX[] = ".kog.tw";
+	if(Port == 443 && HostLength > sizeof(SUFFIX) - 1 && str_comp(aHost + HostLength - (sizeof(SUFFIX) - 1), SUFFIX) == 0)
+		return true;
+	return OriginAllowedByList(aScheme, aHost, Port, pExtraOrigins);
 }
 
 bool EncodeKey(const SDeviceKey &Key, char *pBuf, size_t Size)
@@ -477,17 +628,18 @@ void CLoopbackListener::RedirectUri(char *pBuf, size_t Size) const
 	str_format(pBuf, Size, "http://%s:%d%s", m_Ipv6 ? "[::1]" : "127.0.0.1", m_Port, CALLBACK_PATH);
 }
 
-void CLoopbackListener::CloseConn()
+void CLoopbackListener::CloseConn(SConn &Conn)
 {
-	if(m_Conn)
-		net_tcp_close(m_Conn);
-	m_Conn = nullptr;
-	m_RequestLength = 0;
+	if(Conn.m_Socket)
+		net_tcp_close(Conn.m_Socket);
+	Conn.m_Socket = nullptr;
+	Conn.m_Length = 0;
 }
 
 void CLoopbackListener::Stop()
 {
-	CloseConn();
+	for(SConn &Conn : m_aConns)
+		CloseConn(Conn);
 	if(m_Listen)
 		net_tcp_close(m_Listen);
 	m_Listen = nullptr;
@@ -496,49 +648,52 @@ void CLoopbackListener::Stop()
 		m_State = EState::CLOSED;
 }
 
-void CLoopbackListener::Answer(const char *pStatus, const char *pBody)
+void CLoopbackListener::Answer(SConn &Conn, const char *pStatus, const char *pBody)
 {
 	char aHead[256];
 	const int BodyLength = str_length(pBody);
 	const int HeadLength = str_format(aHead, sizeof(aHead), "HTTP/1.1 %s\r\nContent-Type: text/html; charset=utf-8\r\nContent-Length: %d\r\nCache-Control: no-store\r\nReferrer-Policy: no-referrer\r\nConnection: close\r\n\r\n", pStatus, BodyLength);
-	net_tcp_send(m_Conn, aHead, HeadLength);
-	net_tcp_send(m_Conn, pBody, BodyLength);
+	net_tcp_send(Conn.m_Socket, aHead, HeadLength);
+	net_tcp_send(Conn.m_Socket, pBody, BodyLength);
 }
 
-void CLoopbackListener::HandleRequest()
+void CLoopbackListener::HandleRequest(SConn &Conn)
 {
 	char aError[128];
 	char aCode[MAX_CODE_LENGTH + 1];
-	const ECallback Result = ParseCallback(m_aRequest, m_RequestLength, m_aState, aCode, sizeof(aCode), aError, sizeof(aError));
+	const ECallback Result = ParseCallback(Conn.m_aRequest, Conn.m_Length, m_aState, aCode, sizeof(aCode), aError, sizeof(aError));
 	switch(Result)
 	{
 	case ECallback::CODE:
 		str_copy(m_aCode, aCode);
-		Answer("200 OK", PAGE_OK);
+		Answer(Conn, "200 OK", PAGE_OK);
 		m_State = EState::GOT_CODE;
 		break;
 	case ECallback::SERVER_ERROR:
 		str_copy(m_aError, aError);
-		Answer("200 OK", PAGE_OK);
+		Answer(Conn, "200 OK", PAGE_OK);
 		m_State = EState::SERVER_ERROR;
 		break;
 	case ECallback::BAD_STATE:
 	case ECallback::MISSING_CODE:
 	case ECallback::MALFORMED:
-		Answer("400 Bad Request", PAGE_NO);
+		Answer(Conn, "400 Bad Request", PAGE_NO);
 		break;
 	case ECallback::WRONG_METHOD:
-		Answer("405 Method Not Allowed", PAGE_NO);
+		Answer(Conn, "405 Method Not Allowed", PAGE_NO);
 		break;
 	case ECallback::WRONG_PATH:
-		Answer("404 Not Found", PAGE_NO);
+		Answer(Conn, "404 Not Found", PAGE_NO);
 		break;
 	}
 	Wipe(aCode, sizeof(aCode));
-	CloseConn();
+	Wipe(Conn.m_aRequest, Conn.m_Length);
+	CloseConn(Conn);
 	if(m_State == EState::GOT_CODE || m_State == EState::SERVER_ERROR)
 	{
 		// the first matching request is the only one
+		for(SConn &Other : m_aConns)
+			CloseConn(Other);
 		net_tcp_close(m_Listen);
 		m_Listen = nullptr;
 		Wipe(m_aState, sizeof(m_aState));
@@ -558,40 +713,55 @@ CLoopbackListener::EState CLoopbackListener::Poll()
 		return m_State;
 	}
 
-	if(!m_Conn)
+	for(int i = 0; i < MAX_CONNECTIONS; i++)
 	{
-		NETSOCKET New = nullptr;
-		NETADDR From;
-		if(net_tcp_accept(m_Listen, &New, &From) >= 0 && New)
+		SConn *pFree = nullptr;
+		for(SConn &Conn : m_aConns)
 		{
-			m_Conn = New;
-			net_set_non_blocking(m_Conn);
-			m_RequestLength = 0;
-			m_ConnDeadline = Now + time_freq() * 5;
-		}
-	}
-	if(m_Conn)
-	{
-		if(Now > m_ConnDeadline)
-		{
-			CloseConn();
-			return m_State;
-		}
-		while(net_socket_read_wait(m_Conn, std::chrono::nanoseconds(0)) > 0)
-		{
-			const int Bytes = net_tcp_recv(m_Conn, m_aRequest + m_RequestLength, (int)(sizeof(m_aRequest) - m_RequestLength));
-			if(Bytes <= 0)
+			if(!Conn.m_Socket)
 			{
-				CloseConn();
-				return m_State;
-			}
-			m_RequestLength += Bytes;
-			if(memchr(m_aRequest, '\n', m_RequestLength) || m_RequestLength >= sizeof(m_aRequest))
-			{
-				HandleRequest();
+				pFree = &Conn;
 				break;
 			}
 		}
+		if(!pFree)
+			break;
+		NETSOCKET New = nullptr;
+		NETADDR From;
+		if(net_tcp_accept(m_Listen, &New, &From) < 0 || !New)
+			break;
+		pFree->m_Socket = New;
+		net_set_non_blocking(New);
+		pFree->m_Length = 0;
+		pFree->m_Deadline = Now + time_freq() * 5;
+	}
+
+	for(SConn &Conn : m_aConns)
+	{
+		if(!Conn.m_Socket)
+			continue;
+		if(Now > Conn.m_Deadline)
+		{
+			CloseConn(Conn);
+			continue;
+		}
+		while(Conn.m_Socket && net_socket_read_wait(Conn.m_Socket, std::chrono::nanoseconds(0)) > 0)
+		{
+			const int Bytes = net_tcp_recv(Conn.m_Socket, Conn.m_aRequest + Conn.m_Length, (int)(sizeof(Conn.m_aRequest) - Conn.m_Length));
+			if(Bytes <= 0)
+			{
+				CloseConn(Conn);
+				break;
+			}
+			Conn.m_Length += Bytes;
+			if(memchr(Conn.m_aRequest, '\n', Conn.m_Length) || Conn.m_Length >= sizeof(Conn.m_aRequest))
+			{
+				HandleRequest(Conn);
+				break;
+			}
+		}
+		if(m_State != EState::LISTENING)
+			break;
 	}
 	return m_State;
 }

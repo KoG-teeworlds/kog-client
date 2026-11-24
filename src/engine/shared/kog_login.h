@@ -16,7 +16,11 @@ enum
 	STATE_LENGTH = 32,
 	CHALLENGE_LENGTH = 43,
 	MAX_DEVICE_NAME = 40,
-	MAX_CODE_LENGTH = 1024,
+	MAX_CODE_LENGTH = 4096,
+	MAX_REQUEST_SIZE = 8192,
+	MAX_CONNECTIONS = 4,
+	UUID_SIZE = 16,
+	NONCE_SIZE = 32,
 	SEED_SIZE = 32,
 	PUBLIC_KEY_SIZE = 32,
 	SIGNATURE_SIZE = 64,
@@ -38,7 +42,7 @@ void MakeVerifier(char (&aVerifier)[VERIFIER_LENGTH + 1]);
 void MakeState(char (&aState)[STATE_LENGTH + 1]);
 void CodeChallenge(const char *pVerifier, char (&aChallenge)[CHALLENGE_LENGTH + 1]);
 
-// The host name cut to 40 bytes at a character boundary
+// A neutral name for the platform, never the host name
 void DefaultDeviceName(char *pBuf, size_t Size);
 void CutDeviceName(char *pDst, size_t DstSize, const char *pSrc);
 
@@ -68,10 +72,21 @@ void GenerateSeed(uint8_t (&aSeed)[SEED_SIZE]);
 void PublicKeyFromSeed(const uint8_t (&aSeed)[SEED_SIZE], uint8_t (&aPublicKey)[PUBLIC_KEY_SIZE]);
 void Wipe(void *pData, size_t Size);
 
-// Bytes that are signed: "KoG-login-v1" || server host:port as dialed || nonce || device id, concatenated as they are
-size_t BuildChallengeMessage(uint8_t *pOut, size_t OutSize, const char *pServerAddress, const uint8_t *pNonce, size_t NonceSize, const char *pDeviceId);
-bool SignChallenge(const uint8_t (&aSeed)[SEED_SIZE], const char *pServerAddress, const uint8_t *pNonce, size_t NonceSize, const char *pDeviceId, uint8_t (&aSignature)[SIGNATURE_SIZE]);
-bool VerifyChallenge(const uint8_t (&aPublicKey)[PUBLIC_KEY_SIZE], const char *pServerAddress, const uint8_t *pNonce, size_t NonceSize, const char *pDeviceId, const uint8_t (&aSignature)[SIGNATURE_SIZE]);
+// "8-4-4-4-12" hex to 16 bytes. False for anything else
+bool ParseUuid(const char *pText, uint8_t (&aUuid)[UUID_SIZE]);
+
+// Bytes that are signed: "KoG-login-v1" 0x00 || u8 len(addr) || addr || nonce[32] || device_id[16] || session_id[16].
+// Length prefixed and fixed width, so two different tuples never give the same bytes. Returns 0 if it does not fit,
+// the address is empty or longer than 255 bytes, or the nonce is not 32 bytes.
+size_t BuildChallengeMessage(uint8_t *pOut, size_t OutSize, const char *pServerAddress, const uint8_t *pNonce, size_t NonceSize, const uint8_t (&aDeviceId)[UUID_SIZE], const uint8_t (&aSessionId)[UUID_SIZE]);
+// pDeviceId is the UUID text of the device as the account server issued it
+bool SignChallenge(const uint8_t (&aSeed)[SEED_SIZE], const char *pServerAddress, const uint8_t *pNonce, size_t NonceSize, const char *pDeviceId, const uint8_t (&aSessionId)[UUID_SIZE], uint8_t (&aSignature)[SIGNATURE_SIZE]);
+bool VerifyChallenge(const uint8_t (&aPublicKey)[PUBLIC_KEY_SIZE], const char *pServerAddress, const uint8_t *pNonce, size_t NonceSize, const char *pDeviceId, const uint8_t (&aSessionId)[UUID_SIZE], const uint8_t (&aSignature)[SIGNATURE_SIZE]);
+
+// Whether an endpoint named by the discovery document may be used. It must be https (http only if the base is http and
+// the same origin) and have the origin of pBaseUrl, or a host ending in ".kog.tw" on the default https port, or an origin
+// listed in pExtraOrigins (separated by spaces or commas, each "https://host[:port]").
+bool EndpointAllowed(const char *pBaseUrl, const char *pEndpoint, const char *pExtraOrigins);
 
 // The blob that the keystore holds: version, device id, seed
 bool EncodeKey(const SDeviceKey &Key, char *pBuf, size_t Size);
@@ -89,7 +104,9 @@ struct SJoinDecision
 // Whether this client may answer a login challenge of the server it is on. Vanilla and other servers: never.
 bool MayAnswerChallenge(const SJoinDecision &Decision);
 
-// Wait for one request on 127.0.0.1 (or ::1 if that does not work), accept the first one that matches, then close.
+// Wait on 127.0.0.1 (or ::1 if that does not work) for the request GET /callback with the right state, then close.
+// Up to MAX_CONNECTIONS connections are open at once, so a connection that only sits there (a browser preconnect, a
+// foreign process) does not use up the single chance. Every connection has 5 seconds to send its request line.
 class CLoopbackListener
 {
 public:
@@ -122,21 +139,25 @@ public:
 
 private:
 	NETSOCKET m_Listen = nullptr;
-	NETSOCKET m_Conn = nullptr;
+	struct SConn
+	{
+		NETSOCKET m_Socket = nullptr;
+		int64_t m_Deadline = 0;
+		size_t m_Length = 0;
+		char m_aRequest[MAX_REQUEST_SIZE];
+	};
+	SConn m_aConns[MAX_CONNECTIONS];
 	int m_Port = 0;
 	bool m_Ipv6 = false;
 	EState m_State = EState::IDLE;
 	int64_t m_Deadline = 0;
-	int64_t m_ConnDeadline = 0;
 	char m_aState[STATE_LENGTH + 1] = "";
-	char m_aRequest[4096];
-	size_t m_RequestLength = 0;
 	char m_aCode[MAX_CODE_LENGTH + 1] = "";
 	char m_aError[128] = "";
 
-	void CloseConn();
-	void Answer(const char *pStatus, const char *pBody);
-	void HandleRequest();
+	void CloseConn(SConn &Conn);
+	void Answer(SConn &Conn, const char *pStatus, const char *pBody);
+	void HandleRequest(SConn &Conn);
 };
 
 } // namespace KogLogin
