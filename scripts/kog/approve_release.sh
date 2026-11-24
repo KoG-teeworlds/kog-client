@@ -25,8 +25,17 @@ ci, draft, out, channel, version, tool = sys.argv[1:7]
 m = json.load(open(ci))
 assert m["channel"] == channel and m["version"] == version, "the manifest is not %s %s" % (channel, version)
 assert (m["expires"] - m["issued"]) % 86400 == 0
-subprocess.check_call(["python3", tool, "finalize", "--draft", draft,
-                       "--sequence", str(m["sequence"]), "--now", str(m["issued"]), "--days", str((m["expires"] - m["issued"]) // 86400), "--out", out])
+extra = []
+if "rollout_percent" in m:
+    extra += ["--rollout-percent", str(m["rollout_percent"])]
+if "min_version" in m:
+    extra += ["--min-version", m["min_version"]]
+if "notes_url" in m:
+    extra += ["--notes-url", m["notes_url"]]
+for change in m.get("changes", []):
+    extra += ["--change", change]
+subprocess.check_call(["python3", tool, "finalize", "--draft", draft, "--sequence", str(m["sequence"]), "--now", str(m["issued"]),
+                       "--days", str((m["expires"] - m["issued"]) // 86400), "--out", out] + extra)
 PY
 cmp "$work/ci/update.json" "$work/own/update.json" || { echo "the manifest of CI differs from the one made here from the verified release" >&2; exit 1; }
 

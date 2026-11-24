@@ -1,23 +1,9 @@
 name: KoG release
 
+# Started by the owner pushing a signed tag vX.Y.Z on the head of main; GitHub's ruleset lets only a repository admin create v* tags
 on:
-  workflow_dispatch:
-    inputs:
-      version:
-        description: MAJOR.MINOR.PATCH, equal to KOG_CLIENT_VERSION
-        required: true
-      rollout_percent:
-        description: Percent of installs that get the update (0-100)
-        default: "100"
-      min_version:
-        description: Oldest version that may still run, empty for none (older ones are told to update)
-        default: ""
-      notes_url:
-        description: Release notes page on client.kog.tw or github.com/KoG-teeworlds
-        default: ""
-      changes:
-        description: Up to 3 short changes, separated by |
-        default: ""
+  push:
+    tags: ["v*"]
 
 permissions: {}
 
@@ -30,7 +16,7 @@ jobs:
       checks: read
     env:
       GH_TOKEN: ${{ github.token }}
-      VERSION: ${{ inputs.version }}
+      TAG: ${{ github.ref_name }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -38,8 +24,9 @@ jobs:
           persist-credentials: false
       - name: Check the source
         run: |
-          [[ $VERSION =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]] || { echo "invalid version" >&2; exit 1; }
-          [ "$GITHUB_REF" = refs/heads/main ] || { echo "releases are made from main only" >&2; exit 1; }
+          [[ $TAG =~ ^v[0-9]+\.[0-9]+\.[0-9]+$ ]] || { echo "invalid tag" >&2; exit 1; }
+          VERSION=${TAG#v}
+          [ "$GITHUB_REF" = "refs/tags/$TAG" ] || { echo "releases are made from a tag" >&2; exit 1; }
           git fetch --quiet origin main
           git merge-base --is-ancestor "$GITHUB_SHA" origin/main || { echo "the commit is not on main" >&2; exit 1; }
           [ "$(git rev-parse origin/main)" = "$GITHUB_SHA" ] || { echo "the commit is not the head of main any more" >&2; exit 1; }
@@ -66,11 +53,7 @@ jobs:
       attestations: write
     env:
       GH_TOKEN: ${{ github.token }}
-      VERSION: ${{ inputs.version }}
-      ROLLOUT_PERCENT: ${{ inputs.rollout_percent }}
-      MIN_VERSION: ${{ inputs.min_version }}
-      NOTES_URL: ${{ inputs.notes_url }}
-      CHANGES_INPUT: ${{ inputs.changes }}
+      TAG: ${{ github.ref_name }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -80,13 +63,11 @@ jobs:
           pattern: kog-package-*
           path: artifacts
       - name: Assemble
-        run: |
-          export CHANGES=${CHANGES_INPUT//|/$'\n'}
-          bash scripts/kog/assemble_release.sh stable "$VERSION"
+        run: bash scripts/kog/assemble_release.sh stable "${TAG#v}"
       - uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4.2.2
         with:
           subject-path: release/*
       - name: Create the prerelease
         run: |
-          gh release create "v$VERSION" release/* --target "$GITHUB_SHA" --prerelease --title "KoG Client $VERSION" \
+          gh release create "$TAG" release/* --verify-tag --prerelease --title "KoG Client ${TAG#v}" \
             --notes "Not usable for updates until it is signed twice: workflow Sign release in kog-client-updates, then scripts/kog/approve_release.sh."
