@@ -206,7 +206,7 @@ void CKogLogin::OnRender()
 			Fail(Localize("The local login port was closed. Try again."));
 		break;
 	}
-	case EStep::TOKEN:
+	case EStep::TOKEN_EXCHANGE:
 		StepToken();
 		break;
 	case EStep::USERINFO:
@@ -298,7 +298,7 @@ void CKogLogin::BeginToken(const char *pCode)
 	KogLogin::Wipe(aVerifier, sizeof(aVerifier));
 	KogLogin::Wipe(m_aVerifier, sizeof(m_aVerifier));
 	str_copy(m_aMessage, Localize("Checking the login…"));
-	m_Step = EStep::TOKEN;
+	m_Step = EStep::TOKEN_EXCHANGE;
 	Request(pRequest);
 }
 
