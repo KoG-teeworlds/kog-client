@@ -16,7 +16,7 @@ This lists every outbound connection of the client as built from this repository
 | Discord | Rich presence | Not compiled in (`DISCORD=OFF`), and `tc_discord_rpc` is off | Nothing | `tc_discord_rpc` |
 | Links in menus (ddnet.org, wiki.ddnet.org) | Help pages | Only when you click | Nothing | None |
 
-Not present: telemetry, analytics, advertising and crash uploads. `kog_telemetry` is off and not implemented yet. `kog_hello` (off in stable) sends the client version, its channel and the numbers of the KoG features it supports, only to servers listed for the KoG community, see [KOG-HELLO.md](KOG-HELLO.md).
+Not present: telemetry, analytics, advertising and crash uploads. `kog_telemetry` is off and not implemented yet. `kog_hello` (off in stable) sends the client version, its channel and the numbers of the KoG features it supports, only to servers listed for the KoG community, see [KOG-HELLO.md](KOG-HELLO.md). If you also turn on `cl_kog_auto_login` and the server agrees to it, the client answers its login challenge with the id of this device and a signature that is only good for that server, once per join; nothing is sent to other servers, see [LOGIN.md](LOGIN.md).
 
 ## Update check in detail
 

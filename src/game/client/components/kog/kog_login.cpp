@@ -7,6 +7,8 @@
 #include <engine/serverbrowser.h>
 #include <engine/shared/config.h>
 #include <engine/shared/json.h>
+#include <engine/shared/kog_login_wire.h>
+#include <engine/shared/packer.h>
 #include <engine/storage.h>
 
 #include <game/client/gameclient.h>
@@ -17,17 +19,29 @@ namespace {
 constexpr int64_t BROWSER_TIMEOUT_MS = 3 * 60 * 1000;
 constexpr const char *KOG_COMMUNITY_ID = "kog";
 
-class CStubTransport : public IKogLoginTransport
+class CClientTransport : public IKogLoginTransport
 {
+	IClient *m_pClient;
+
 public:
-	bool SendProof(const char *pDeviceId, const uint8_t (&aSignature)[KogLogin::SIGNATURE_SIZE]) override { return false; }
+	explicit CClientTransport(IClient *pClient) :
+		m_pClient(pClient) {}
+
+	bool SendProof(const char *pDeviceId, const uint8_t (&aSignature)[KogLogin::SIGNATURE_SIZE]) override
+	{
+		uint8_t aDevice[KogLogin::UUID_SIZE];
+		if(!KogLogin::ParseUuid(pDeviceId, aDevice))
+			return false;
+		m_pClient->KogSendLoginProof(aDevice, aSignature);
+		return true;
+	}
 };
 
 } // namespace
 
 void CKogLogin::OnInit()
 {
-	m_pTransport = std::make_unique<CStubTransport>();
+	m_pTransport = std::make_unique<CClientTransport>(Client());
 	KogLogin::SDeviceKey Key;
 	m_HasKey = LoadKey(&Key);
 	KogLogin::Wipe(&Key, sizeof(Key));
@@ -481,7 +495,45 @@ void CKogLogin::OnStateChange(int NewState, int OldState)
 	{
 		m_ManualLogin = false;
 		m_AnsweredThisJoin = false;
+		m_JoinState = EJoinState::NONE;
+		m_aJoinAccountName[0] = '\0';
 	}
+}
+
+void CKogLogin::OnLoginChallenge(CUnpacker *pUnpacker)
+{
+	KogLoginWire::SChallenge Challenge;
+	if(!KogLoginWire::UnpackChallenge(pUnpacker, &Challenge))
+		return;
+	char aAddress[64];
+	if(!KogLogin::CanonicalAddress(Client()->ServerAddress(), aAddress, sizeof(aAddress)))
+		return;
+	if(OnChallenge(aAddress, Challenge.m_aNonce, sizeof(Challenge.m_aNonce), Challenge.m_aSessionId))
+		m_JoinState = EJoinState::WAITING;
+}
+
+void CKogLogin::OnLoginResult(CUnpacker *pUnpacker)
+{
+	// only the answer to a proof that this client sent: a server cannot make it say it is logged in
+	if(m_JoinState != EJoinState::WAITING)
+		return;
+	KogLoginWire::SResult Result;
+	if(!KogLoginWire::UnpackResult(pUnpacker, &Result))
+		return;
+
+	char aBuf[128];
+	if(Result.m_LoggedIn && Result.m_aAccountName[0] != '\0')
+	{
+		m_JoinState = EJoinState::LOGGED_IN;
+		str_copy(m_aJoinAccountName, Result.m_aAccountName);
+		str_format(aBuf, sizeof(aBuf), "%s %s", Localize("[KoG] Logged in as"), m_aJoinAccountName);
+	}
+	else
+	{
+		m_JoinState = EJoinState::REFUSED;
+		str_copy(aBuf, Localize("[KoG] This server did not accept the login of this device. You play as a guest; /login with a code still works."));
+	}
+	GameClient()->Echo(aBuf);
 }
 
 bool CKogLogin::ServerIsKog(IServerBrowser *pBrowser, const NETADDR &Address)

@@ -49,3 +49,8 @@ UUID(NETMSG_MAPLIST_GROUP_END, "sv-maplist-end@ddnet.org")
 // KoG, only between a KoG client and a KoG server (docs/KOG-HELLO.md)
 UUID(NETMSG_KOG_CLIENT_HELLO, "kog-client-hello@kog.tw")
 UUID(NETMSG_KOG_SERVER_HELLO, "kog-server-hello@kog.tw")
+
+// The login with the device key, only after client_login was agreed (docs/LOGIN.md)
+UUID(NETMSG_KOG_LOGIN_CHALLENGE, "kog-login-challenge@kog.tw")
+UUID(NETMSG_KOG_LOGIN_PROOF, "kog-login-proof@kog.tw")
+UUID(NETMSG_KOG_LOGIN_RESULT, "kog-login-result@kog.tw")

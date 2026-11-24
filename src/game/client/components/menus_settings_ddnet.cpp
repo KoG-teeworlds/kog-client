@@ -48,6 +48,13 @@ void CMenus::RenderKogAccount(CUIRect View)
 		if(Login.MessageIsError())
 			TextRender()->TextColor(1.0f, 0.4f, 0.4f, 1.0f);
 	}
+	else if(Login.JoinState() == CKogLogin::EJoinState::LOGGED_IN)
+		str_format(aBuf, sizeof(aBuf), "%s %s.", Localize("Logged in on this server as"), Login.JoinAccountName());
+	else if(Login.JoinState() == CKogLogin::EJoinState::REFUSED)
+	{
+		str_copy(aBuf, Localize("This server did not accept the login of this device."));
+		TextRender()->TextColor(1.0f, 0.4f, 0.4f, 1.0f);
+	}
 	else if(Login.HasDeviceKey() && g_Config.m_ClKogAccountName[0] != '\0')
 		str_format(aBuf, sizeof(aBuf), "%s %s.", Localize("Logged in as"), g_Config.m_ClKogAccountName);
 	else if(Login.HasDeviceKey())
