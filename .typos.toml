@@ -20,6 +20,9 @@ extend-exclude = [
 [default]
 extend-ignore-re = [
 	'TClient',
+	# macOS Big Sur, in docs/HOMEBREW.md and the Homebrew symbol :big_sur
+	'Big Sur',
+	'big_sur',
 	'lod',
 	'LOD',
 	'Lod',
