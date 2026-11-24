@@ -31,6 +31,7 @@ public:
 	~CHttpRequestEmscripten() override;
 
 	void Header(const char *pNameColonValue) override;
+	void WipeSecrets() override;
 
 	void Abort() override;
 

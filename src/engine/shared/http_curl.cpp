@@ -53,7 +53,20 @@ CHttpRequestCurl::CHttpRequestCurl(const char *pUrl) :
 CHttpRequestCurl::~CHttpRequestCurl()
 {
 	dbg_assert(m_File == nullptr, "HTTP request file was not closed");
+	if(m_Sensitive)
+		CHttpRequestCurl::WipeSecrets();
 	curl_slist_free_all(m_pRequestHeaders);
+}
+
+void CHttpRequestCurl::WipeSecrets()
+{
+	IHttpRequest::WipeSecrets();
+	for(curl_slist *pItem = m_pRequestHeaders; pItem; pItem = pItem->next)
+	{
+		volatile char *pData = pItem->data;
+		for(size_t i = 0; pData && pData[i] != '\0'; i++)
+			pData[i] = 'x';
+	}
 }
 
 void CHttpRequestCurl::Header(const char *pNameColonValue)
@@ -105,7 +118,7 @@ bool CHttpRequestCurl::ConfigureHandle(CURL *pHandle)
 #ifdef __GNUC__
 #pragma GCC diagnostic pop
 #endif
-	curl_easy_setopt(pHandle, CURLOPT_FOLLOWLOCATION, 1L);
+	curl_easy_setopt(pHandle, CURLOPT_FOLLOWLOCATION, m_FollowRedirects ? 1L : 0L);
 	curl_easy_setopt(pHandle, CURLOPT_MAXREDIRS, 4L);
 	if(m_FailOnErrorStatus)
 	{

@@ -6,6 +6,8 @@
 #include <base/str.h>
 #include <base/thread.h>
 
+#include <algorithm>
+
 #include <engine/shared/config.h>
 #include <engine/storage.h>
 
@@ -23,6 +25,15 @@ CHttpRequestEmscripten::CHttpRequestEmscripten(const char *pUrl) :
 CHttpRequestEmscripten::~CHttpRequestEmscripten()
 {
 	dbg_assert(m_pFetch == nullptr, "HTTP request fetch handle was not closed");
+	if(m_Sensitive)
+		CHttpRequestEmscripten::WipeSecrets();
+}
+
+void CHttpRequestEmscripten::WipeSecrets()
+{
+	IHttpRequest::WipeSecrets();
+	for(auto &[Name, Value] : m_vRequestHeaders)
+		std::fill(Value.begin(), Value.end(), 'x');
 }
 
 void CHttpRequestEmscripten::Header(const char *pNameColonValue)

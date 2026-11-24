@@ -51,7 +51,7 @@ public:
 	bool MessageIsError() const { return m_Step == EStep::FAILED; }
 
 	// To be called by the handler of the server's challenge once the protocol exists
-	bool OnChallenge(const char *pServerAddress, const uint8_t *pNonce, size_t NonceSize);
+	bool OnChallenge(const char *pServerAddress, const uint8_t *pNonce, size_t NonceSize, const uint8_t (&aSessionId)[KogLogin::UUID_SIZE]);
 	void NoteManualLogin() { m_ManualLogin = true; }
 	static bool ServerIsKog(class IServerBrowser *pBrowser, const NETADDR &Address);
 
@@ -89,7 +89,9 @@ private:
 	void Succeed(const char *pMessage);
 	void Reset();
 	bool BaseUrl(char *pBuf, size_t Size) const;
-	void Request(std::shared_ptr<IHttpRequest> pRequest);
+	// Secret: no redirects, and the body and headers are overwritten when done
+	void Request(std::shared_ptr<IHttpRequest> pRequest, bool Secret);
+	void ReleaseRequest();
 	void SetBearer(IHttpRequest *pRequest);
 	void FailHttp(const char *pWhat);
 
