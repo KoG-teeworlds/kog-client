@@ -88,6 +88,7 @@ CServerBrowser::~CServerBrowser()
 
 void CServerBrowser::Shutdown()
 {
+	m_KogMasterList.Shutdown();
 	m_pHttp->Shutdown();
 }
 
@@ -110,6 +111,8 @@ void CServerBrowser::SetBaseInfo(class CNetClient *pClient, const char *pNetVers
 void CServerBrowser::OnInit()
 {
 	m_pHttp = CreateServerBrowserHttp(m_pEngine, m_pStorage, m_pHttpClient, g_Config.m_BrCachedBestServerinfoUrl);
+	m_KogMasterList.Init(m_pStorage, m_pHttpClient);
+	m_KogMasterList.Refresh();
 }
 
 void CServerBrowser::RegisterCommands()
@@ -750,6 +753,7 @@ void CServerBrowser::SetInfo(CServerEntry *pEntry, const CServerInfo &Info) cons
 	pEntry->m_Info = Info;
 	pEntry->m_Info.m_Favorite = TmpInfo.m_Favorite;
 	pEntry->m_Info.m_FavoriteAllowPing = TmpInfo.m_FavoriteAllowPing;
+	pEntry->m_Info.m_KogSigned = TmpInfo.m_KogSigned;
 	pEntry->m_Info.m_ServerIndex = TmpInfo.m_ServerIndex;
 	mem_copy(pEntry->m_Info.m_aAddresses, TmpInfo.m_aAddresses, sizeof(pEntry->m_Info.m_aAddresses));
 	pEntry->m_Info.m_NumAddresses = TmpInfo.m_NumAddresses;
@@ -1073,6 +1077,7 @@ void CServerBrowser::Refresh(int Type, bool Force)
 	else
 	{
 		m_pHttp->Refresh();
+		m_KogMasterList.Refresh();
 		m_pPingCache->Load();
 		m_RefreshingHttp = true;
 
@@ -1254,7 +1259,64 @@ void CServerBrowser::UpdateFromHttp()
 		}
 	}
 
+	AddKogMasterServers();
+
 	RequestResort();
+}
+
+void CServerBrowser::AddKogMasterServers()
+{
+	if(m_ServerlistType == TYPE_LAN || m_ServerlistType == TYPE_FAVORITES)
+		return;
+	if(m_ServerlistType >= TYPE_FAVORITE_COMMUNITY_1 && m_ServerlistType <= TYPE_FAVORITE_COMMUNITY_5)
+	{
+		const size_t CommunityIndex = m_ServerlistType - TYPE_FAVORITE_COMMUNITY_1;
+		std::vector<const CCommunity *> vpFavoriteCommunities = FavoriteCommunities();
+		if(CommunityIndex >= vpFavoriteCommunities.size() || str_comp(vpFavoriteCommunities[CommunityIndex]->Id(), "kog") != 0)
+			return;
+	}
+
+	const char *pCountry = COMMUNITY_COUNTRY_NONE;
+	const char *pType = COMMUNITY_TYPE_NONE;
+	for(const CCommunity &Community : m_vCommunities)
+	{
+		if(str_comp(Community.Id(), "kog") == 0 && !Community.Countries().empty() && !Community.Types().empty())
+		{
+			pCountry = Community.Countries().front().Name();
+			pType = Community.Types().front().Name();
+		}
+	}
+
+	for(const KogMaster::SServer &Server : m_KogMasterList.Servers())
+	{
+		NETADDR aAddrs[KogMaster::MAX_ADDRESSES];
+		int NumAddrs = 0;
+		for(const std::string &Address : Server.m_vAddresses)
+		{
+			if(net_addr_from_url(&aAddrs[NumAddrs], Address.c_str(), nullptr, 0) == 0)
+				NumAddrs++;
+		}
+		if(NumAddrs == 0)
+			continue;
+		bool Known = false;
+		for(int i = 0; i < NumAddrs; i++)
+			Known = Known || Find(aAddrs[i]) != nullptr;
+		if(Known)
+		{
+			for(int i = 0; i < NumAddrs; i++)
+			{
+				if(CServerEntry *pKnown = Find(aAddrs[i]))
+					pKnown->m_Info.m_KogSigned = true;
+			}
+			continue;
+		}
+		for(int i = 0; i < NumAddrs; i++)
+			m_CommunityServersByAddr.emplace(CommunityAddressKey(aAddrs[i]), CCommunityServer("kog", pCountry, pType));
+		CServerEntry *pEntry = Add(aAddrs, NumAddrs);
+		str_copy(pEntry->m_Info.m_aName, Server.m_Name.c_str());
+		pEntry->m_Info.m_KogSigned = true;
+		QueueRequest(pEntry);
+	}
 }
 
 void CServerBrowser::CleanUp()
@@ -1284,6 +1346,13 @@ void CServerBrowser::Update()
 	}
 
 	m_pHttp->Update();
+
+	m_KogMasterList.Update();
+	if(m_KogMasterList.TakeChanged() && m_ServerlistType != TYPE_LAN && !m_RefreshingHttp)
+	{
+		AddKogMasterServers();
+		RequestResort();
+	}
 
 	if(m_ServerlistType != TYPE_LAN && m_RefreshingHttp && !m_pHttp->IsRefreshing())
 	{

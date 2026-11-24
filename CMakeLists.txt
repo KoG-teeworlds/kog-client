@@ -171,6 +171,7 @@ option(TEST_MYSQL "Test mysql support in unit tests (also sets -DMYSQL=ON)" OFF)
 option(AUTOUPDATE "Enable the autoupdater" OFF)
 option(INFORM_UPDATE "Inform about available updates" ON)
 option(KOG_ALLOW_PLACEHOLDER_KEY "Allow a release build with the update signing key still being the placeholder" OFF)
+set(KOG_MASTER_DEV_ROOT "" CACHE STRING "Hex public key of a throwaway master root for local tests. Only for -DKOG_CHANNEL=dev -DDEV=ON: it also lets kog_master_url name http://127.0.0.1")
 option(VIDEORECORDER "Enable video recording support via FFmpeg" ON)
 option(UPNP "Enable UPnP support" OFF)
 option(ANTIBOT "Enable support for a dynamic anticheat library (not provided, see src/antibot for interface if you want to implement your own)" OFF)
@@ -1029,6 +1030,16 @@ if(NOT(GTEST_FOUND) AND DOWNLOAD_GTEST)
   endif()
 endif()
 
+if(KOG_MASTER_DEV_ROOT)
+  if(NOT (KOG_CHANNEL STREQUAL "dev" AND DEV))
+    message(FATAL_ERROR "KOG_MASTER_DEV_ROOT is only for a local test build: -DKOG_CHANNEL=dev -DDEV=ON")
+  endif()
+  string(LENGTH "${KOG_MASTER_DEV_ROOT}" KOG_MASTER_DEV_ROOT_LENGTH)
+  if(NOT KOG_MASTER_DEV_ROOT MATCHES "^[0-9a-f]+$" OR NOT KOG_MASTER_DEV_ROOT_LENGTH EQUAL 64)
+    message(FATAL_ERROR "KOG_MASTER_DEV_ROOT must be 64 lower-case hex digits")
+  endif()
+  set_source_files_properties(src/engine/client/kog_master_list.cpp PROPERTIES COMPILE_DEFINITIONS "KOG_MASTER_DEV_ROOT=\"${KOG_MASTER_DEV_ROOT}\"")
+endif()
 string(TOUPPER "${KOG_CHANNEL}" KOG_CHANNEL_UPPER)
 file(STRINGS src/engine/client/kog_update_pubkey.h KOG_PUBKEY_PLACEHOLDER_LINE REGEX "^#define KOG_UPDATE_KEYS_PLACEHOLDER_${KOG_CHANNEL_UPPER} 1")
 if(KOG_PUBKEY_PLACEHOLDER_LINE AND AUTOUPDATE AND NOT DEV AND NOT KOG_ALLOW_PLACEHOLDER_KEY AND CMAKE_BUILD_TYPE MATCHES "^(Release|RelWithDebInfo|MinSizeRel)$")
@@ -2514,6 +2525,8 @@ set_src(ENGINE_SHARED GLOB_RECURSE src/engine/shared
   kog_failsafe.h
   kog_login.cpp
   kog_login.h
+  kog_master.cpp
+  kog_master.h
   kog_protocol.h
   kog_update.cpp
   kog_update.h
@@ -2769,6 +2782,9 @@ if(CLIENT)
     keynames.h
     kog_keystore.cpp
     kog_keystore.h
+    kog_master_list.cpp
+    kog_master_list.h
+    kog_master_pubkey.h
     kog_update_pubkey.h
     notifications.cpp
     notifications.h
@@ -3664,6 +3680,8 @@ if(GTEST_FOUND OR DOWNLOAD_GTEST)
     jsonwriter_test.cpp
     kog_failsafe_test.cpp
     kog_login_test.cpp
+    kog_master_test.cpp
+    kog_master_vector.h
     kog_update_test.cpp
     kog_user_agent_test.cpp
     linereader_test.cpp
@@ -3708,6 +3726,8 @@ if(GTEST_FOUND OR DOWNLOAD_GTEST)
     # tidy-alphabetical-start
     src/engine/client/blocklist_driver.cpp
     src/engine/client/blocklist_driver.h
+    src/engine/client/kog_master_list.cpp
+    src/engine/client/kog_master_list.h
     src/engine/client/serverbrowser.cpp
     src/engine/client/serverbrowser.h
     src/engine/client/serverbrowser_http.cpp

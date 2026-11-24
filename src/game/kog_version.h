@@ -20,6 +20,12 @@
 #define KOG_LOGIN_DEFAULT 0
 #endif
 
+// The signed list of the KoG master. Empty = the client does not ask for one. Set it to the master address of the channel
+// (src/engine/client/kog_master_pubkey.h) when that master is deployed and its root keys are in that header
+#ifndef KOG_MASTER_URL_DEFAULT
+#define KOG_MASTER_URL_DEFAULT ""
+#endif
+
 #define KOG_BASED_ON_TCLIENT "10.9.0"
 #define KOG_BASED_ON_DDNET "20.1"
 
