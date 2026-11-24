@@ -26,6 +26,11 @@
 #define KOG_MASTER_URL_DEFAULT ""
 #endif
 
+// The KoG hello (announce capabilities to KoG servers) is on by default in canary and dev builds only (CMake sets it)
+#ifndef KOG_HELLO_DEFAULT
+#define KOG_HELLO_DEFAULT 0
+#endif
+
 #define KOG_BASED_ON_TCLIENT "10.9.0"
 #define KOG_BASED_ON_DDNET "20.1"
 

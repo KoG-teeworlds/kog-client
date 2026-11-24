@@ -100,6 +100,7 @@ struct SJoinDecision
 	bool m_ServerIsKog; // the address is listed for the KoG community in the server list
 	bool m_AlreadyLoggedIn;
 	bool m_AlreadyAnsweredThisJoin;
+	bool m_CapabilityNegotiated; // the server agreed to client_login in the KoG hello
 };
 // Whether this client may answer a login challenge of the server it is on. Vanilla and other servers: never.
 bool MayAnswerChallenge(const SJoinDecision &Decision);
