@@ -241,7 +241,7 @@ Spacing scale (units): 4, 8, 12, 16, 24, 40. Radius: 6 for buttons and cards, 10
 12 (labels, the smallest allowed), 14 (body), 16, 22 (card title), 34 (Play). Rows are at least 28 high; rail items 42.
 Icons: Font Awesome 6 Free Solid, which the client already loads as its icon font (`FontIcon::*`, used in `RenderMenubar`);
 the mockups use simple stand-in drawings of the same meaning. No new image files except the logo (PR #26).
-Logo: official files from brand_and_media, unmodified (CC BY-NC-ND 4.0). The rail uses the short logo, the hero page the long
+Logo: official files from brand_and_media, unmodified (Creative Commons, attribution, non-commercial, no derivatives). The rail uses the short logo, the hero page the long
 one; nothing recoloured, cropped or placed on a background that hurts its outline.
 
 Headings: Saira Condensed 700 on the websites. The client's font mechanism (`data/fonts/index.json`) can load more fonts but a
@@ -394,7 +394,7 @@ textures); the map behind is a rough stand-in. The page scales with the window h
 ![Variant A 800](mainmenu-mockups/variant-a-800.png)
 ![Variant B 800](mainmenu-mockups/variant-b-800.png)
 
-The embedded logos are the official files from brand_and_media (commit pinned by PR #26), CC BY-NC-ND 4.0, not under the zlib licence of the rest. The embedded heading font is Saira Condensed 700 from the kog-www public folder.
+The embedded logos are the official files from brand_and_media (commit pinned by PR #26), Creative Commons (see PR #26), not under the zlib licence of the rest. The embedded heading font is Saira Condensed 700 from the kog-www public folder.
 
 Names and numbers in the mockups (TeeFan, 312 players, the servers) are made up. The Friends strip, Recent servers and
 Top ranks are drawn to show the idea; section 5 says which of them are out of scope.
