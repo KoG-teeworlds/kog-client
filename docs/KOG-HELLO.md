@@ -50,7 +50,7 @@ feature, and the game goes on as normal.
 
 Features ask the component and never look at a version number: `GameClient()->m_KogHello.Has(EKogCap::CLIENT_LOGIN)`.
 The join proof answers a challenge only if `client_login` was agreed in this connection (in addition to the checks in
-[LOGIN.md](LOGIN.md)).
+[LOGIN.md](LOGIN.md)); without it the challenge, the proof and the result messages are never read or sent.
 
 ## Settings
 

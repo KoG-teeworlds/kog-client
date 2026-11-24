@@ -302,6 +302,7 @@ public:
 
 	// ----- send functions -----
 	int SendMsg(int Conn, CMsgPacker *pMsg, int Flags) override;
+	void KogSendLoginProof(const uint8_t (&aDeviceId)[16], const uint8_t (&aSignature)[64]) override;
 	// Send via the currently active client (main/dummy)
 	int SendMsgActive(CMsgPacker *pMsg, int Flags) override;
 

@@ -394,6 +394,40 @@ TEST(KogLogin, NothingIsAnsweredToANonKogServer)
 	EXPECT_FALSE(MayAnswerChallenge(Off));
 }
 
+static NETADDR Addr(const char *pText)
+{
+	NETADDR Address;
+	EXPECT_EQ(net_addr_from_str(&Address, pText), 0) << pText;
+	return Address;
+}
+
+TEST(KogLogin, CanonicalAddressOfTheConnection)
+{
+	char aBuf[64];
+	// the same spelling as the backend: ip:port, mapped IPv4 as IPv4, IPv6 compressed, lower case, in brackets
+	EXPECT_TRUE(CanonicalAddress(Addr("203.0.113.7:8303"), aBuf, sizeof(aBuf)));
+	EXPECT_STREQ(aBuf, "203.0.113.7:8303");
+	EXPECT_TRUE(CanonicalAddress(Addr("[2001:DB8:0:0:0:0:0:1]:8303"), aBuf, sizeof(aBuf)));
+	EXPECT_STREQ(aBuf, "[2001:db8::1]:8303");
+	EXPECT_TRUE(CanonicalAddress(Addr("[2001:db8:0:1:0:0:0:1]:8303"), aBuf, sizeof(aBuf)));
+	EXPECT_STREQ(aBuf, "[2001:db8:0:1::1]:8303");
+	EXPECT_TRUE(CanonicalAddress(Addr("[::1]:8303"), aBuf, sizeof(aBuf)));
+	EXPECT_STREQ(aBuf, "[::1]:8303");
+	EXPECT_TRUE(CanonicalAddress(Addr("[::ffff:203.0.113.7]:8303"), aBuf, sizeof(aBuf)));
+	EXPECT_STREQ(aBuf, "203.0.113.7:8303") << "an IPv4-mapped address is the IPv4 one";
+
+	NETADDR NoPort = Addr("203.0.113.7:8303");
+	NoPort.port = 0;
+	EXPECT_FALSE(CanonicalAddress(NoPort, aBuf, sizeof(aBuf)));
+	EXPECT_STREQ(aBuf, "");
+	NETADDR NoType = Addr("203.0.113.7:8303");
+	NoType.type = 0;
+	EXPECT_FALSE(CanonicalAddress(NoType, aBuf, sizeof(aBuf)));
+
+	char aSmall[8];
+	EXPECT_FALSE(CanonicalAddress(Addr("203.0.113.7:8303"), aSmall, sizeof(aSmall)));
+}
+
 TEST(KogLogin, DeviceNameIsNeutralAndNotTheHostName)
 {
 	char aName[161];

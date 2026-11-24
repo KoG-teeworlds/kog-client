@@ -15,7 +15,7 @@ MACRO_CONFIG_INT(KogCheckUpdates, kog_check_updates, 1, 0, 1, CFGFLAG_CLIENT | C
 MACRO_CONFIG_STR(KogUpdateChannel, kog_update_channel, 16, KOG_CLIENT_CHANNEL, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Update channel: stable, canary or dev. Only set it here or in the settings, never from a server")
 MACRO_CONFIG_STR(KogUpdateUrl, kog_update_url, 256, "", CFGFLAG_CLIENT | CFGFLAG_SAVE, "Override the host of the update manifest (https only; empty = the built-in KoG address)")
 MACRO_CONFIG_INT(ClKogLogin, cl_kog_login, KOG_LOGIN_DEFAULT, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Switch for Log in with KoG (browser login, device key). Off: no browser flow and no automatic login; the /login code still works")
-MACRO_CONFIG_INT(ClKogAutoLogin, cl_kog_auto_login, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Prove this device to KoG servers when joining (needs the login protocol on the server; off until it exists)")
+MACRO_CONFIG_INT(ClKogAutoLogin, cl_kog_auto_login, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Prove this device to KoG servers when joining, only to servers listed for the KoG community that agreed to it. Off: the client never answers a login challenge")
 MACRO_CONFIG_STR(ClKogAccountUrl, cl_kog_account_url, 128, "https://kog.tw", CFGFLAG_CLIENT | CFGFLAG_SAVE, "Base URL of the KoG account server (https), for staging")
 MACRO_CONFIG_STR(ClKogAccountExtraOrigins, cl_kog_account_extra_origins, 256, "", CFGFLAG_CLIENT | CFGFLAG_SAVE, "Origins besides the account URL's own and *.kog.tw that its login description may name (https://host[:port], separated by spaces)")
 MACRO_CONFIG_STR(ClKogDeviceName, cl_kog_device_name, 161, "", CFGFLAG_CLIENT | CFGFLAG_SAVE, "Name of this device on your account, at most 40 characters (empty = KoG Client plus the system)")

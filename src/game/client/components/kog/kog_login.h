@@ -9,7 +9,7 @@
 
 #include <memory>
 
-// Where a login proof goes. The protocol is not defined yet; the stub sends nothing.
+// Where a login proof goes: the main connection of the client, see docs/LOGIN.md
 class IKogLoginTransport
 {
 public:
@@ -60,7 +60,21 @@ public:
 	const char *Message() const { return m_aMessage; }
 	bool MessageIsError() const { return m_Step == EStep::FAILED; }
 
-	// To be called by the handler of the server's challenge once the protocol exists
+	// What happened on this server: nothing, the proof is with the server, or the server answered
+	enum class EJoinState
+	{
+		NONE,
+		WAITING,
+		LOGGED_IN,
+		REFUSED,
+	};
+	EJoinState JoinState() const { return m_JoinState; }
+	const char *JoinAccountName() const { return m_aJoinAccountName; }
+	// The messages kog-login-challenge and kog-login-result of the main connection
+	void OnLoginChallenge(class CUnpacker *pUnpacker);
+	void OnLoginResult(class CUnpacker *pUnpacker);
+
+	// The challenge of the server, already read. True if it was answered.
 	bool OnChallenge(const char *pServerAddress, const uint8_t *pNonce, size_t NonceSize, const uint8_t (&aSessionId)[KogLogin::UUID_SIZE]);
 	void NoteManualLogin() { m_ManualLogin = true; }
 	static bool ServerIsKog(class IServerBrowser *pBrowser, const NETADDR &Address);
@@ -91,6 +105,8 @@ private:
 	KogLogin::SDeviceKey m_UnlockedKey;
 	bool m_ManualLogin = false;
 	bool m_AnsweredThisJoin = false;
+	EJoinState m_JoinState = EJoinState::NONE;
+	char m_aJoinAccountName[64] = "";
 	char m_aMessage[256] = "";
 
 	char m_aAuthorizeEndpoint[256] = "";
