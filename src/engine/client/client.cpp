@@ -245,6 +245,13 @@ void CClient::SendInfo(int Conn)
 	MsgVer.AddString(GameClient()->DDNetVersionStr());
 	SendMsg(Conn, &MsgVer, MSGFLAG_VITAL);
 
+	if(Conn == CONN_MAIN)
+	{
+		CMsgPacker MsgHello(NETMSG_KOG_CLIENT_HELLO, true);
+		if(GameClient()->KogMakeHello(&MsgHello))
+			SendMsg(Conn, &MsgHello, MSGFLAG_VITAL);
+	}
+
 	if(IsSixup())
 	{
 		CMsgPacker Msg(NETMSG_INFO, true);
@@ -1733,6 +1740,10 @@ void CClient::ProcessServerPacket(CNetChunk *pPacket, int Conn, bool Dummy)
 			m_ServerCapabilities = GetServerCapabilities(Version, Flags, IsSixup());
 			m_CanReceiveServerCapabilities = false;
 			m_ServerSentCapabilities = true;
+		}
+		else if(Conn == CONN_MAIN && (pPacket->m_Flags & NET_CHUNKFLAG_VITAL) != 0 && Msg == NETMSG_KOG_SERVER_HELLO)
+		{
+			GameClient()->KogServerHello(&Unpacker);
 		}
 		else if(Conn == CONN_MAIN && (pPacket->m_Flags & NET_CHUNKFLAG_VITAL) != 0 && Msg == NETMSG_MAP_CHANGE)
 		{

@@ -558,7 +558,7 @@ bool DecodeKey(const char *pBlob, SDeviceKey *pKey)
 
 bool MayAnswerChallenge(const SJoinDecision &Decision)
 {
-	return Decision.m_SwitchOn && Decision.m_AutoLoginOn && Decision.m_HasDeviceKey && Decision.m_ServerIsKog && !Decision.m_AlreadyLoggedIn && !Decision.m_AlreadyAnsweredThisJoin;
+	return Decision.m_SwitchOn && Decision.m_AutoLoginOn && Decision.m_HasDeviceKey && Decision.m_ServerIsKog && Decision.m_CapabilityNegotiated && !Decision.m_AlreadyLoggedIn && !Decision.m_AlreadyAnsweredThisJoin;
 }
 
 static const char PAGE_OK[] = "<!doctype html><html><head><meta charset=\"utf-8\"><title>KoG Client</title></head><body style=\"font-family:sans-serif;text-align:center;margin-top:20vh\"><h1>You can close this tab</h1><p>Go back to the game to finish.</p></body></html>";

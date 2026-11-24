@@ -500,6 +500,7 @@ bool CKogLogin::OnChallenge(const char *pServerAddress, const uint8_t *pNonce, s
 	Decision.m_ServerIsKog = ServerIsKog(ServerBrowser(), Client()->ServerAddress());
 	Decision.m_AlreadyLoggedIn = m_ManualLogin;
 	Decision.m_AlreadyAnsweredThisJoin = m_AnsweredThisJoin;
+	Decision.m_CapabilityNegotiated = GameClient()->m_KogHello.Has(EKogCap::CLIENT_LOGIN);
 	if(!KogLogin::MayAnswerChallenge(Decision))
 		return false;
 
