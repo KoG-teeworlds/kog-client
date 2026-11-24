@@ -34,6 +34,7 @@ Planned, not built yet:
 - stable releases (the stable keys are placeholders)
 - KoG messages between client and server, announced with capabilities
 - opt-in client-side network statistics
+- a page that shows a returning player what changed and lets them decide each change, see [docs/WHATS-CHANGED.md](docs/WHATS-CHANGED.md)
 
 ## Build
 
