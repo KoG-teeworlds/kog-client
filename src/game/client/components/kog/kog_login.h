@@ -1,6 +1,7 @@
 #ifndef GAME_CLIENT_COMPONENTS_KOG_KOG_LOGIN_H
 #define GAME_CLIENT_COMPONENTS_KOG_KOG_LOGIN_H
 
+#include <engine/console.h>
 #include <engine/http.h>
 #include <engine/shared/kog_login.h>
 
@@ -33,6 +34,7 @@ public:
 	};
 
 	int Sizeof() const override { return sizeof(*this); }
+	void OnConsoleInit() override;
 	void OnInit() override;
 	void OnShutdown() override;
 	void OnRender() override;
@@ -44,7 +46,15 @@ public:
 	void Cancel();
 
 	bool Busy() const { return m_Step != EStep::IDLE && m_Step != EStep::DONE && m_Step != EStep::FAILED; }
-	bool HasDeviceKey() const { return m_HasKey; }
+	bool HasDeviceKey() const { return m_KeyState != EKeyState::NONE && m_KeyState != EKeyState::DAMAGED; }
+	// A locked key cannot sign until Unlock succeeded
+	bool KeyLocked() const { return m_KeyState == EKeyState::LOCKED; }
+	bool KeyDamaged() const { return m_KeyState == EKeyState::DAMAGED; }
+	bool KeyHasPassphrase() const { return m_KeyState == EKeyState::LOCKED || m_KeyState == EKeyState::UNLOCKED; }
+	// The passphrase of the key file. They only ever change the file when it can be opened, and they set the message
+	void Unlock(const char *pPassphrase);
+	void SetPassphrase(const char *pNew, const char *pCurrent);
+	void RemovePassphrase(const char *pCurrent);
 	EStep Step() const { return m_Step; }
 	// Plain words for the settings box
 	const char *Message() const { return m_aMessage; }
@@ -62,13 +72,23 @@ private:
 		REVOKE,
 	};
 
+	enum class EKeyState
+	{
+		NONE,
+		PLAIN,
+		LOCKED,
+		UNLOCKED,
+		DAMAGED, // there is a file, and it can be read as neither a plain nor a locked key
+	};
+
 	EStep m_Step = EStep::IDLE;
 	EPurpose m_Purpose = EPurpose::LOGIN;
 	std::shared_ptr<IHttpRequest> m_pRequest;
 	KogLogin::CLoopbackListener m_Listener;
 	std::unique_ptr<IKogLoginTransport> m_pTransport;
 
-	bool m_HasKey = false;
+	EKeyState m_KeyState = EKeyState::NONE;
+	KogLogin::SDeviceKey m_UnlockedKey;
 	bool m_ManualLogin = false;
 	bool m_AnsweredThisJoin = false;
 	char m_aMessage[256] = "";
@@ -84,7 +104,11 @@ private:
 	KogLogin::SDeviceKey m_PendingKey;
 	char m_aRevokeId[64] = "";
 
+	static void ConKogKeyPassphrase(IConsole::IResult *pResult, void *pUserData);
 	bool LoadKey(KogLogin::SDeviceKey *pKey);
+	void RefreshKeyState();
+	void WipeUnlocked();
+	void SaveWithPassphrase(const char *pNew, const char *pCurrent);
 	void Fail(const char *pMessage);
 	void Succeed(const char *pMessage);
 	void Reset();

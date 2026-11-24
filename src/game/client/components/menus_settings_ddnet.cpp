@@ -10,6 +10,8 @@
 #include <engine/font_icons.h>
 #include <engine/graphics.h>
 #include <engine/shared/config.h>
+#include <engine/shared/kog_keyfile.h>
+#include <engine/shared/kog_login.h>
 #include <engine/storage.h>
 #include <engine/textrender.h>
 #include <engine/updater.h>
@@ -48,6 +50,10 @@ void CMenus::RenderKogAccount(CUIRect View)
 		if(Login.MessageIsError())
 			TextRender()->TextColor(1.0f, 0.4f, 0.4f, 1.0f);
 	}
+	else if(Login.KeyLocked())
+		str_copy(aBuf, Localize("Not logged in: the device key is locked. Enter the passphrase."));
+	else if(Login.KeyDamaged())
+		str_copy(aBuf, Localize("Not logged in: the device key file cannot be read. Log out on this device to remove it."));
 	else if(Login.HasDeviceKey() && g_Config.m_ClKogAccountName[0] != '\0')
 		str_format(aBuf, sizeof(aBuf), "%s %s.", Localize("Logged in as"), g_Config.m_ClKogAccountName);
 	else if(Login.HasDeviceKey())
@@ -89,6 +95,71 @@ void CMenus::RenderKogAccount(CUIRect View)
 	KogLogin::DefaultDeviceName(aDefault, sizeof(aDefault));
 	s_DeviceName.SetEmptyText(aDefault);
 	Ui()->DoEditBox(&s_DeviceName, &NameBox, 12.0f);
+
+	if(!Login.HasDeviceKey())
+		return;
+	// The passphrase is typed here and nowhere else, so it does not end up in the config, the console history or a log
+	static CLineInputBuffered<KogKeyFile::MAX_PASSPHRASE + 1> s_Current, s_New;
+	s_Current.SetHidden(true);
+	s_New.SetHidden(true);
+	const auto ClearInput = [](CLineInputBuffered<KogKeyFile::MAX_PASSPHRASE + 1> &Input) {
+		KogLogin::Wipe(const_cast<char *>(Input.GetString()), KogKeyFile::MAX_PASSPHRASE + 1);
+		Input.Clear();
+	};
+
+	CUIRect Row, Label, Box, Action, Action2;
+	Options.HSplitTop(2.0f, nullptr, &Options);
+	Options.HSplitTop(20.0f, &Row, &Options);
+	Row.VSplitLeft(110.0f, &Label, &Row);
+	Row.VSplitLeft(250.0f, &Box, &Row);
+	Row.VSplitLeft(10.0f, nullptr, &Row);
+	Row.VSplitLeft(150.0f, &Action, &Row);
+	Row.VSplitLeft(10.0f, nullptr, &Action2);
+	Ui()->DoLabel(&Label, Login.KeyHasPassphrase() ? Localize("Passphrase:") : Localize("New passphrase:"), 12.0f, TEXTALIGN_ML);
+	CLineInputBuffered<KogKeyFile::MAX_PASSPHRASE + 1> &Main = Login.KeyHasPassphrase() ? s_Current : s_New;
+	Ui()->DoEditBox(&Main, &Box, 12.0f);
+	if(Login.KeyLocked())
+	{
+		static CButtonContainer s_ButtonUnlock;
+		if(DoButton_Menu(&s_ButtonUnlock, Localize("Unlock"), 0, &Action) && !Login.Busy())
+		{
+			Login.Unlock(s_Current.GetString());
+			ClearInput(s_Current);
+		}
+	}
+	else if(!Login.KeyHasPassphrase())
+	{
+		static CButtonContainer s_ButtonLock;
+		if(DoButton_Menu(&s_ButtonLock, Localize("Lock the key"), 0, &Action))
+		{
+			Login.SetPassphrase(s_New.GetString(), nullptr);
+			ClearInput(s_New);
+		}
+	}
+	else
+	{
+		static CButtonContainer s_ButtonRemove;
+		if(DoButton_Menu(&s_ButtonRemove, Localize("Remove passphrase"), 0, &Action))
+		{
+			Login.RemovePassphrase(s_Current.GetString());
+			ClearInput(s_Current);
+		}
+		Options.HSplitTop(2.0f, nullptr, &Options);
+		Options.HSplitTop(20.0f, &Row, &Options);
+		Row.VSplitLeft(110.0f, &Label, &Row);
+		Row.VSplitLeft(250.0f, &Box, &Row);
+		Row.VSplitLeft(10.0f, nullptr, &Row);
+		Row.VSplitLeft(150.0f, &Action, nullptr);
+		Ui()->DoLabel(&Label, Localize("New passphrase:"), 12.0f, TEXTALIGN_ML);
+		Ui()->DoEditBox(&s_New, &Box, 12.0f);
+		static CButtonContainer s_ButtonChange;
+		if(DoButton_Menu(&s_ButtonChange, Localize("Change passphrase"), 0, &Action))
+		{
+			Login.SetPassphrase(s_New.GetString(), s_Current.GetString());
+			ClearInput(s_Current);
+			ClearInput(s_New);
+		}
+	}
 }
 
 void CMenus::RenderSettingsDDNet(CUIRect MainView)
@@ -102,7 +173,7 @@ void CMenus::RenderSettingsDDNet(CUIRect MainView)
 #endif
 
 	CUIRect AccountRect;
-	MainView.HSplitBottom(82.0f, &MainView, &AccountRect);
+	MainView.HSplitBottom(126.0f, &MainView, &AccountRect);
 	MainView.HSplitBottom(5.0f, &MainView, nullptr);
 
 	// demo

@@ -2517,6 +2517,8 @@ set_src(ENGINE_SHARED GLOB_RECURSE src/engine/shared
   kog_failsafe.h
   kog_hello.cpp
   kog_hello.h
+  kog_keyfile.cpp
+  kog_keyfile.h
   kog_login.cpp
   kog_login.h
   kog_protocol.h
@@ -3670,6 +3672,7 @@ if(GTEST_FOUND OR DOWNLOAD_GTEST)
     kog_community_test.cpp
     kog_failsafe_test.cpp
     kog_hello_test.cpp
+    kog_keyfile_test.cpp
     kog_login_test.cpp
     kog_update_test.cpp
     kog_user_agent_test.cpp
