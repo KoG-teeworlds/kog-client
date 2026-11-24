@@ -10,7 +10,7 @@
 # KoG Client
 
 An open-source fork of [TClient](https://github.com/TaterClient/TClient), which is a fork of the
-[DDNet](https://ddnet.org) client, for [King of Gores](https://kog.tw). Work in progress: there is no release yet.
+[DDNet](https://ddnet.org) client, for [King of Gores](https://kog.tw). Work in progress: there is no stable release yet; canary builds are published as GitHub prereleases.
 
 ## Status
 
@@ -21,19 +21,23 @@ Done:
   committed Steam redistributable
 - no longer contacts TClient's servers (update check, information file, identification message to game servers)
 - the updater verifies an Ed25519 signature on its update manifest, checks every downloaded file against its SHA-256
-  and restores the previous files if an update fails (unit tests included); updates stay disabled until the
-  project's signing key has been generated
+  and restores the previous files if an update fails (unit tests included); the keys are compiled in
+  (`src/engine/client/kog_update_pubkey.h`): the canary and dev keys are real, so those channels update; the stable
+  keys are still placeholders, so stable does not update
+
+- login with a KoG account (OAuth 2.0 in the browser, no password in the game), on by default in canary and dev
+  builds only; proving the device to a game server is not built, see [docs/LOGIN.md](docs/LOGIN.md)
+- signed canary and dev releases and the download page at client.kog.tw
 
 Planned, not built yet:
 
-- login with a KoG account (OAuth 2.0 in the browser, no password in the game)
+- stable releases (the stable keys are placeholders)
 - KoG messages between client and server, announced with capabilities
 - opt-in client-side network statistics
-- signed releases and the download page at client.kog.tw
 
 ## Build
 
-Same as DDNet, see [docs/BUILDING.md](docs/BUILDING.md). The updater needs `-DAUTOUPDATE=ON`. Run the tests with
+Same as DDNet, see [docs/BUILDING.md](docs/BUILDING.md). The updater needs `-DAUTOUPDATE=ON` (default OFF; the release workflows turn it on). Run the tests with
 `cmake --build . --target run_tests`.
 
 ## Contributing

@@ -12,7 +12,7 @@ cmake --build build
 and run with:
 
 ```sh
-UBSAN_OPTIONS=log_path=./SAN:print_stacktrace=1:halt_on_errors=0 ASAN_OPTIONS=log_path=./SAN:print_stacktrace=1:check_initialization_order=1:detect_leaks=1:halt_on_errors=0:handle_abort=1 ./DDNet
+UBSAN_OPTIONS=log_path=./SAN:print_stacktrace=1:halt_on_errors=0 ASAN_OPTIONS=log_path=./SAN:print_stacktrace=1:check_initialization_order=1:detect_leaks=1:halt_on_errors=0:handle_abort=1 ./KoG-Client
 ```
 
 Check the SAN.\* files afterwards. This finds more problems than memcheck, runs faster, but requires a modern GCC/Clang compiler.
@@ -20,10 +20,10 @@ Check the SAN.\* files afterwards. This finds more problems than memcheck, runs 
 On macOS with the Homebrew `sdl2-compat` package you need to set `DYLD_LIBRARY_PATH`:
 
 ```sh
-DYLD_LIBRARY_PATH=$(brew --prefix sdl3)/lib ./DDNet
+DYLD_LIBRARY_PATH=$(brew --prefix sdl3)/lib ./KoG-Client
 ```
 
-For valgrind's memcheck compile a normal Debug build and run with: `valgrind --tool=memcheck ./DDNet`
+For valgrind's memcheck compile a normal Debug build and run with: `valgrind --tool=memcheck ./KoG-Client`
 Expect a large slow down.
 
 ## Symbolizing a crash dump (`.RTP`) for an official Windows release
