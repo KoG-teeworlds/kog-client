@@ -107,7 +107,7 @@ bool CLocalizationDatabase::IsValidTranslation(const char *pSource, const char *
 {
 	const char *pReason = nullptr;
 	SFormatSignature Source, Translation;
-	if(str_length(pTranslation) > MAX_TRANSLATION_LENGTH)
+	if(strlen(pTranslation) > MAX_TRANSLATION_LENGTH)
 		pReason = "translation is too long";
 	else if(!ParseFormat(pTranslation, Translation) || !ParseFormat(pSource, Source))
 		pReason = "invalid format specifier (or %n)";
