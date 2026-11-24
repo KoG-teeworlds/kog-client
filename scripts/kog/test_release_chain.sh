@@ -141,6 +141,20 @@ echo server > "$run/pkg/linux/DDNet-Server"
 (cd "$run/pkg" && tar -cJf "$run/artifacts/kog-package-linux/KoGClient-1-linux_x86_64.tar.xz" --transform 's,^linux,KoGClient-1-linux_x86_64,' linux)
 if (cd "$run" && KOG_PUBLISHED_URL=http://127.0.0.1:9 bash scripts/kog/assemble_release.sh canary 0.1.0-canary.5 >/dev/null 2>&1); then fail "a server in the package was accepted"; fi
 
+echo "the previous manifest comes from the published branch, and an unreadable branch is never taken for a first publish"
+api="$work/api"
+mkdir -p "$api/repos/KoG-teeworlds/kog-client-updates/contents/canary"
+echo '{"sequence": 7}' > "$api/repos/KoG-teeworlds/kog-client-updates/contents/canary/update.json"
+(cd "$api" && python3 -m http.server 18499 --bind 127.0.0.1 >/dev/null 2>&1 & echo $! > "$work/api.pid")
+sleep 1
+rc=0; KOG_API_URL=http://127.0.0.1:18499 bash "$root/scripts/kog/published_file.sh" canary/update.json "$work/prev.json" || rc=$?
+[ "$rc" = 0 ] && grep -q '"sequence": 7' "$work/prev.json" || fail "the published file was not read"
+rc=0; KOG_API_URL=http://127.0.0.1:18499 bash "$root/scripts/kog/published_file.sh" dev/update.json "$work/prev2.json" 2>/dev/null || rc=$?
+[ "$rc" = 3 ] && [ ! -e "$work/prev2.json" ] || fail "a missing file was not reported as missing"
+kill "$(cat "$work/api.pid")" 2>/dev/null || true
+rc=0; KOG_API_URL=http://127.0.0.1:9 bash "$root/scripts/kog/published_file.sh" canary/update.json "$work/prev3.json" 2>/dev/null || rc=$?
+[ "$rc" = 1 ] || fail "an unreachable branch was taken for a first publish"
+
 if [ -n "${KOG_TESTRUNNER:-}" ]; then
   # the runner may abort at exit after its tests passed
   result=$(KOG_UPDATE_FIXTURE_DIR="$fixture" "$KOG_TESTRUNNER" --gtest_filter='KogUpdate.ScriptFixture' 2>&1 || true)
