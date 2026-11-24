@@ -114,9 +114,9 @@ void CKogLogin::FailHttp(const char *pWhat)
 {
 	char aMessage[256];
 	if(m_pRequest->State() != EHttpState::DONE)
-		str_format(aMessage, sizeof(aMessage), Localize("%s: network problem, could not reach the KoG account server."), pWhat);
+		str_format(aMessage, sizeof(aMessage), "%s: %s", pWhat, Localize("network problem, could not reach the KoG account server."));
 	else
-		str_format(aMessage, sizeof(aMessage), Localize("%s: the KoG account server refused it (status %d)."), pWhat, m_pRequest->StatusCode());
+		str_format(aMessage, sizeof(aMessage), "%s: %s (%d)", pWhat, Localize("the KoG account server refused it, status"), m_pRequest->StatusCode());
 	Fail(aMessage);
 }
 
@@ -426,7 +426,7 @@ void CKogLogin::StepDevice()
 	str_copy(g_Config.m_ClKogAccountName, m_aAccountName);
 	char aMessage[256];
 	if(m_aAccountName[0] != '\0')
-		str_format(aMessage, sizeof(aMessage), Localize("Logged in as %s."), m_aAccountName);
+		str_format(aMessage, sizeof(aMessage), "%s %s.", Localize("Logged in as"), m_aAccountName);
 	else
 		str_copy(aMessage, Localize("Logged in."));
 	Succeed(aMessage);

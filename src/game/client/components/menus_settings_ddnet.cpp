@@ -48,8 +48,10 @@ void CMenus::RenderKogAccount(CUIRect View)
 		if(Login.MessageIsError())
 			TextRender()->TextColor(1.0f, 0.4f, 0.4f, 1.0f);
 	}
+	else if(Login.HasDeviceKey() && g_Config.m_ClKogAccountName[0] != '\0')
+		str_format(aBuf, sizeof(aBuf), "%s %s.", Localize("Logged in as"), g_Config.m_ClKogAccountName);
 	else if(Login.HasDeviceKey())
-		str_format(aBuf, sizeof(aBuf), g_Config.m_ClKogAccountName[0] != '\0' ? Localize("Logged in as %s.") : Localize("Logged in%s."), g_Config.m_ClKogAccountName[0] != '\0' ? g_Config.m_ClKogAccountName : "");
+		str_copy(aBuf, Localize("Logged in."));
 	else
 		str_copy(aBuf, Localize("Not logged in."));
 	Ui()->DoLabel(&Status, aBuf, 12.0f, TEXTALIGN_ML);
