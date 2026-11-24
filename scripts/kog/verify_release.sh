@@ -7,7 +7,6 @@ channel=${1:?channel}
 tag=${2:?tag}
 out=${3:?outdir}
 repo=${KOG_REPO:-KoG-teeworlds/kog-client}
-base_url=${KOG_PUBLISHED_URL:-https://client.kog.tw}
 root=$(cd "$(dirname "$0")/../.." && pwd -P)
 case "$channel" in
   stable) workflow=kog-release.yml branch=main ;;
@@ -62,6 +61,8 @@ while read -r name; do
   [ -f "$out/assets/$name" ] || { echo "missing asset $name" >&2; exit 1; }
 done < <(sort -u "$out/asset_names.txt")
 rm -f "$out/previous.json"
-curl -fsS "$base_url/$channel/update.json" -o "$out/previous.json" 2>/dev/null || rm -f "$out/previous.json"
+rc=0
+bash "$root/scripts/kog/published_file.sh" "$channel/update.json" "$out/previous.json" || rc=$?
+[ "$rc" = 0 ] || [ "$rc" = 3 ] || exit 1
 $tool newer --manifest "$out/update.draft.json" --previous "$out/previous.json"
 echo "release $tag verified: channel $channel, commit $source"
