@@ -87,9 +87,11 @@ add_compile_definitions(KOG_CLIENT_CHANNEL="${KOG_CHANNEL}")
 if(KOG_CHANNEL STREQUAL "stable")
   add_compile_definitions(KOG_LOGIN_DEFAULT=0)
   add_compile_definitions(KOG_HELLO_DEFAULT=0)
+  add_compile_definitions(KOG_REQUIRE_CERT_DEFAULT=0)
 else()
   add_compile_definitions(KOG_LOGIN_DEFAULT=1)
   add_compile_definitions(KOG_HELLO_DEFAULT=1)
+  add_compile_definitions(KOG_REQUIRE_CERT_DEFAULT=1)
 endif()
 if(NOT KOG_CHANNEL STREQUAL "stable")
   if(NOT KOG_BUILD_NUMBER MATCHES "^[0-9]+$")
@@ -2520,6 +2522,8 @@ set_src(ENGINE_SHARED GLOB_RECURSE src/engine/shared
   kog_login.h
   kog_login_wire.cpp
   kog_login_wire.h
+  kog_trust.cpp
+  kog_trust.h
   kog_protocol.h
   kog_update.cpp
   kog_update.h
@@ -2775,6 +2779,7 @@ if(CLIENT)
     keynames.h
     kog_keystore.cpp
     kog_keystore.h
+    kog_trust_pins.h
     kog_update_pubkey.h
     notifications.cpp
     notifications.h
@@ -2855,6 +2860,8 @@ if(CLIENT)
     components/kog/kog_hello.h
     components/kog/kog_login.cpp
     components/kog/kog_login.h
+    components/kog/kog_trust.cpp
+    components/kog/kog_trust.h
     components/local_server.cpp
     components/local_server.h
     components/mapimages.cpp
@@ -3672,6 +3679,7 @@ if(GTEST_FOUND OR DOWNLOAD_GTEST)
     kog_hello_test.cpp
     kog_login_test.cpp
     kog_login_wire_test.cpp
+    kog_trust_test.cpp
     kog_update_test.cpp
     linereader_test.cpp
     localization_test.cpp

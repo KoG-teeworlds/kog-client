@@ -558,6 +558,8 @@ bool DecodeKey(const char *pBlob, SDeviceKey *pKey)
 
 bool MayAnswerChallenge(const SJoinDecision &Decision)
 {
+	if(Decision.m_CertBad || (Decision.m_CertRequired && !Decision.m_CertVerified))
+		return false;
 	return Decision.m_SwitchOn && Decision.m_AutoLoginOn && Decision.m_HasDeviceKey && Decision.m_ServerIsKog && Decision.m_CapabilityNegotiated && !Decision.m_AlreadyLoggedIn && !Decision.m_AlreadyAnsweredThisJoin;
 }
 

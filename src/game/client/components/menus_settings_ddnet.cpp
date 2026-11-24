@@ -61,6 +61,11 @@ void CMenus::RenderKogAccount(CUIRect View)
 		str_copy(aBuf, Localize("Logged in."));
 	else
 		str_copy(aBuf, Localize("Not logged in."));
+	if(GameClient()->m_KogTrust.LastVerdict() == CKogTrust::EVerdict::OK && Login.JoinState() != CKogLogin::EJoinState::NONE)
+	{
+		str_append(aBuf, " ", sizeof(aBuf));
+		str_append(aBuf, Localize("(KoG certificate of the server: valid)"), sizeof(aBuf));
+	}
 	Ui()->DoLabel(&Status, aBuf, 12.0f, TEXTALIGN_ML);
 	TextRender()->TextColor(1.0f, 1.0f, 1.0f, 1.0f);
 
