@@ -59,7 +59,7 @@ jobs:
         # that does nothing: the check keeps its name and passes, and the scarce macOS runners are left alone
         - name: macos
           run: ${{ (github.event_name != 'pull_request' || needs.changes.outputs.native == 'true') && 'yes' || 'no' }}
-          os: ${{ (github.event_name != 'pull_request' || needs.changes.outputs.native == 'true') && 'macos-latest' || 'ubuntu-22.04' }}
+          os: ${{ (github.event_name != 'pull_request' || needs.changes.outputs.native == 'true') && 'macos-15' || 'ubuntu-22.04' }}
           cmake-args: -G Ninja
           cmake-args-release: -DIPO=ON
           package-file: "*-macos.dmg"
