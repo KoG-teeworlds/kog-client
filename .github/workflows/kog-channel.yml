@@ -144,4 +144,7 @@ jobs:
         env:
           SIGNING_KEY: ${{ secrets.SIGNING_KEY }}
           UPDATES_DEPLOY_KEY: ${{ secrets.UPDATES_DEPLOY_KEY }}
-        run: bash scripts/kog/sign_and_publish.sh "$CHANNEL" "$VERSION" out
+        run: |
+          [ -n "$SIGNING_KEY" ] || { echo "::error::SIGNING_KEY is empty: the environment ${CHANNEL}-signing gave this job no secret of that name"; exit 1; }
+          echo "signing key: ${#SIGNING_KEY} characters"
+          bash scripts/kog/sign_and_publish.sh "$CHANNEL" "$VERSION" out
