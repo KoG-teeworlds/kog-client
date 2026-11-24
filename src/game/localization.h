@@ -59,6 +59,17 @@ public:
 
 	void AddString(const char *pOrgStr, const char *pNewStr, const char *pContext);
 	const char *FindString(unsigned Hash, unsigned ContextHash) const;
+
+	static constexpr size_t MAX_TRANSLATION_LENGTH = 4096;
+
+	/**
+	 * Checks that a translation is safe to use wherever the source string is used as a printf-style format string.
+	 * The conversion specifiers must match the source's in count, order, type, length modifier and `*` arguments.
+	 * `%n` and translations longer than MAX_TRANSLATION_LENGTH are rejected.
+	 *
+	 * @param ppReason If not null, receives a short description of why the translation was rejected.
+	 */
+	static bool IsValidTranslation(const char *pSource, const char *pTranslation, const char **ppReason = nullptr);
 };
 
 extern CLocalizationDatabase g_Localization;
