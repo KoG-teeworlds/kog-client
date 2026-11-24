@@ -32,7 +32,9 @@ void CMenusStart::RenderStartMenu(CUIRect MainView)
 	Graphics()->TextureSet(g_pData->m_aImages[IMAGE_BANNER].m_Id);
 	Graphics()->QuadsBegin();
 	Graphics()->SetColor(1, 1, 1, 1);
-	IGraphics::CQuadItem QuadItem(MainView.w / 2 - 170, 60, 360, 103);
+	const float BannerHeight = 110.0f;
+	const float BannerWidth = BannerHeight * 603.3f / 351.9f; // aspect ratio of the official logo, never stretched
+	IGraphics::CQuadItem QuadItem(MainView.w / 2 - BannerWidth / 2, 55, BannerWidth, BannerHeight);
 	Graphics()->QuadsDrawTL(&QuadItem, 1);
 	Graphics()->QuadsEnd();
 
