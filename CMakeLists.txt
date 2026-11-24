@@ -2513,6 +2513,7 @@ set_src(ENGINE_SHARED GLOB_RECURSE src/engine/shared
   jsonwriter.h
   kernel.cpp
   kog_failsafe.cpp
+  kog_community.h
   kog_failsafe.h
   kog_hello.cpp
   kog_hello.h
@@ -3666,6 +3667,7 @@ if(GTEST_FOUND OR DOWNLOAD_GTEST)
     jobs_test.cpp
     json_test.cpp
     jsonwriter_test.cpp
+    kog_community_test.cpp
     kog_failsafe_test.cpp
     kog_hello_test.cpp
     kog_login_test.cpp

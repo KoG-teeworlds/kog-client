@@ -7,6 +7,7 @@
 #include <engine/serverbrowser.h>
 #include <engine/shared/config.h>
 #include <engine/shared/json.h>
+#include <engine/shared/kog_community.h>
 #include <engine/storage.h>
 
 #include <game/client/gameclient.h>
@@ -15,7 +16,6 @@
 namespace {
 
 constexpr int64_t BROWSER_TIMEOUT_MS = 3 * 60 * 1000;
-constexpr const char *KOG_COMMUNITY_ID = "kog";
 
 class CStubTransport : public IKogLoginTransport
 {
@@ -488,7 +488,7 @@ void CKogLogin::OnStateChange(int NewState, int OldState)
 bool CKogLogin::ServerIsKog(IServerBrowser *pBrowser, const NETADDR &Address)
 {
 	const IServerBrowser::CServerEntry *pEntry = pBrowser->Find(Address);
-	return pEntry != nullptr && str_comp(pEntry->m_Info.m_aCommunityId, KOG_COMMUNITY_ID) == 0;
+	return pEntry != nullptr && str_comp(pEntry->m_Info.m_aCommunityId, KogCommunity::ID) == 0;
 }
 
 bool CKogLogin::OnChallenge(const char *pServerAddress, const uint8_t *pNonce, size_t NonceSize, const uint8_t (&aSessionId)[KogLogin::UUID_SIZE])
