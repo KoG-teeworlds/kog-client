@@ -15,6 +15,11 @@
 #define KOG_CLIENT_CHANNEL "stable"
 #endif
 
+// Log in with KoG is on by default in canary and dev builds only (CMake sets it)
+#ifndef KOG_LOGIN_DEFAULT
+#define KOG_LOGIN_DEFAULT 0
+#endif
+
 #define KOG_BASED_ON_TCLIENT "10.9.0"
 #define KOG_BASED_ON_DDNET "20.1"
 

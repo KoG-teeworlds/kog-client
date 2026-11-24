@@ -11,6 +11,7 @@ This lists every outbound connection of the client as built from this repository
 | `skins.ddnet.org` (HTTPS) | Download skins of players you meet | On demand | The skin names of players on your server | `cl_download_skins` |
 | Community icon hosts named in the info file | Icons in the server browser | On demand | Nothing | None |
 | `client.kog.tw`, GitHub Releases | Update check and download | Not started yet: nothing calls the check, and `kog_check_updates` is not read yet | Nothing | `kog_check_updates`, `kog_update_url` |
+| `kog.tw` (HTTPS, or `cl_kog_account_url`) | Log in with KoG: discovery, token, user info, device registration and removal | Only when you press Log in or Log out, and only if `cl_kog_login` is on (canary and dev builds) | The OAuth code and PKCE verifier, the device name (host name, editable) and the public half of a device key | `cl_kog_login`, `cl_kog_account_url`, `cl_kog_device_name`; see `docs/LOGIN.md` |
 | `tc_custom_communities_url` | Extra communities | Empty, so no request | Nothing | `tc_custom_communities_url` |
 | Discord | Rich presence | Not compiled in (`DISCORD=OFF`), and `tc_discord_rpc` is off | Nothing | `tc_discord_rpc` |
 | Links in menus (ddnet.org, wiki.ddnet.org) | Help pages | Only when you click | Nothing | None |

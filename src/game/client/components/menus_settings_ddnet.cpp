@@ -26,6 +26,71 @@
 
 #include <algorithm>
 
+void CMenus::RenderKogAccount(CUIRect View)
+{
+	CKogLogin &Login = GameClient()->m_KogLogin;
+	CUIRect Title, Status, Controls, Options, Button;
+	View.HSplitTop(20.0f, &Title, &View);
+	View.HSplitTop(20.0f, &Status, &View);
+	View.HSplitTop(20.0f, &Controls, &Options);
+	Ui()->DoLabel(&Title, Localize("KoG account"), 16.0f, TEXTALIGN_ML);
+
+	if(!g_Config.m_ClKogLogin)
+	{
+		Ui()->DoLabel(&Status, Localize("Log in with KoG is switched off (cl_kog_login 0). The /login code still works."), 12.0f, TEXTALIGN_ML);
+		return;
+	}
+
+	char aBuf[256];
+	if(Login.Message()[0] != '\0' && (Login.Busy() || Login.MessageIsError() || Login.Step() == CKogLogin::EStep::DONE))
+	{
+		str_copy(aBuf, Login.Message());
+		if(Login.MessageIsError())
+			TextRender()->TextColor(1.0f, 0.4f, 0.4f, 1.0f);
+	}
+	else if(Login.HasDeviceKey() && g_Config.m_ClKogAccountName[0] != '\0')
+		str_format(aBuf, sizeof(aBuf), "%s %s.", Localize("Logged in as"), g_Config.m_ClKogAccountName);
+	else if(Login.HasDeviceKey())
+		str_copy(aBuf, Localize("Logged in."));
+	else
+		str_copy(aBuf, Localize("Not logged in."));
+	Ui()->DoLabel(&Status, aBuf, 12.0f, TEXTALIGN_ML);
+	TextRender()->TextColor(1.0f, 1.0f, 1.0f, 1.0f);
+
+	CUIRect LoginButton, LogoutButton, CancelButton, NameLabel, NameBox;
+	Controls.VSplitLeft(180.0f, &LoginButton, &Controls);
+	Controls.VSplitLeft(10.0f, nullptr, &Controls);
+	Controls.VSplitLeft(180.0f, &LogoutButton, &Controls);
+	Controls.VSplitLeft(10.0f, nullptr, &CancelButton);
+	CancelButton.VSplitLeft(100.0f, &CancelButton, nullptr);
+
+	static CButtonContainer s_ButtonLogin;
+	if(DoButton_Menu(&s_ButtonLogin, Localize("Log in with KoG"), 0, &LoginButton) && !Login.Busy())
+		Login.StartLogin();
+	static CButtonContainer s_ButtonLogout;
+	if(DoButton_Menu(&s_ButtonLogout, Localize("Log out on this device"), 0, &LogoutButton) && !Login.Busy())
+		Login.StartLogout();
+	if(Login.Busy())
+	{
+		static CButtonContainer s_ButtonCancel;
+		if(DoButton_Menu(&s_ButtonCancel, Localize("Cancel"), 0, &CancelButton))
+			Login.Cancel();
+	}
+
+	Options.HSplitTop(2.0f, nullptr, &Options);
+	Options.HSplitTop(20.0f, &Button, &Options);
+	Button.VSplitMid(&Button, &NameLabel, 10.0f);
+	if(DoButton_CheckBox(&g_Config.m_ClKogAutoLogin, Localize("Log in automatically on KoG servers"), g_Config.m_ClKogAutoLogin, &Button))
+		g_Config.m_ClKogAutoLogin ^= 1;
+	NameLabel.VSplitLeft(110.0f, &NameLabel, &NameBox);
+	Ui()->DoLabel(&NameLabel, Localize("Device name:"), 12.0f, TEXTALIGN_ML);
+	static CLineInput s_DeviceName(g_Config.m_ClKogDeviceName, sizeof(g_Config.m_ClKogDeviceName));
+	char aDefault[161];
+	KogLogin::DefaultDeviceName(aDefault, sizeof(aDefault));
+	s_DeviceName.SetEmptyText(aDefault);
+	Ui()->DoEditBox(&s_DeviceName, &NameBox, 12.0f);
+}
+
 void CMenus::RenderSettingsDDNet(CUIRect MainView)
 {
 	CUIRect Button, Left, Right, LeftLeft, Label;
@@ -35,6 +100,10 @@ void CMenus::RenderSettingsDDNet(CUIRect MainView)
 	MainView.HSplitBottom(62.0f, &MainView, &UpdaterRect);
 	MainView.HSplitBottom(5.0f, &MainView, nullptr);
 #endif
+
+	CUIRect AccountRect;
+	MainView.HSplitBottom(82.0f, &MainView, &AccountRect);
+	MainView.HSplitBottom(5.0f, &MainView, nullptr);
 
 	// demo
 	CUIRect Demo;
@@ -303,6 +372,8 @@ void CMenus::RenderSettingsDDNet(CUIRect MainView)
 #endif
 
 	// Updater
+	RenderKogAccount(AccountRect);
+
 #if defined(CONF_AUTOUPDATE)
 	{
 		CUIRect Status, Controls, Notice;

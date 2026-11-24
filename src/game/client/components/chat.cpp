@@ -1393,6 +1393,9 @@ void CChat::SendChat(int Team, const char *pLine)
 
 	m_LastChatSend = time();
 
+	if(str_startswith(pLine, "/login "))
+		GameClient()->m_KogLogin.NoteManualLogin();
+
 	if(GameClient()->Client()->IsSixup())
 	{
 		protocol7::CNetMsg_Cl_Say Msg7;

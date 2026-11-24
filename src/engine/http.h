@@ -78,6 +78,8 @@ public:
 	void Head();
 	void Post(const unsigned char *pData, size_t DataLength);
 	void PostJson(const char *pJson);
+	void PostForm(const char *pForm);
+	void Delete();
 
 	virtual void Header(const char *pNameColonValue) = 0;
 	void HeaderString(const char *pName, const char *pValue);
@@ -136,6 +138,8 @@ protected:
 		HEAD,
 		POST,
 		POST_JSON,
+		POST_FORM,
+		DELETE_,
 	};
 	static const char *GetRequestType(REQUEST Type);
 

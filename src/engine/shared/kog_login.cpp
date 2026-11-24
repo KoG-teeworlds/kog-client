@@ -1,0 +1,599 @@
+#include "kog_login.h"
+
+#include <base/hash.h>
+#include <base/mem.h>
+#include <base/secure.h>
+#include <base/str.h>
+#include <base/time.h>
+
+#include <engine/external/monocypher/monocypher-ed25519.h>
+
+#include <cstring>
+
+#if defined(CONF_FAMILY_WINDOWS)
+#include <windows.h>
+#elif defined(CONF_FAMILY_UNIX)
+#include <unistd.h>
+#endif
+
+namespace KogLogin {
+
+static const char BASE64URL[] = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_";
+
+void Base64UrlEncode(char *pDst, size_t DstSize, const void *pData, size_t DataSize)
+{
+	const uint8_t *pIn = static_cast<const uint8_t *>(pData);
+	size_t Out = 0;
+	for(size_t i = 0; i < DataSize; i += 3)
+	{
+		const size_t Left = DataSize - i;
+		const uint32_t Value = (uint32_t(pIn[i]) << 16) | (Left > 1 ? uint32_t(pIn[i + 1]) << 8 : 0) | (Left > 2 ? uint32_t(pIn[i + 2]) : 0);
+		const size_t Chars = Left > 2 ? 4 : Left + 1;
+		for(size_t j = 0; j < Chars; j++)
+		{
+			if(Out + 1 >= DstSize)
+			{
+				pDst[Out] = '\0';
+				return;
+			}
+			pDst[Out++] = BASE64URL[(Value >> (18 - 6 * j)) & 63];
+		}
+	}
+	if(DstSize > 0)
+		pDst[Out] = '\0';
+}
+
+int Base64UrlDecode(void *pDst, size_t DstSize, const char *pSrc)
+{
+	const size_t Length = str_length(pSrc);
+	if(Length % 4 == 1)
+		return -1;
+	uint8_t *pOut = static_cast<uint8_t *>(pDst);
+	size_t Out = 0;
+	uint32_t Value = 0;
+	int Bits = 0;
+	for(size_t i = 0; i < Length; i++)
+	{
+		const char *pPos = strchr(BASE64URL, pSrc[i]);
+		if(!pPos || pSrc[i] == '\0')
+			return -1;
+		Value = ((Value << 6) | uint32_t(pPos - BASE64URL)) & 0xffffff;
+		Bits += 6;
+		if(Bits >= 8)
+		{
+			Bits -= 8;
+			if(Out >= DstSize)
+				return -1;
+			pOut[Out++] = (Value >> Bits) & 0xff;
+		}
+	}
+	if(Bits > 0 && (Value & ((1u << Bits) - 1)) != 0)
+		return -1;
+	return (int)Out;
+}
+
+void UrlEncode(char *pDst, size_t DstSize, const char *pSrc)
+{
+	static const char HEX[] = "0123456789ABCDEF";
+	size_t Out = 0;
+	for(; *pSrc; pSrc++)
+	{
+		const unsigned char c = *pSrc;
+		const bool Plain = (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || (c >= '0' && c <= '9') || c == '-' || c == '.' || c == '_' || c == '~';
+		if(Out + (Plain ? 1 : 3) + 1 > DstSize)
+			break;
+		if(Plain)
+			pDst[Out++] = c;
+		else
+		{
+			pDst[Out++] = '%';
+			pDst[Out++] = HEX[c >> 4];
+			pDst[Out++] = HEX[c & 15];
+		}
+	}
+	if(DstSize > 0)
+		pDst[Out] = '\0';
+}
+
+static int HexValue(char c)
+{
+	if(c >= '0' && c <= '9')
+		return c - '0';
+	if(c >= 'a' && c <= 'f')
+		return c - 'a' + 10;
+	if(c >= 'A' && c <= 'F')
+		return c - 'A' + 10;
+	return -1;
+}
+
+bool UrlDecode(char *pDst, size_t DstSize, const char *pSrc, size_t SrcLength)
+{
+	size_t Out = 0;
+	for(size_t i = 0; i < SrcLength; i++)
+	{
+		char c = pSrc[i];
+		if(c == '%')
+		{
+			if(i + 2 >= SrcLength)
+				return false;
+			const int Hi = HexValue(pSrc[i + 1]);
+			const int Lo = HexValue(pSrc[i + 2]);
+			if(Hi < 0 || Lo < 0)
+				return false;
+			c = (char)(Hi * 16 + Lo);
+			i += 2;
+		}
+		else if(c == '+')
+			c = ' ';
+		if(c == '\0' || Out + 1 >= DstSize)
+			return false;
+		pDst[Out++] = c;
+	}
+	pDst[Out] = '\0';
+	return true;
+}
+
+void Wipe(void *pData, size_t Size)
+{
+	volatile uint8_t *p = static_cast<volatile uint8_t *>(pData);
+	for(size_t i = 0; i < Size; i++)
+		p[i] = 0;
+}
+
+void MakeVerifier(char (&aVerifier)[VERIFIER_LENGTH + 1])
+{
+	// 48 random bytes make 64 base64url characters, all from the unreserved set of RFC 7636
+	uint8_t aRandom[48];
+	secure_random_fill(aRandom, sizeof(aRandom));
+	Base64UrlEncode(aVerifier, sizeof(aVerifier), aRandom, sizeof(aRandom));
+	Wipe(aRandom, sizeof(aRandom));
+}
+
+void MakeState(char (&aState)[STATE_LENGTH + 1])
+{
+	uint8_t aRandom[24];
+	secure_random_fill(aRandom, sizeof(aRandom));
+	Base64UrlEncode(aState, sizeof(aState), aRandom, sizeof(aRandom));
+	Wipe(aRandom, sizeof(aRandom));
+}
+
+void CodeChallenge(const char *pVerifier, char (&aChallenge)[CHALLENGE_LENGTH + 1])
+{
+	const SHA256_DIGEST Digest = sha256(pVerifier, str_length(pVerifier));
+	Base64UrlEncode(aChallenge, sizeof(aChallenge), Digest.data, sizeof(Digest.data));
+}
+
+void CutDeviceName(char *pDst, size_t DstSize, const char *pSrc)
+{
+	char aCopy[512];
+	str_copy(aCopy, pSrc);
+	str_utf8_truncate(pDst, DstSize, str_utf8_skip_whitespaces(aCopy), MAX_DEVICE_NAME);
+	str_utf8_trim_right(pDst);
+}
+
+void DefaultDeviceName(char *pBuf, size_t Size)
+{
+	char aHost[256] = "";
+#if defined(CONF_FAMILY_WINDOWS)
+	DWORD Length = sizeof(aHost);
+	if(!GetComputerNameA(aHost, &Length))
+		aHost[0] = '\0';
+#elif defined(CONF_FAMILY_UNIX)
+	if(gethostname(aHost, sizeof(aHost) - 1) != 0)
+		aHost[0] = '\0';
+	aHost[sizeof(aHost) - 1] = '\0';
+#endif
+	if(aHost[0] == '\0')
+		str_copy(aHost, "Unknown device");
+	str_sanitize_cc(aHost);
+	CutDeviceName(pBuf, Size, aHost);
+}
+
+bool BuildAuthorizeUrl(char *pBuf, size_t Size, const char *pAuthorizeEndpoint, const char *pRedirectUri, const char *pState, const char *pChallenge, const char *pDeviceName)
+{
+	char aRedirect[256], aScope[128], aDevice[512];
+	UrlEncode(aRedirect, sizeof(aRedirect), pRedirectUri);
+	UrlEncode(aScope, sizeof(aScope), SCOPE);
+	UrlEncode(aDevice, sizeof(aDevice), pDeviceName);
+	const int Length = str_format(pBuf, Size, "%s%cresponse_type=code&client_id=%s&redirect_uri=%s&scope=%s&state=%s&code_challenge=%s&code_challenge_method=S256&device_name=%s",
+		pAuthorizeEndpoint, strchr(pAuthorizeEndpoint, '?') ? '&' : '?', CLIENT_ID, aRedirect, aScope, pState, pChallenge, aDevice);
+	return Length > 0 && (size_t)Length < Size;
+}
+
+static bool ConstantTimeEquals(const char *pA, const char *pB)
+{
+	const size_t LengthA = str_length(pA);
+	const size_t LengthB = str_length(pB);
+	unsigned Diff = (unsigned)(LengthA ^ LengthB);
+	for(size_t i = 0; i < LengthA; i++)
+		Diff |= (unsigned char)pA[i] ^ (unsigned char)pB[LengthB ? i % LengthB : 0];
+	return Diff == 0;
+}
+
+ECallback ParseCallback(const char *pRequest, size_t Length, const char *pExpectedState, char *pCode, size_t CodeSize, char *pError, size_t ErrorSize)
+{
+	if(pCode && CodeSize)
+		pCode[0] = '\0';
+	if(pError && ErrorSize)
+		pError[0] = '\0';
+
+	const char *pLineEnd = static_cast<const char *>(memchr(pRequest, '\n', Length));
+	if(!pLineEnd)
+		return ECallback::MALFORMED;
+	size_t LineLength = pLineEnd - pRequest;
+	if(LineLength > 0 && pRequest[LineLength - 1] == '\r')
+		LineLength--;
+
+	if(LineLength < 4 || str_comp_num(pRequest, "GET ", 4) != 0)
+	{
+		const bool HasSpace = memchr(pRequest, ' ', LineLength) != nullptr;
+		return HasSpace ? ECallback::WRONG_METHOD : ECallback::MALFORMED;
+	}
+	const char *pTarget = pRequest + 4;
+	const char *pLine = pRequest + LineLength;
+	const char *pTargetEnd = static_cast<const char *>(memchr(pTarget, ' ', pLine - pTarget));
+	if(!pTargetEnd || pLine - pTargetEnd < 9 || str_comp_num(pTargetEnd + 1, "HTTP/1.", 7) != 0)
+		return ECallback::MALFORMED;
+
+	const char *pQuery = static_cast<const char *>(memchr(pTarget, '?', pTargetEnd - pTarget));
+	const size_t PathLength = (pQuery ? pQuery : pTargetEnd) - pTarget;
+	if(PathLength != (size_t)str_length(CALLBACK_PATH) || str_comp_num(pTarget, CALLBACK_PATH, PathLength) != 0)
+		return ECallback::WRONG_PATH;
+	if(!pQuery)
+		return ECallback::BAD_STATE;
+	pQuery++;
+
+	char aState[128] = "", aCode[MAX_CODE_LENGTH + 1] = "", aErr[128] = "";
+	bool HaveState = false, HaveCode = false, HaveErr = false, Duplicate = false;
+	const char *pPos = pQuery;
+	while(pPos < pTargetEnd)
+	{
+		const char *pAmp = static_cast<const char *>(memchr(pPos, '&', pTargetEnd - pPos));
+		const char *pEnd = pAmp ? pAmp : pTargetEnd;
+		const char *pEq = static_cast<const char *>(memchr(pPos, '=', pEnd - pPos));
+		if(pEq)
+		{
+			const size_t NameLength = pEq - pPos;
+			char *pValue = nullptr;
+			size_t ValueSize = 0;
+			bool *pHave = nullptr;
+			if(NameLength == 5 && str_comp_num(pPos, "state", 5) == 0)
+			{
+				pValue = aState;
+				ValueSize = sizeof(aState);
+				pHave = &HaveState;
+			}
+			else if(NameLength == 4 && str_comp_num(pPos, "code", 4) == 0)
+			{
+				pValue = aCode;
+				ValueSize = sizeof(aCode);
+				pHave = &HaveCode;
+			}
+			else if(NameLength == 5 && str_comp_num(pPos, "error", 5) == 0)
+			{
+				pValue = aErr;
+				ValueSize = sizeof(aErr);
+				pHave = &HaveErr;
+			}
+			if(pHave)
+			{
+				if(*pHave)
+					Duplicate = true;
+				*pHave = true;
+				if(!UrlDecode(pValue, ValueSize, pEq + 1, pEnd - (pEq + 1)))
+				{
+					Wipe(aCode, sizeof(aCode));
+					return ECallback::MALFORMED;
+				}
+			}
+		}
+		pPos = pEnd + 1;
+	}
+
+	ECallback Result = ECallback::CODE;
+	if(Duplicate)
+		Result = ECallback::MALFORMED;
+	else if(!HaveState || !ConstantTimeEquals(aState, pExpectedState))
+		Result = ECallback::BAD_STATE;
+	else if(HaveErr)
+	{
+		if(pError && ErrorSize)
+			str_copy(pError, aErr, ErrorSize);
+		Result = ECallback::SERVER_ERROR;
+	}
+	else if(!HaveCode || aCode[0] == '\0')
+		Result = ECallback::MISSING_CODE;
+	else if(pCode && CodeSize)
+		str_copy(pCode, aCode, CodeSize);
+	Wipe(aCode, sizeof(aCode));
+	return Result;
+}
+
+void GenerateSeed(uint8_t (&aSeed)[SEED_SIZE])
+{
+	secure_random_fill(aSeed, sizeof(aSeed));
+}
+
+void PublicKeyFromSeed(const uint8_t (&aSeed)[SEED_SIZE], uint8_t (&aPublicKey)[PUBLIC_KEY_SIZE])
+{
+	uint8_t aSeedCopy[SEED_SIZE];
+	uint8_t aSecret[64];
+	mem_copy(aSeedCopy, aSeed, sizeof(aSeedCopy));
+	crypto_ed25519_key_pair(aSecret, aPublicKey, aSeedCopy);
+	Wipe(aSecret, sizeof(aSecret));
+	Wipe(aSeedCopy, sizeof(aSeedCopy));
+}
+
+size_t BuildChallengeMessage(uint8_t *pOut, size_t OutSize, const char *pServerAddress, const uint8_t *pNonce, size_t NonceSize, const char *pDeviceId)
+{
+	const size_t PrefixLength = str_length(CHALLENGE_PREFIX);
+	const size_t AddressLength = str_length(pServerAddress);
+	const size_t IdLength = str_length(pDeviceId);
+	const size_t Total = PrefixLength + AddressLength + NonceSize + IdLength;
+	if(Total > OutSize)
+		return 0;
+	size_t Pos = 0;
+	mem_copy(pOut + Pos, CHALLENGE_PREFIX, PrefixLength);
+	Pos += PrefixLength;
+	mem_copy(pOut + Pos, pServerAddress, AddressLength);
+	Pos += AddressLength;
+	if(NonceSize)
+		mem_copy(pOut + Pos, pNonce, NonceSize);
+	Pos += NonceSize;
+	mem_copy(pOut + Pos, pDeviceId, IdLength);
+	return Total;
+}
+
+enum
+{
+	MAX_MESSAGE = 1024,
+};
+
+bool SignChallenge(const uint8_t (&aSeed)[SEED_SIZE], const char *pServerAddress, const uint8_t *pNonce, size_t NonceSize, const char *pDeviceId, uint8_t (&aSignature)[SIGNATURE_SIZE])
+{
+	if(pServerAddress[0] == '\0' || pDeviceId[0] == '\0')
+		return false;
+	uint8_t aMessage[MAX_MESSAGE];
+	const size_t Length = BuildChallengeMessage(aMessage, sizeof(aMessage), pServerAddress, pNonce, NonceSize, pDeviceId);
+	if(Length == 0)
+		return false;
+	uint8_t aSeedCopy[SEED_SIZE];
+	uint8_t aSecret[64];
+	uint8_t aPublic[PUBLIC_KEY_SIZE];
+	mem_copy(aSeedCopy, aSeed, sizeof(aSeedCopy));
+	crypto_ed25519_key_pair(aSecret, aPublic, aSeedCopy);
+	crypto_ed25519_sign(aSignature, aSecret, aMessage, Length);
+	Wipe(aSecret, sizeof(aSecret));
+	Wipe(aSeedCopy, sizeof(aSeedCopy));
+	return true;
+}
+
+bool VerifyChallenge(const uint8_t (&aPublicKey)[PUBLIC_KEY_SIZE], const char *pServerAddress, const uint8_t *pNonce, size_t NonceSize, const char *pDeviceId, const uint8_t (&aSignature)[SIGNATURE_SIZE])
+{
+	uint8_t aMessage[MAX_MESSAGE];
+	const size_t Length = BuildChallengeMessage(aMessage, sizeof(aMessage), pServerAddress, pNonce, NonceSize, pDeviceId);
+	return Length != 0 && crypto_ed25519_check(aSignature, aPublicKey, aMessage, Length) == 0;
+}
+
+bool EncodeKey(const SDeviceKey &Key, char *pBuf, size_t Size)
+{
+	char aSeed[64];
+	Base64UrlEncode(aSeed, sizeof(aSeed), Key.m_aSeed, sizeof(Key.m_aSeed));
+	const int Length = str_format(pBuf, Size, "v1\n%s\n%s", Key.m_aId, aSeed);
+	Wipe(aSeed, sizeof(aSeed));
+	return Length > 0 && (size_t)Length < Size;
+}
+
+bool DecodeKey(const char *pBlob, SDeviceKey *pKey)
+{
+	const char *pId = str_startswith(pBlob, "v1\n");
+	if(!pId)
+		return false;
+	const char *pNewline = strchr(pId, '\n');
+	if(!pNewline || pNewline == pId || (size_t)(pNewline - pId) >= sizeof(pKey->m_aId))
+		return false;
+	uint8_t aSeed[SEED_SIZE + 1];
+	const int Bytes = Base64UrlDecode(aSeed, sizeof(aSeed), pNewline + 1);
+	if(Bytes != SEED_SIZE)
+	{
+		Wipe(aSeed, sizeof(aSeed));
+		return false;
+	}
+	str_truncate(pKey->m_aId, sizeof(pKey->m_aId), pId, pNewline - pId);
+	mem_copy(pKey->m_aSeed, aSeed, SEED_SIZE);
+	Wipe(aSeed, sizeof(aSeed));
+	return true;
+}
+
+bool MayAnswerChallenge(const SJoinDecision &Decision)
+{
+	return Decision.m_SwitchOn && Decision.m_AutoLoginOn && Decision.m_HasDeviceKey && Decision.m_ServerIsKog && !Decision.m_AlreadyLoggedIn && !Decision.m_AlreadyAnsweredThisJoin;
+}
+
+static const char PAGE_OK[] = "<!doctype html><html><head><meta charset=\"utf-8\"><title>KoG Client</title></head><body style=\"font-family:sans-serif;text-align:center;margin-top:20vh\"><h1>You can close this tab</h1><p>Go back to the game to finish.</p></body></html>";
+static const char PAGE_NO[] = "<!doctype html><html><head><meta charset=\"utf-8\"><title>KoG Client</title></head><body style=\"font-family:sans-serif\"><p>Not found.</p></body></html>";
+
+static bool TryListen(const char *pHost, int Port, NETSOCKET *pSocket)
+{
+	char aAddr[64];
+	str_format(aAddr, sizeof(aAddr), "%s:%d", pHost, Port);
+	NETADDR Addr;
+	if(net_addr_from_str(&Addr, aAddr) != 0)
+		return false;
+	NETSOCKET Sock = net_tcp_create(Addr);
+	if(!Sock)
+		return false;
+	if(net_tcp_listen(Sock, 4) != 0)
+	{
+		net_tcp_close(Sock);
+		return false;
+	}
+	net_set_non_blocking(Sock);
+	*pSocket = Sock;
+	return true;
+}
+
+static int64_t NowTicks()
+{
+	return time_get_impl();
+}
+
+bool CLoopbackListener::Start(const char *pState, int64_t TimeoutMs)
+{
+	Stop();
+	str_copy(m_aState, pState);
+	m_aCode[0] = '\0';
+	m_aError[0] = '\0';
+	for(int Attempt = 0; Attempt < 20 && !m_Listen; Attempt++)
+	{
+		const int Port = 49152 + secure_rand_below(65535 - 49152);
+		if(TryListen("127.0.0.1", Port, &m_Listen))
+		{
+			m_Port = Port;
+			m_Ipv6 = false;
+		}
+	}
+	for(int Attempt = 0; Attempt < 20 && !m_Listen; Attempt++)
+	{
+		const int Port = 49152 + secure_rand_below(65535 - 49152);
+		if(TryListen("[::1]", Port, &m_Listen))
+		{
+			m_Port = Port;
+			m_Ipv6 = true;
+		}
+	}
+	if(!m_Listen)
+	{
+		m_State = EState::CLOSED;
+		return false;
+	}
+	m_Deadline = NowTicks() + time_freq() * TimeoutMs / 1000;
+	m_State = EState::LISTENING;
+	return true;
+}
+
+void CLoopbackListener::RedirectUri(char *pBuf, size_t Size) const
+{
+	str_format(pBuf, Size, "http://%s:%d%s", m_Ipv6 ? "[::1]" : "127.0.0.1", m_Port, CALLBACK_PATH);
+}
+
+void CLoopbackListener::CloseConn()
+{
+	if(m_Conn)
+		net_tcp_close(m_Conn);
+	m_Conn = nullptr;
+	m_RequestLength = 0;
+}
+
+void CLoopbackListener::Stop()
+{
+	CloseConn();
+	if(m_Listen)
+		net_tcp_close(m_Listen);
+	m_Listen = nullptr;
+	Wipe(m_aState, sizeof(m_aState));
+	if(m_State == EState::LISTENING)
+		m_State = EState::CLOSED;
+}
+
+void CLoopbackListener::Answer(const char *pStatus, const char *pBody)
+{
+	char aHead[256];
+	const int BodyLength = str_length(pBody);
+	const int HeadLength = str_format(aHead, sizeof(aHead), "HTTP/1.1 %s\r\nContent-Type: text/html; charset=utf-8\r\nContent-Length: %d\r\nCache-Control: no-store\r\nReferrer-Policy: no-referrer\r\nConnection: close\r\n\r\n", pStatus, BodyLength);
+	net_tcp_send(m_Conn, aHead, HeadLength);
+	net_tcp_send(m_Conn, pBody, BodyLength);
+}
+
+void CLoopbackListener::HandleRequest()
+{
+	char aError[128];
+	char aCode[MAX_CODE_LENGTH + 1];
+	const ECallback Result = ParseCallback(m_aRequest, m_RequestLength, m_aState, aCode, sizeof(aCode), aError, sizeof(aError));
+	switch(Result)
+	{
+	case ECallback::CODE:
+		str_copy(m_aCode, aCode);
+		Answer("200 OK", PAGE_OK);
+		m_State = EState::GOT_CODE;
+		break;
+	case ECallback::SERVER_ERROR:
+		str_copy(m_aError, aError);
+		Answer("200 OK", PAGE_OK);
+		m_State = EState::SERVER_ERROR;
+		break;
+	case ECallback::BAD_STATE:
+	case ECallback::MISSING_CODE:
+	case ECallback::MALFORMED:
+		Answer("400 Bad Request", PAGE_NO);
+		break;
+	case ECallback::WRONG_METHOD:
+		Answer("405 Method Not Allowed", PAGE_NO);
+		break;
+	case ECallback::WRONG_PATH:
+		Answer("404 Not Found", PAGE_NO);
+		break;
+	}
+	Wipe(aCode, sizeof(aCode));
+	CloseConn();
+	if(m_State == EState::GOT_CODE || m_State == EState::SERVER_ERROR)
+	{
+		// the first matching request is the only one
+		net_tcp_close(m_Listen);
+		m_Listen = nullptr;
+		Wipe(m_aState, sizeof(m_aState));
+	}
+}
+
+CLoopbackListener::EState CLoopbackListener::Poll()
+{
+	if(m_State != EState::LISTENING)
+		return m_State;
+
+	const int64_t Now = NowTicks();
+	if(Now > m_Deadline)
+	{
+		Stop();
+		m_State = EState::TIMED_OUT;
+		return m_State;
+	}
+
+	if(!m_Conn)
+	{
+		NETSOCKET New = nullptr;
+		NETADDR From;
+		if(net_tcp_accept(m_Listen, &New, &From) >= 0 && New)
+		{
+			m_Conn = New;
+			net_set_non_blocking(m_Conn);
+			m_RequestLength = 0;
+			m_ConnDeadline = Now + time_freq() * 5;
+		}
+	}
+	if(m_Conn)
+	{
+		if(Now > m_ConnDeadline)
+		{
+			CloseConn();
+			return m_State;
+		}
+		while(net_socket_read_wait(m_Conn, std::chrono::nanoseconds(0)) > 0)
+		{
+			const int Bytes = net_tcp_recv(m_Conn, m_aRequest + m_RequestLength, (int)(sizeof(m_aRequest) - m_RequestLength));
+			if(Bytes <= 0)
+			{
+				CloseConn();
+				return m_State;
+			}
+			m_RequestLength += Bytes;
+			if(memchr(m_aRequest, '\n', m_RequestLength) || m_RequestLength >= sizeof(m_aRequest))
+			{
+				HandleRequest();
+				break;
+			}
+		}
+	}
+	return m_State;
+}
+
+} // namespace KogLogin
