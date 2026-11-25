@@ -86,8 +86,10 @@ endif()
 add_compile_definitions(KOG_CLIENT_CHANNEL="${KOG_CHANNEL}")
 if(KOG_CHANNEL STREQUAL "stable")
   add_compile_definitions(KOG_LOGIN_DEFAULT=0)
+  add_compile_definitions(KOG_HELLO_DEFAULT=0)
 else()
   add_compile_definitions(KOG_LOGIN_DEFAULT=1)
+  add_compile_definitions(KOG_HELLO_DEFAULT=1)
 endif()
 if(NOT KOG_CHANNEL STREQUAL "stable")
   if(NOT KOG_BUILD_NUMBER MATCHES "^[0-9]+$")
@@ -1094,16 +1096,6 @@ set_src(RUST_BRIDGE_SHARED GLOB_RECURSE src/rust-bridge
   cpp/console.h
   engine/shared/rust_version.cpp
   engine/shared/rust_version.h
-  # tidy-alphabetical-end
-)
-
-set_glob(RUST_MASTERSRV GLOB "rs;toml" src/mastersrv/src
-  # tidy-alphabetical-start
-  addr.rs
-  community_token.rs
-  config.rs
-  locations.rs
-  main.rs
   # tidy-alphabetical-end
 )
 
@@ -2522,6 +2514,8 @@ set_src(ENGINE_SHARED GLOB_RECURSE src/engine/shared
   kernel.cpp
   kog_failsafe.cpp
   kog_failsafe.h
+  kog_hello.cpp
+  kog_hello.h
   kog_login.cpp
   kog_login.h
   kog_protocol.h
@@ -3673,6 +3667,7 @@ if(GTEST_FOUND OR DOWNLOAD_GTEST)
     json_test.cpp
     jsonwriter_test.cpp
     kog_failsafe_test.cpp
+    kog_hello_test.cpp
     kog_login_test.cpp
     kog_update_test.cpp
     linereader_test.cpp

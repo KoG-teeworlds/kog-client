@@ -52,7 +52,7 @@ void CKogLogin::Reset()
 {
 	if(m_pRequest)
 		m_pRequest->Abort();
-	m_pRequest = nullptr;
+	ReleaseRequest();
 	m_Listener.Stop();
 	m_Listener.WipeCode();
 	KogLogin::Wipe(m_aVerifier, sizeof(m_aVerifier));
@@ -92,8 +92,20 @@ bool CKogLogin::BaseUrl(char *pBuf, size_t Size) const
 	return str_startswith(pBuf, "https://") != nullptr || (g_Config.m_HttpAllowInsecure && str_startswith(pBuf, "http://") != nullptr);
 }
 
-void CKogLogin::Request(std::shared_ptr<IHttpRequest> pRequest)
+void CKogLogin::ReleaseRequest()
 {
+	if(m_pRequest && m_pRequest->Done())
+		m_pRequest->WipeSecrets();
+	m_pRequest = nullptr;
+}
+
+void CKogLogin::Request(std::shared_ptr<IHttpRequest> pRequest, bool Secret)
+{
+	if(Secret)
+	{
+		pRequest->FollowRedirects(false);
+		pRequest->Sensitive(true);
+	}
 	pRequest->LogProgress(HTTPLOG::NONE);
 	pRequest->FailOnErrorStatus(false);
 	pRequest->MaxResponseSize(256 * 1024);
@@ -141,7 +153,7 @@ void CKogLogin::StartLogin()
 	str_format(aUrl, sizeof(aUrl), "%s/.well-known/openid-configuration", aBase);
 	str_copy(m_aMessage, Localize("Contacting the KoG account server…"));
 	m_Step = EStep::DISCOVERY;
-	Request(HttpGet(aUrl));
+	Request(HttpGet(aUrl), false);
 }
 
 void CKogLogin::StartLogout()
@@ -172,7 +184,7 @@ void CKogLogin::StartLogout()
 	str_format(aUrl, sizeof(aUrl), "%s/.well-known/openid-configuration", aBase);
 	str_copy(m_aMessage, Localize("Logged out on this device. Removing it from your account…"));
 	m_Step = EStep::DISCOVERY;
-	Request(HttpGet(aUrl));
+	Request(HttpGet(aUrl), false);
 }
 
 void CKogLogin::OnRender()
@@ -245,9 +257,11 @@ void CKogLogin::StepDiscovery()
 	}
 	if(pJson)
 		json_value_free(pJson);
-	m_pRequest = nullptr;
-	if(!Valid || !str_startswith(m_aAuthorizeEndpoint, "https://") || !str_startswith(m_aTokenEndpoint, "https://") ||
-		(m_aUserinfoEndpoint[0] != '\0' && !str_startswith(m_aUserinfoEndpoint, "https://")))
+	ReleaseRequest();
+	char aBase[256];
+	const char *pExtra = g_Config.m_ClKogAccountExtraOrigins;
+	if(!Valid || !BaseUrl(aBase, sizeof(aBase)) || !KogLogin::EndpointAllowed(aBase, m_aAuthorizeEndpoint, pExtra) || !KogLogin::EndpointAllowed(aBase, m_aTokenEndpoint, pExtra) ||
+		(m_aUserinfoEndpoint[0] != '\0' && !KogLogin::EndpointAllowed(aBase, m_aUserinfoEndpoint, pExtra)))
 	{
 		Fail(Localize("The KoG account server sent an unusable login description."));
 		return;
@@ -299,7 +313,7 @@ void CKogLogin::BeginToken(const char *pCode)
 	KogLogin::Wipe(m_aVerifier, sizeof(m_aVerifier));
 	str_copy(m_aMessage, Localize("Checking the login…"));
 	m_Step = EStep::TOKEN_EXCHANGE;
-	Request(pRequest);
+	Request(pRequest, true);
 }
 
 void CKogLogin::StepToken()
@@ -322,7 +336,7 @@ void CKogLogin::StepToken()
 	if(pJson)
 		json_value_free(pJson);
 	KogLogin::Wipe(pBody, Length);
-	m_pRequest = nullptr;
+	ReleaseRequest();
 	if(!Valid)
 	{
 		Fail(Localize("The KoG account server did not return a login."));
@@ -341,7 +355,7 @@ void CKogLogin::BeginUserinfo()
 	std::shared_ptr<IHttpRequest> pRequest = CreateHttpRequest(m_aUserinfoEndpoint);
 	SetBearer(pRequest.get());
 	m_Step = EStep::USERINFO;
-	Request(pRequest);
+	Request(pRequest, true);
 }
 
 void CKogLogin::StepUserinfo()
@@ -365,7 +379,7 @@ void CKogLogin::StepUserinfo()
 		if(pJson)
 			json_value_free(pJson);
 	}
-	m_pRequest = nullptr;
+	ReleaseRequest();
 	BeginDevice();
 }
 
@@ -389,7 +403,7 @@ void CKogLogin::BeginDevice()
 	SetBearer(pRequest.get());
 	str_copy(m_aMessage, Localize("Registering this device…"));
 	m_Step = EStep::DEVICE;
-	Request(pRequest);
+	Request(pRequest, true);
 }
 
 void CKogLogin::StepDevice()
@@ -408,7 +422,7 @@ void CKogLogin::StepDevice()
 		str_copy(m_PendingKey.m_aId, pId->u.string.ptr);
 	if(pJson)
 		json_value_free(pJson);
-	m_pRequest = nullptr;
+	ReleaseRequest();
 	if(!Valid)
 	{
 		Fail(Localize("The KoG account server did not return a device."));
@@ -443,7 +457,7 @@ void CKogLogin::BeginRevoke()
 	pRequest->Delete();
 	SetBearer(pRequest.get());
 	m_Step = EStep::REVOKE;
-	Request(pRequest);
+	Request(pRequest, true);
 }
 
 void CKogLogin::StepRevoke()
@@ -451,8 +465,12 @@ void CKogLogin::StepRevoke()
 	if(!m_pRequest->Done())
 		return;
 	const int Status = m_pRequest->StatusCode();
-	if(m_pRequest->State() == EHttpState::DONE && (Status == 200 || Status == 204 || Status == 404))
+	const bool Reached = m_pRequest->State() == EHttpState::DONE;
+	ReleaseRequest();
+	if(Reached && (Status == 200 || Status == 204))
 		Succeed(Localize("Logged out. The device is removed from your account."));
+	else if(Reached && Status == 404)
+		Fail(Localize("Logged out on this device. It was not found on the account you signed in with in the browser: remove it on kog.tw."));
 	else
 		Fail(Localize("Logged out on this device, but it could not be removed from your account. Remove it on kog.tw."));
 }
@@ -472,7 +490,7 @@ bool CKogLogin::ServerIsKog(IServerBrowser *pBrowser, const NETADDR &Address)
 	return pEntry != nullptr && str_comp(pEntry->m_Info.m_aCommunityId, KOG_COMMUNITY_ID) == 0;
 }
 
-bool CKogLogin::OnChallenge(const char *pServerAddress, const uint8_t *pNonce, size_t NonceSize)
+bool CKogLogin::OnChallenge(const char *pServerAddress, const uint8_t *pNonce, size_t NonceSize, const uint8_t (&aSessionId)[KogLogin::UUID_SIZE])
 {
 	KogLogin::SJoinDecision Decision;
 	Decision.m_SwitchOn = g_Config.m_ClKogLogin != 0;
@@ -481,13 +499,14 @@ bool CKogLogin::OnChallenge(const char *pServerAddress, const uint8_t *pNonce, s
 	Decision.m_ServerIsKog = ServerIsKog(ServerBrowser(), Client()->ServerAddress());
 	Decision.m_AlreadyLoggedIn = m_ManualLogin;
 	Decision.m_AlreadyAnsweredThisJoin = m_AnsweredThisJoin;
+	Decision.m_CapabilityNegotiated = GameClient()->m_KogHello.Has(EKogCap::CLIENT_LOGIN);
 	if(!KogLogin::MayAnswerChallenge(Decision))
 		return false;
 
 	KogLogin::SDeviceKey Key;
 	uint8_t aSignature[KogLogin::SIGNATURE_SIZE];
 	bool Sent = false;
-	if(LoadKey(&Key) && KogLogin::SignChallenge(Key.m_aSeed, pServerAddress, pNonce, NonceSize, Key.m_aId, aSignature))
+	if(LoadKey(&Key) && KogLogin::SignChallenge(Key.m_aSeed, pServerAddress, pNonce, NonceSize, Key.m_aId, aSessionId, aSignature))
 	{
 		m_AnsweredThisJoin = true;
 		Sent = m_pTransport->SendProof(Key.m_aId, aSignature);

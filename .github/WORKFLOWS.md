@@ -8,7 +8,7 @@ Our workflows are the `kog-*.yml` files. The upstream T-Client/DDNet workflows s
 | `kog-codeql.yml` | pull request, push to `main`, manual | CodeQL for C++ and Python |
 | `kog-spelling.yml` | pull request, push to `main` | typos |
 | `kog-checks.yml` | pull request, push to `main` | Release chain checks: manifest, signing, verifier |
-| `kog-release.yml` | manual | Builds release files and a draft manifest. It never signs: signing runs in the protected `release-signing` environment of `kog-client-updates` |
+| `kog-release.yml` | push of a `v*` tag by a repository admin | Builds release files and a draft manifest. It never signs: signing runs in the protected `release-signing` environment of `kog-client-updates` |
 
 How the release workflows are used, and what is not in place yet: [docs/RELEASING.md](../docs/RELEASING.md).
 

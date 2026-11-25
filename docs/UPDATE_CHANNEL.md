@@ -1,13 +1,17 @@
 # Update channel
 
 The client updates itself from a signed manifest. Nothing the network delivers is trusted until the signatures check.
-The updater is only compiled with `-DAUTOUPDATE=ON`, and a release build fails while a channel's keys are placeholders.
+The updater is only compiled with `-DAUTOUPDATE=ON` (default OFF; `kog-package.yml` turns it on for all three platforms), and a Release build fails while the build's channel has placeholder keys.
+
+Keys in the client today (`src/engine/client/kog_update_pubkey.h`): `canary` and `dev` have their real CI keys and update. `stable` is marked placeholder (`KOG_UPDATE_KEYS_PLACEHOLDER_STABLE 1`) and has no owner or backup key: the client still fetches the manifest, then reports "not configured" and does not update. A stable package cannot be built until that changes, unless `-DKOG_ALLOW_PLACEHOLDER_KEY=ON`.
+
+The check runs at start when `kog_check_updates` is 1 (default). The manifest only lists Linux and Windows clients, so on macOS nothing is offered; download the new `.dmg`.
 
 ## Channels
 
 | Channel | Built from | Signatures | Keys | Manifest valid for |
 | --- | --- | --- | --- | --- |
-| `stable` | a release started by hand on `main` | CI key (A) and the owner's hardware key (B) | stable CI keys a/b, owner keys, offline backup | up to 90 days |
+| `stable` | a release started by pushing a signed tag `vX.Y.Z` on `main` | CI key (A) and the owner's hardware key (B) | stable CI keys a/b, owner keys, offline backup | up to 90 days |
 | `canary` | every push to `main`, automatic | CI key | canary CI keys a/b | up to 30 days |
 | `dev` | every push to `dev`, automatic | CI key | dev CI keys a/b | up to 14 days |
 
@@ -68,7 +72,8 @@ Stable:
    `published`. The commit message holds the manifest SHA-256, the source commit and the run URL.
 
 Canary and dev run the same checks in `kog-channel.yml`, with one signature and the environments `canary-signing` and
-`dev-signing` (restricted to `main` and `dev`). They are never built for forks or pull requests.
+`dev-signing` (restricted to `main` and `dev`). The signing job is in `kog-canary.yml` and `kog-dev.yml`, not in the reusable
+workflow: the secrets of an environment do not reach a job of a reusable workflow. They are never built for forks or pull requests.
 
 `scripts/kog/verify_published.sh [channel]` verifies what the servers serve, from the keys in the repository, on both hosts.
 

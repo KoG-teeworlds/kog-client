@@ -25,6 +25,7 @@ public:
 	~CHttpRequestCurl() override;
 
 	void Header(const char *pNameColonValue) override;
+	void WipeSecrets() override;
 
 private:
 	curl_slist *m_pRequestHeaders = nullptr;

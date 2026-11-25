@@ -3,7 +3,7 @@ set -euo pipefail
 
 # Puts a signed manifest into the published branch of the updates repo, after checking both signatures once more.
 # usage: publish_signed.sh CHANNEL VERSION DIR MESSAGE     (DIR: update.json, update.json.sig, update.json.sigb)
-# env: GH_TOKEN with write access to the updates repo, or UPDATES_DEPLOY_KEY (a private key with write access); SOURCE_COMMIT, RUN_URL for the audit record; SITE_DIR for the site files
+# env: GH_TOKEN with write access to the updates repo, or UPDATES_DEPLOY_KEY (a private key with write access); SOURCE_COMMIT, RUN_URL for the audit record; SITE_DIR for the site files (default: site/ on main of the updates repo)
 channel=${1:?channel}
 version=${2:?version}
 dir=${3:?dir}
@@ -45,34 +45,49 @@ else
   remote="https://github.com/$repo"
   git_remote() { git -c "http.https://github.com/.extraheader=$header" "$@"; }
 fi
-if git_remote ls-remote --exit-code --heads "$remote" published >/dev/null 2>&1; then
-  git_remote clone --quiet --branch published "$remote" "$work/published"
-else
-  git init --quiet -b published "$work/published"
-  git -C "$work/published" remote add origin "$remote"
-fi
 published="$work/published"
-if [ -f "$published/$channel/update.json" ]; then
-  python3 - "$published/$channel/update.json" "$dir/update.json" <<'PY'
+site_dir=${SITE_DIR:-}
+if [ -z "$site_dir" ] && git_remote clone --quiet --depth 1 --branch main "$remote" "$work/main" 2>/dev/null && [ -d "$work/main/site" ]; then
+  site_dir="$work/main/site"
+fi
+sha=$(sha256sum "$dir/update.json" 2>/dev/null | cut -d' ' -f1 || shasum -a 256 "$dir/update.json" | cut -d' ' -f1)
+
+# The site workflow of the updates repo pushes to the same branch. A push that is not a fast-forward is rejected by git,
+# that is the lock: fetch the newer tip, apply the manifest again on top of it, push again. Never forced.
+for attempt in 1 2 3 4 5; do
+  rm -rf "$published"
+  if git_remote ls-remote --exit-code --heads "$remote" published >/dev/null 2>&1; then
+    git_remote clone --quiet --branch published "$remote" "$published"
+  else
+    git init --quiet -b published "$published"
+    git -C "$published" remote add origin "$remote"
+  fi
+  if [ -f "$published/$channel/update.json" ]; then
+    python3 - "$published/$channel/update.json" "$dir/update.json" <<'PY'
 import json, sys
 old, new = (json.load(open(path)) for path in sys.argv[1:3])
 assert new["sequence"] > old["sequence"], "the sequence does not rise: %d after %d" % (new["sequence"], old["sequence"])
 PY
-fi
-if [ -n "${SITE_DIR:-}" ]; then cp -R "$SITE_DIR/." "$published/"; fi
-mkdir -p "$published/$channel/releases/$version"
-for f in update.json update.json.sig update.json.sigb; do
-  [ -f "$dir/$f" ] || continue
-  cp "$dir/$f" "$published/$channel/$f"
-  cp "$dir/$f" "$published/$channel/releases/$version/$f"
-done
-echo client.kog.tw > "$published/CNAME"
-touch "$published/.nojekyll"
-
-sha=$(sha256sum "$dir/update.json" 2>/dev/null | cut -d' ' -f1 || shasum -a 256 "$dir/update.json" | cut -d' ' -f1)
-git -C "$published" add -A
-git -C "$published" -c user.name="kog-release" -c user.email="kog-release@users.noreply.github.com" commit --quiet -m "$message" -m "manifest sha256: $sha
+  fi
+  if [ -n "$site_dir" ]; then cp -R "$site_dir/." "$published/"; fi
+  mkdir -p "$published/$channel/releases/$version"
+  for f in update.json update.json.sig update.json.sigb; do
+    [ -f "$dir/$f" ] || continue
+    cp "$dir/$f" "$published/$channel/$f"
+    cp "$dir/$f" "$published/$channel/releases/$version/$f"
+  done
+  echo client.kog.tw > "$published/CNAME"
+  touch "$published/.nojekyll"
+  git -C "$published" add -A
+  git -C "$published" -c user.name="kog-release" -c user.email="kog-release@users.noreply.github.com" commit --quiet -m "$message" -m "manifest sha256: $sha
 source commit: ${SOURCE_COMMIT:-unknown}
 run: ${RUN_URL:-by hand}"
-git_remote -C "$published" push --quiet origin HEAD:published
-echo "published $channel $version, manifest sha256 $sha"
+  if git_remote -C "$published" push --quiet origin HEAD:published; then
+    echo "published $channel $version, manifest sha256 $sha"
+    exit 0
+  fi
+  echo "push rejected on attempt $attempt, the branch published has a newer tip: again on top of it" >&2
+  sleep $((attempt * 3))
+done
+echo "could not push to the branch published in 5 attempts" >&2
+exit 1

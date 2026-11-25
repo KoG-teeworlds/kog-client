@@ -245,6 +245,13 @@ void CClient::SendInfo(int Conn)
 	MsgVer.AddString(GameClient()->DDNetVersionStr());
 	SendMsg(Conn, &MsgVer, MSGFLAG_VITAL);
 
+	if(Conn == CONN_MAIN)
+	{
+		CMsgPacker MsgHello(NETMSG_KOG_CLIENT_HELLO, true);
+		if(GameClient()->KogMakeHello(&MsgHello))
+			SendMsg(Conn, &MsgHello, MSGFLAG_VITAL);
+	}
+
 	if(IsSixup())
 	{
 		CMsgPacker Msg(NETMSG_INFO, true);
@@ -1733,6 +1740,10 @@ void CClient::ProcessServerPacket(CNetChunk *pPacket, int Conn, bool Dummy)
 			m_ServerCapabilities = GetServerCapabilities(Version, Flags, IsSixup());
 			m_CanReceiveServerCapabilities = false;
 			m_ServerSentCapabilities = true;
+		}
+		else if(Conn == CONN_MAIN && (pPacket->m_Flags & NET_CHUNKFLAG_VITAL) != 0 && Msg == NETMSG_KOG_SERVER_HELLO)
+		{
+			GameClient()->KogServerHello(&Unpacker);
 		}
 		else if(Conn == CONN_MAIN && (pPacket->m_Flags & NET_CHUNKFLAG_VITAL) != 0 && Msg == NETMSG_MAP_CHANGE)
 		{
@@ -5544,21 +5555,40 @@ int CClient::UdpConnectivity(int NetType)
 	return Connectivity;
 }
 
+// A link can carry secrets in its query (the login's state), so the log gets the host of a web link only
+static void LinkForLog(const char *pLink, char *pBuf, size_t Size)
+{
+	const char *pHost = str_startswith(pLink, "https://");
+	if(!pHost)
+		pHost = str_startswith(pLink, "http://");
+	if(!pHost)
+	{
+		str_copy(pBuf, pLink, Size);
+		return;
+	}
+	size_t Length = 0;
+	while(pHost[Length] != '\0' && pHost[Length] != '/' && pHost[Length] != '?' && pHost[Length] != '#')
+		Length++;
+	str_truncate(pBuf, Size, pHost, Length);
+}
+
 static bool ViewLinkImpl(const char *pLink)
 {
+	char aForLog[128];
+	LinkForLog(pLink, aForLog, sizeof(aForLog));
 #if defined(CONF_PLATFORM_ANDROID) || defined(CONF_PLATFORM_IOS)
 	if(SDL_OpenURL(pLink) == 0)
 	{
 		return true;
 	}
-	log_error("client", "Failed to open link '%s' (%s)", pLink, SDL_GetError());
+	log_error("client", "Failed to open link to '%s' (%s)", aForLog, SDL_GetError());
 	return false;
 #else
 	if(os_open_link(pLink))
 	{
 		return true;
 	}
-	log_error("client", "Failed to open link '%s'", pLink);
+	log_error("client", "Failed to open link to '%s'", aForLog);
 	return false;
 #endif
 }
@@ -5567,7 +5597,9 @@ bool CClient::ViewLink(const char *pLink)
 {
 	if(!str_startswith(pLink, "https://"))
 	{
-		log_error("client", "Failed to open link '%s': only https-links are allowed", pLink);
+		char aForLog[128];
+		LinkForLog(pLink, aForLog, sizeof(aForLog));
+		log_error("client", "Failed to open link '%s': only https-links are allowed", aForLog);
 		return false;
 	}
 	return ViewLinkImpl(pLink);

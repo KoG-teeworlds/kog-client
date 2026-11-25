@@ -21,6 +21,7 @@
 #endif
 
 #if defined(CONF_FAMILY_UNIX) && !defined(CONF_PLATFORM_MACOS)
+#include <cstdio>
 #include <fcntl.h>
 #include <sys/stat.h>
 #include <unistd.h>
@@ -54,15 +55,20 @@ static CFMutableDictionaryRef Query()
 bool Save(IStorage *pStorage, const char *pSecret)
 {
 	CFMutableDictionaryRef pQuery = Query();
-	CFDataRef pData = CFDataCreate(nullptr, reinterpret_cast<const UInt8 *>(pSecret), str_length(pSecret));
+	CFMutableDataRef pData = CFDataCreateMutable(nullptr, 0);
+	CFDataAppendBytes(pData, reinterpret_cast<const UInt8 *>(pSecret), str_length(pSecret));
 	CFMutableDictionaryRef pUpdate = CFDictionaryCreateMutable(nullptr, 0, &kCFTypeDictionaryKeyCallBacks, &kCFTypeDictionaryValueCallBacks);
 	CFDictionarySetValue(pUpdate, kSecValueData, pData);
+	// Never in a backup or on another device, and only while the Mac is unlocked
+	CFDictionarySetValue(pUpdate, kSecAttrAccessible, kSecAttrAccessibleWhenUnlockedThisDeviceOnly);
 	OSStatus Status = SecItemUpdate(pQuery, pUpdate);
 	if(Status == errSecItemNotFound)
 	{
 		CFDictionarySetValue(pQuery, kSecValueData, pData);
+		CFDictionarySetValue(pQuery, kSecAttrAccessible, kSecAttrAccessibleWhenUnlockedThisDeviceOnly);
 		Status = SecItemAdd(pQuery, nullptr);
 	}
+	KogLogin::Wipe(CFDataGetMutableBytePtr(pData), CFDataGetLength(pData));
 	CFRelease(pUpdate);
 	CFRelease(pData);
 	CFRelease(pQuery);
@@ -87,6 +93,8 @@ bool Load(IStorage *pStorage, char *pBuf, size_t Size)
 		CFDataGetBytes(pData, CFRangeMake(0, Length), reinterpret_cast<UInt8 *>(pBuf));
 		pBuf[Length] = '\0';
 	}
+	// SecItemCopyMatching hands out a private copy, so overwriting it does not touch the keychain item
+	KogLogin::Wipe(const_cast<UInt8 *>(CFDataGetBytePtr(pData)), Length);
 	CFRelease(pResult);
 	return Fits;
 }
@@ -115,6 +123,8 @@ bool Save(IStorage *pStorage, const char *pSecret)
 	Credential.TargetName = const_cast<LPWSTR>(TARGET);
 	Credential.CredentialBlobSize = (DWORD)str_length(pSecret);
 	Credential.CredentialBlob = reinterpret_cast<LPBYTE>(const_cast<char *>(pSecret));
+	// Not CRED_PERSIST_ENTERPRISE: that one roams with the domain profile. LOCAL_MACHINE keeps it on this PC across
+	// logons; SESSION would lose the login at every sign-out. The credential is readable by this Windows user only.
 	Credential.Persist = CRED_PERSIST_LOCAL_MACHINE;
 	Credential.UserName = const_cast<LPWSTR>(L"device");
 	return CredWriteW(&Credential, 0) == TRUE;
@@ -156,13 +166,38 @@ bool Save(IStorage *pStorage, const char *pSecret)
 	char aPath[IO_MAX_PATH_LENGTH];
 	pStorage->GetCompletePath(IStorage::TYPE_SAVE, FILENAME, aPath, sizeof(aPath));
 #if defined(CONF_FAMILY_UNIX)
-	const int Fd = open(aPath, O_WRONLY | O_CREAT | O_TRUNC, 0600);
+	// A new file next to the target, so a link or file planted at the final name is replaced, never followed
+	char aTmp[IO_MAX_PATH_LENGTH];
+	str_format(aTmp, sizeof(aTmp), "%s.tmp", aPath);
+	unlink(aTmp);
+#if defined(O_NOFOLLOW)
+	const int NoFollow = O_NOFOLLOW;
+#else
+	const int NoFollow = 0;
+#endif
+	const int Fd = open(aTmp, O_WRONLY | O_CREAT | O_EXCL | NoFollow | O_CLOEXEC, 0600);
 	if(Fd < 0)
 		return false;
-	fchmod(Fd, 0600);
-	const size_t Length = str_length(pSecret);
-	const bool Ok = write(Fd, pSecret, Length) == (ssize_t)Length;
-	close(Fd);
+	const char *pData = pSecret;
+	size_t Left = str_length(pSecret);
+	bool Ok = true;
+	while(Left > 0 && Ok)
+	{
+		const ssize_t Written = write(Fd, pData, Left);
+		if(Written <= 0)
+			Ok = false;
+		else
+		{
+			pData += Written;
+			Left -= Written;
+		}
+	}
+	Ok = Ok && fsync(Fd) == 0;
+	Ok = close(Fd) == 0 && Ok;
+	if(Ok)
+		Ok = rename(aTmp, aPath) == 0;
+	if(!Ok)
+		unlink(aTmp);
 	return Ok;
 #else
 	IOHANDLE File = pStorage->OpenFile(FILENAME, IOFLAG_WRITE, IStorage::TYPE_SAVE);

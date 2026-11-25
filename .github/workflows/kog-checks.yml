@@ -17,6 +17,7 @@ jobs:
           persist-credentials: false
       - run: bash scripts/kog/test_release_chain.sh
       - run: bash scripts/kog/check_brand.sh
+      - run: bash scripts/kog/test_native_changes.sh
 
   hosted-runners:
     runs-on: ubuntu-latest

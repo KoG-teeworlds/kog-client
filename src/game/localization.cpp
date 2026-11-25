@@ -9,10 +9,114 @@
 #include <base/str.h>
 
 #include <engine/console.h>
+#include <engine/shared/config.h>
 #include <engine/shared/linereader.h>
 #include <engine/storage.h>
 
 #include <algorithm>
+#include <cstring>
+#include <map>
+#include <string>
+
+// The arguments a format string consumes, by argument position, and the number of %%.
+struct SFormatSignature
+{
+	std::map<int, std::string> m_Args;
+	int m_Percents = 0;
+
+	bool operator==(const SFormatSignature &Other) const { return m_Args == Other.m_Args && m_Percents == Other.m_Percents; }
+};
+
+// Returns false if the string contains %n, mixes numbered and unnumbered
+// arguments or uses one argument with two different types.
+static bool ParseFormat(const char *pStr, SFormatSignature &Out)
+{
+	int Next = 1;
+	bool Numbered = false;
+	bool Unnumbered = false;
+
+	const auto ReadPosition = [&](const char *&p) {
+		const char *pStart = p;
+		int Pos = 0;
+		while(*p >= '0' && *p <= '9')
+			Pos = std::min(Pos * 10 + (*p++ - '0'), 100000);
+		if(*p == '$' && p != pStart && Pos > 0)
+		{
+			p++;
+			return Pos;
+		}
+		p = pStart;
+		return 0;
+	};
+	const auto AddArg = [&](int Pos, const std::string &Type) {
+		(Pos ? Numbered : Unnumbered) = true;
+		if(!Pos)
+			Pos = Next++;
+		auto [It, Inserted] = Out.m_Args.emplace(Pos, Type);
+		return Inserted || It->second == Type;
+	};
+
+	for(const char *p = pStr; *p; p++)
+	{
+		if(*p != '%')
+			continue;
+		p++;
+		if(*p == '%')
+		{
+			Out.m_Percents++;
+			continue;
+		}
+		const int Pos = ReadPosition(p);
+		while(*p && strchr("-+ #0'I", *p))
+			p++;
+		for(int Part = 0; Part < 2; Part++)
+		{
+			if(Part == 1)
+			{
+				if(*p != '.')
+					break;
+				p++;
+			}
+			if(*p == '*')
+			{
+				p++;
+				if(!AddArg(ReadPosition(p), "*"))
+					return false;
+			}
+			else
+			{
+				while(*p >= '0' && *p <= '9')
+					p++;
+			}
+		}
+		std::string Type;
+		while(*p && strchr("hlLqjzt", *p))
+			Type += *p++;
+		if(*p == 'n')
+			return false;
+		Type += *p ? *p : '!';
+		if(!AddArg(Pos, Type))
+			return false;
+		if(!*p)
+			break;
+	}
+	return !(Numbered && Unnumbered);
+}
+
+bool CLocalizationDatabase::IsValidTranslation(const char *pSource, const char *pTranslation, const char **ppReason)
+{
+	const char *pReason = nullptr;
+	SFormatSignature Source, Translation;
+	if(strlen(pTranslation) > MAX_TRANSLATION_LENGTH)
+		pReason = "translation is too long";
+	else if(!ParseFormat(pTranslation, Translation) || !ParseFormat(pSource, Source))
+		pReason = "invalid format specifier (or %n)";
+	else if(!(Source == Translation))
+		pReason = "format specifiers differ from the source string";
+	if(ppReason)
+		*ppReason = pReason;
+	return pReason == nullptr;
+}
 
 const char *Localize(const char *pStr, const char *pContext)
 {
@@ -247,6 +351,12 @@ bool CLocalizationDatabase::Load(const char *pFilename, IStorage *pStorage, ICon
 			continue;
 
 		pReplacement += 3;
+		const char *pReason;
+		if(g_Config.m_ClLocalizationValidate && !IsValidTranslation(aOrigin, pReplacement, &pReason))
+		{
+			log_error("localization", "ignoring translation in '%s' for '%s' on line %d: %s", pFilename, aOrigin, Line, pReason);
+			continue;
+		}
 		AddString(aOrigin, pReplacement, aContext);
 	}
 	std::sort(m_vStrings.begin(), m_vStrings.end());

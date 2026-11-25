@@ -25,6 +25,8 @@ IHttpRequest::IHttpRequest(const char *pUrl)
 IHttpRequest::~IHttpRequest()
 {
 	dbg_assert(m_File == nullptr, "HTTP request file was not closed");
+	if(m_Sensitive)
+		IHttpRequest::WipeSecrets();
 	free(m_pBody);
 	free(m_pBuffer);
 	if(m_State == EHttpState::DONE && m_ValidateBeforeOverwrite)
@@ -59,6 +61,16 @@ void IHttpRequest::WriteToFileAndMemory(IStorage *pStorage, const char *pDest, i
 {
 	WriteToFile(pStorage, pDest, StorageType);
 	m_WriteToMemory = true;
+}
+
+void IHttpRequest::WipeSecrets()
+{
+	volatile unsigned char *pBody = m_pBody;
+	for(size_t i = 0; pBody && i < m_BodyLength; i++)
+		pBody[i] = 0;
+	volatile unsigned char *pBuffer = m_pBuffer;
+	for(size_t i = 0; pBuffer && i < m_BufferSize; i++)
+		pBuffer[i] = 0;
 }
 
 void IHttpRequest::Head()
