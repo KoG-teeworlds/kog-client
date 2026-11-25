@@ -76,7 +76,10 @@ exists, the server is a KoG server (its address is listed for the `kog` communit
 cannot claim for itself), the player did not already use `/login` in this join, and not twice per join. Vanilla and other
 servers never get an answer.
 
-The wire format is designed in a separate change. Until it lands the transport is a stub that sends nothing, which is why
+The client also needs the server to have agreed to the feature `client_login` in the KoG hello ([KOG-HELLO.md](KOG-HELLO.md)):
+without it no challenge is answered, and the hello only lists `client_login` while `cl_kog_login`, `cl_kog_auto_login` and a device key are there.
+
+The wire format of the challenge and the proof is designed in a separate change. Until it lands the transport is a stub that sends nothing, which is why
 `cl_kog_auto_login` is off by default.
 
 ## Threat model
@@ -101,5 +104,5 @@ and the public key are sent to register the device. The default name has no host
 ## Tests
 
 `src/test/kog_login_test.cpp`: the RFC 7636 PKCE vector, the RFC 8032 Ed25519 vectors, parsing of the callback (wrong path,
-wrong state, duplicate parameters, other methods), the listener (first matching request only, idle connections, refusal and timeout, close, a code of the maximum length), the allowed endpoint origins, the challenge bytes and signature (layout, the old ambiguity, a vector made outside this code base, binding to server, nonce, device and session), the neutral device name, the wiping of request bodies, a 307 that the token POST must not follow (against a loopback server and real libcurl), and the decision not to answer non-KoG servers.
+wrong state, duplicate parameters, other methods), the listener (first matching request only, idle connections, refusal and timeout, close, a code of the maximum length), the allowed endpoint origins, the challenge bytes and signature (layout, the old ambiguity, a vector made outside this code base, binding to server, nonce, device and session), the neutral device name, the wiping of request bodies, a 307 that the token POST must not follow (against a loopback server and real libcurl), and the decision not to answer non-KoG servers or servers that did not agree to `client_login`.
 The HTTP steps of the flow, the keychain, the key file and the settings box need a running account server or a desktop session and have no automated test.
