@@ -56,10 +56,12 @@ jobs:
           package-file: "*-linux_x86_64.tar.xz"
           run: "yes"
         # A pull request that cannot change the native build (docs, spelling, scripts) gets this leg on a cheap Linux runner
-        # that does nothing: the check keeps its name and passes, and the scarce macOS runners are left alone
+        # that does nothing: the check keeps its name and passes, and the scarce macOS runners are left alone.
+        # This is a compile and test check only, so it runs on the Intel pool for pull requests and main alike; the Apple Silicon
+        # download is built by the package workflow at release time
         - name: macos
           run: ${{ (github.event_name != 'pull_request' || needs.changes.outputs.native == 'true') && 'yes' || 'no' }}
-          os: ${{ (github.event_name != 'pull_request' || needs.changes.outputs.native == 'true') && (github.event_name == 'pull_request' && 'macos-15-intel' || 'macos-15') || 'ubuntu-22.04' }}
+          os: ${{ (github.event_name != 'pull_request' || needs.changes.outputs.native == 'true') && 'macos-15-intel' || 'ubuntu-22.04' }}
           cmake-args: -G Ninja
           cmake-args-release: -DIPO=ON
           package-file: "*-macos.dmg"
