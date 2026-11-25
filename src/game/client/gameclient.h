@@ -49,6 +49,7 @@
 #include "components/infomessages.h"
 #include "components/items.h"
 #include "components/key_binder.h"
+#include "components/kog/kog_attest.h"
 #include "components/kog/kog_hello.h"
 #include "components/kog/kog_login.h"
 #include "components/kog/kog_trust.h"
@@ -234,6 +235,7 @@ public:
 	CKogHello m_KogHello;
 	CKogLogin m_KogLogin;
 	CKogTrust m_KogTrust;
+	CKogAttest m_KogAttest;
 	CTrails m_Trails;
 	CPet m_Pet;
 	CPlayerIndicator m_PlayerIndicator;
@@ -727,6 +729,7 @@ public:
 	void KogServerHello(CUnpacker *pUnpacker) override { m_KogHello.OnServerHello(pUnpacker); }
 	void KogLoginChallenge(CUnpacker *pUnpacker) override { m_KogLogin.OnLoginChallenge(pUnpacker); }
 	void KogLoginResult(CUnpacker *pUnpacker) override { m_KogLogin.OnLoginResult(pUnpacker); }
+	void KogAttestChallenge(CUnpacker *pUnpacker) override { m_KogAttest.OnChallenge(pUnpacker); }
 	int ClientVersion7() const override;
 
 	void DoTeamChangeMessage7(const char *pName, int ClientId, int Team, const char *pPrefix = "");

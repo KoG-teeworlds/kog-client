@@ -2,6 +2,7 @@
 #define GAME_CLIENT_COMPONENTS_KOG_KOG_HELLO_H
 
 #include <engine/console.h>
+#include <engine/shared/kog_attest.h>
 #include <engine/shared/kog_hello.h>
 
 #include <game/client/component.h>
@@ -16,6 +17,7 @@ class CKogHello : public CComponent
 	uint32_t m_Negotiated = 0;
 	bool m_Sent = false;
 	bool m_Answered = false;
+	uint8_t m_aHelloHash[KogAttest::HASH_SIZE] = {};
 
 public:
 	int Sizeof() const override { return sizeof(*this); }
@@ -32,6 +34,8 @@ public:
 
 	// The capabilities that both sides have for this connection. 0 until the server has answered.
 	uint32_t Negotiated() const { return m_Negotiated; }
+	// SHA-256 of the fields of the hello sent on this connection, the attestation signs it. False: no hello was sent.
+	bool HelloHash(uint8_t (&aHash)[KogAttest::HASH_SIZE]) const;
 	bool Has(EKogCap Cap) const { return KogHello::Has(m_Negotiated, Cap); }
 };
 

@@ -2514,6 +2514,8 @@ set_src(ENGINE_SHARED GLOB_RECURSE src/engine/shared
   jsonwriter.cpp
   jsonwriter.h
   kernel.cpp
+  kog_attest.cpp
+  kog_attest.h
   kog_community.h
   kog_failsafe.cpp
   kog_failsafe.h
@@ -2859,6 +2861,8 @@ if(CLIENT)
     components/items.h
     components/key_binder.cpp
     components/key_binder.h
+    components/kog/kog_attest.cpp
+    components/kog/kog_attest.h
     components/kog/kog_hello.cpp
     components/kog/kog_hello.h
     components/kog/kog_login.cpp
@@ -3678,6 +3682,8 @@ if(GTEST_FOUND OR DOWNLOAD_GTEST)
     jobs_test.cpp
     json_test.cpp
     jsonwriter_test.cpp
+    kog_attest_test.cpp
+    kog_attest_vector.h
     kog_community_test.cpp
     kog_failsafe_test.cpp
     kog_hello_test.cpp

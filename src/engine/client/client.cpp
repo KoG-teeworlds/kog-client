@@ -45,6 +45,7 @@
 #include <engine/shared/config.h>
 #include <engine/shared/demo.h>
 #include <engine/shared/fifo.h>
+#include <engine/shared/kog_attest.h>
 #include <engine/shared/kog_login_wire.h>
 #include <engine/shared/filecollection.h>
 #include <engine/shared/masterserver.h>
@@ -196,6 +197,13 @@ void CClient::KogSendLoginProof(const uint8_t (&aDeviceId)[16], const uint8_t (&
 {
 	CMsgPacker Msg(NETMSG_KOG_LOGIN_PROOF, true);
 	KogLoginWire::PackProof(&Msg, aDeviceId, aSignature);
+	SendMsg(CONN_MAIN, &Msg, MSGFLAG_VITAL);
+}
+
+void CClient::KogSendAttestResponse(const uint8_t (&aKeyId)[16], const uint8_t (&aMeasurement)[32], const uint8_t (&aSignature)[64])
+{
+	CMsgPacker Msg(NETMSG_KOG_ATTEST_RESPONSE, true);
+	KogAttest::PackResponse(&Msg, aKeyId, KogAttest::EStatus::OK, aMeasurement, aSignature);
 	SendMsg(CONN_MAIN, &Msg, MSGFLAG_VITAL);
 }
 
@@ -1760,6 +1768,10 @@ void CClient::ProcessServerPacket(CNetChunk *pPacket, int Conn, bool Dummy)
 		else if(Conn == CONN_MAIN && (pPacket->m_Flags & NET_CHUNKFLAG_VITAL) != 0 && Msg == NETMSG_KOG_LOGIN_RESULT)
 		{
 			GameClient()->KogLoginResult(&Unpacker);
+		}
+		else if(Conn == CONN_MAIN && (pPacket->m_Flags & NET_CHUNKFLAG_VITAL) != 0 && Msg == NETMSG_KOG_ATTEST_CHALLENGE)
+		{
+			GameClient()->KogAttestChallenge(&Unpacker);
 		}
 		else if(Conn == CONN_MAIN && (pPacket->m_Flags & NET_CHUNKFLAG_VITAL) != 0 && Msg == NETMSG_MAP_CHANGE)
 		{

@@ -37,6 +37,7 @@ The numbers are written once and never reused. They are the same on every client
 | Id | Name | Offered when | What it enables |
 | --- | --- | --- | --- |
 | 1 | `client_login` | `cl_kog_login` and `cl_kog_auto_login` are on and this device has a key | the client may prove your account at join (see [LOGIN.md](LOGIN.md)) |
+| 4 | `client_attest` | the same as `client_login` | the client may answer a fresh challenge with the install key (see [CLIENT-ATTEST.md](CLIENT-ATTEST.md)) |
 
 The list is generated from one table in `src/engine/shared/kog_protocol.h` (`KOG_CAPABILITIES`); adding a feature is
 one line there. A feature is offered only if its own settings are on.

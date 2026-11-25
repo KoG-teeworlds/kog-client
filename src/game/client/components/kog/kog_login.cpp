@@ -1,5 +1,6 @@
 #include "kog_login.h"
 
+#include <base/mem.h>
 #include <base/str.h>
 
 #include <engine/client.h>
@@ -126,6 +127,16 @@ bool CKogLogin::LoadKey(KogLogin::SDeviceKey *pKey)
 	char aBlob[KogKeyFile::MAX_BLOB];
 	const bool Ok = KogKeyStore::Load(Storage(), nullptr, aBlob, sizeof(aBlob)) == KogKeyFile::ELoad::OK && KogLogin::DecodeKey(aBlob, pKey);
 	KogLogin::Wipe(aBlob, sizeof(aBlob));
+	return Ok;
+}
+
+bool CKogLogin::LoadSeed(uint8_t (&aSeed)[KogLogin::SEED_SIZE])
+{
+	KogLogin::SDeviceKey Key;
+	const bool Ok = LoadKey(&Key);
+	if(Ok)
+		mem_copy(aSeed, Key.m_aSeed, sizeof(aSeed));
+	KogLogin::Wipe(&Key, sizeof(Key));
 	return Ok;
 }
 

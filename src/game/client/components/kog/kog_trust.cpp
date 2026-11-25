@@ -10,6 +10,7 @@
 #include <engine/client.h>
 #include <engine/client/kog_trust_pins.h>
 #include <engine/shared/config.h>
+#include <engine/shared/kog_attest.h>
 #include <engine/shared/kog_login.h>
 #include <engine/storage.h>
 
@@ -195,6 +196,7 @@ void CKogTrust::OnStateChange(int NewState, int OldState)
 	{
 		m_LastVerdict = EVerdict::NOT_CHECKED;
 		m_aLastSubject[0] = '\0';
+		m_HasLeafHash = false;
 	}
 	// at the start of a connection to a KoG server, when a login is possible: look if the held list is old
 	if(NewState == IClient::STATE_CONNECTING && Enabled() && g_Config.m_ClKogLogin && g_Config.m_ClKogAutoLogin &&
@@ -206,6 +208,7 @@ void CKogTrust::OnStateChange(int NewState, int OldState)
 CKogTrust::EVerdict CKogTrust::Check(const char *pAddress, const KogLoginWire::SChallenge &Challenge)
 {
 	m_aLastSubject[0] = '\0';
+	m_HasLeafHash = false;
 	if(!Enabled())
 		return m_LastVerdict = EVerdict::NOT_CHECKED;
 	if(Challenge.m_Chain.empty())
@@ -231,5 +234,20 @@ CKogTrust::EVerdict CKogTrust::Check(const char *pAddress, const KogLoginWire::S
 	}
 	if(KogTrust::IsRevoked(m_Bundle, GameServer))
 		return m_LastVerdict = EVerdict::REVOKED;
+	const uint8_t *pLeaf = nullptr;
+	size_t LeafSize = 0;
+	if(KogTrust::LeafCert(Challenge.m_Chain.data(), Challenge.m_Chain.size(), &pLeaf, &LeafSize))
+	{
+		KogAttest::CertHash(pLeaf, LeafSize, m_aLeafHash);
+		m_HasLeafHash = true;
+	}
 	return m_LastVerdict = EVerdict::OK;
+}
+
+bool CKogTrust::LeafHash(uint8_t (&aHash)[32]) const
+{
+	if(!m_HasLeafHash)
+		return false;
+	mem_copy(aHash, m_aLeafHash, sizeof(aHash));
+	return true;
 }

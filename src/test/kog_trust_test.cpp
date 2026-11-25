@@ -86,6 +86,25 @@ TEST(KogTrust, TheChainVerifiesUnderThePinnedKey)
 	EXPECT_EQ(memcmp(Game.m_aPubkey, Pub.data(), 32), 0);
 }
 
+TEST(KogTrust, TheLeafIsTheSecondCertificateOfTheChain)
+{
+	const std::vector<uint8_t> Chain = ::Chain();
+	const std::vector<uint8_t> Gs = Hex(GS_CERT);
+	const uint8_t *pLeaf = nullptr;
+	size_t LeafSize = 0;
+	ASSERT_TRUE(LeafCert(Chain.data(), Chain.size(), &pLeaf, &LeafSize));
+	ASSERT_EQ(LeafSize, Gs.size());
+	EXPECT_EQ(memcmp(pLeaf, Gs.data(), Gs.size()), 0);
+	// one certificate, trailing bytes and a cut chain have no leaf
+	const std::vector<uint8_t> Node = Hex(NODE_CERT);
+	EXPECT_FALSE(LeafCert(Node.data(), Node.size(), &pLeaf, &LeafSize));
+	std::vector<uint8_t> Extra = Chain;
+	Extra.push_back(0);
+	EXPECT_FALSE(LeafCert(Extra.data(), Extra.size(), &pLeaf, &LeafSize));
+	EXPECT_FALSE(LeafCert(Chain.data(), Chain.size() - 1, &pLeaf, &LeafSize));
+	EXPECT_FALSE(LeafCert(Chain.data(), 0, &pLeaf, &LeafSize));
+}
+
 TEST(KogTrust, NothingPinnedIsNotAnAnswer)
 {
 	const std::vector<uint8_t> Wire = Chain();

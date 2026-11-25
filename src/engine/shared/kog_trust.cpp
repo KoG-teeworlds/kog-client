@@ -164,6 +164,17 @@ EChain VerifyChain(const SAnchors &Anchors, const uint8_t *pChain, size_t Size, 
 	return EChain::OK;
 }
 
+bool LeafCert(const uint8_t *pChain, size_t Size, const uint8_t **ppLeaf, size_t *pLeafSize)
+{
+	SCert Node, Game;
+	size_t Used = 0, Used2 = 0;
+	if(Size > 2 * MAX_CERT_SIZE || !ParseCert(pChain, Size, &Node, &Used) || !ParseCert(pChain + Used, Size - Used, &Game, &Used2) || Used + Used2 != Size)
+		return false;
+	*ppLeaf = pChain + Used;
+	*pLeafSize = Used2;
+	return true;
+}
+
 size_t BuildServerSigned(uint8_t *pOut, size_t OutSize, const char *pAddress, const uint8_t *pNonce, size_t NonceSize, const uint8_t (&aSessionId)[16], uint32_t TtlMs)
 {
 	const size_t AddressLength = str_length(pAddress);

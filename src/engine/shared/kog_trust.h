@@ -65,6 +65,10 @@ enum class EChain
 // subject and the key of the game server are set.
 EChain VerifyChain(const SAnchors &Anchors, const uint8_t *pChain, size_t Size, uint64_t Now, SCert *pGameServer);
 
+// The bytes of the game server certificate in a chain (the second certificate), which the attestation hashes. False
+// for a chain that is not exactly two well formed certificates. Does not check any signature: use it after VerifyChain.
+bool LeafCert(const uint8_t *pChain, size_t Size, const uint8_t **ppLeaf, size_t *pLeafSize);
+
 // "KoG-server-v1" 0x00 || u8 len(addr) || addr || nonce[32] || session_id[16] || u32 BE ttl_ms
 size_t BuildServerSigned(uint8_t *pOut, size_t OutSize, const char *pAddress, const uint8_t *pNonce, size_t NonceSize, const uint8_t (&aSessionId)[16], uint32_t TtlMs);
 bool VerifyServerSignature(const uint8_t (&aServerKey)[KEY_SIZE], const char *pAddress, const uint8_t *pNonce, size_t NonceSize, const uint8_t (&aSessionId)[16], uint32_t TtlMs, const uint8_t (&aSignature)[SIGNATURE_SIZE]);

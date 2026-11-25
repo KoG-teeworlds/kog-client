@@ -32,6 +32,8 @@ public:
 	EVerdict Check(const char *pAddress, const KogLoginWire::SChallenge &Challenge);
 	EVerdict LastVerdict() const { return m_LastVerdict; }
 	const char *LastSubject() const { return m_aLastSubject; }
+	// SHA-256 of the game server certificate that the last Check of this connection accepted. False: none was accepted.
+	bool LeafHash(uint8_t (&aHash)[32]) const;
 
 	// A certificate failed: the list may have changed, look again (at most once in five minutes)
 	void RefreshSoon();
@@ -45,6 +47,8 @@ private:
 	int64_t m_LastTry = 0;
 	EVerdict m_LastVerdict = EVerdict::NOT_CHECKED;
 	char m_aLastSubject[KogTrust::MAX_ID_SIZE + 1] = "";
+	bool m_HasLeafHash = false;
+	uint8_t m_aLeafHash[32] = {};
 
 	std::shared_ptr<IHttpRequest> m_pRequest;
 	int m_Source = 0;

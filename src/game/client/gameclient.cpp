@@ -150,6 +150,7 @@ void CGameClient::OnConsoleInit()
 					      &m_KogHello, // KoG
 					      &m_KogLogin, // KoG
 					      &m_KogTrust, // KoG
+					      &m_KogAttest, // KoG
 					      &m_Players,
 					      &m_MovingTilesBackground, // TClient
 					      &m_MapLayersForeground,
