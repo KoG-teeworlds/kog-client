@@ -48,7 +48,8 @@ EOutcome Classify(EResult Result)
 
 bool UrlAllowed(const char *pUrl, const char *pDevBaseUrl)
 {
-	if(str_length(pUrl) == 0 || str_length(pUrl) > MAX_URL_LENGTH)
+	const size_t UrlLength = str_length(pUrl);
+	if(UrlLength == 0 || UrlLength > MAX_URL_LENGTH)
 		return false;
 	// The base is only used for its own origin: without a dev base it is a kog.tw address, so only https://*.kog.tw:443 passes
 	const char *pBase = pDevBaseUrl[0] != '\0' ? pDevBaseUrl : "https://client.kog.tw";
