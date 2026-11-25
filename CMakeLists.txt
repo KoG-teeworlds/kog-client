@@ -2512,8 +2512,8 @@ set_src(ENGINE_SHARED GLOB_RECURSE src/engine/shared
   jsonwriter.cpp
   jsonwriter.h
   kernel.cpp
-  kog_failsafe.cpp
   kog_community.h
+  kog_failsafe.cpp
   kog_failsafe.h
   kog_hello.cpp
   kog_hello.h
