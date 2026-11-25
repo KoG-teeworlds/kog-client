@@ -2525,9 +2525,9 @@ set_src(ENGINE_SHARED GLOB_RECURSE src/engine/shared
   kog_login.h
   kog_login_wire.cpp
   kog_login_wire.h
+  kog_protocol.h
   kog_trust.cpp
   kog_trust.h
-  kog_protocol.h
   kog_update.cpp
   kog_update.h
   linereader.cpp
