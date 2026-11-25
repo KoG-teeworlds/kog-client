@@ -45,3 +45,7 @@ UUID(NETMSG_RECONNECT, "reconnect@ddnet.org")
 UUID(NETMSG_MAPLIST_ADD, "sv-maplist-add@ddnet.org")
 UUID(NETMSG_MAPLIST_GROUP_START, "sv-maplist-start@ddnet.org")
 UUID(NETMSG_MAPLIST_GROUP_END, "sv-maplist-end@ddnet.org")
+
+// KoG, only between a KoG client and a KoG server (docs/KOG-HELLO.md)
+UUID(NETMSG_KOG_CLIENT_HELLO, "kog-client-hello@kog.tw")
+UUID(NETMSG_KOG_SERVER_HELLO, "kog-server-hello@kog.tw")
