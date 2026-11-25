@@ -21,4 +21,3 @@ MACRO_CONFIG_STR(ClKogAccountExtraOrigins, cl_kog_account_extra_origins, 256, ""
 MACRO_CONFIG_STR(ClKogDeviceName, cl_kog_device_name, 161, "", CFGFLAG_CLIENT | CFGFLAG_SAVE, "Name of this device on your account, at most 40 characters (empty = KoG Client plus the system)")
 MACRO_CONFIG_STR(ClKogAccountName, cl_kog_account_name, 64, "", CFGFLAG_CLIENT | CFGFLAG_SAVE, "Account name shown in the settings after Log in with KoG (not a secret)")
 MACRO_CONFIG_STR(KogInstallId, kog_install_id, 40, "", CFGFLAG_CLIENT | CFGFLAG_SAVE, "Random value of this install that picks its place in a staged rollout. Never sent anywhere")
-MACRO_CONFIG_INT(ClLocalizationValidate, cl_localization_validate, 1, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Ignore translations whose printf format specifiers differ from the English string (0 = old behaviour, for debugging only)")
