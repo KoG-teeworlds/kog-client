@@ -172,6 +172,7 @@ CUpdaterFetchTask::CUpdaterFetchTask(CUpdater *pUpdater, const char *pUrl, const
 	char aDestination[IO_MAX_PATH_LENGTH];
 	str_format(aDestination, sizeof(aDestination), "update/%s", pDestPath);
 	m_pHttpRequest = CreateHttpRequest(pUrl);
+	m_pHttpRequest->KogUserAgent();
 	m_pHttpRequest->WriteToFile(pUpdater->m_pStorage, aDestination, -2);
 	m_pHttpRequest->ExpectSha256(File.m_Sha256);
 	m_pHttpRequest->MaxResponseSize(File.m_Size);
@@ -352,6 +353,7 @@ void CUpdater::StartFetch(SFetch &Fetch)
 		char aUrl[512];
 		GetUrl(aUrl, sizeof(aUrl), Fetch.m_Attempt, FILES[i]);
 		Fetch.m_apRequests[i] = HttpGet(aUrl);
+		Fetch.m_apRequests[i]->KogUserAgent();
 		Fetch.m_apRequests[i]->WriteToMemory();
 		Fetch.m_apRequests[i]->MaxResponseSize(i == 0 ? (int64_t)KogUpdate::MAX_MANIFEST_SIZE : 4096);
 		Fetch.m_apRequests[i]->Timeout(CTimeout{10000, 0, 500, 10});

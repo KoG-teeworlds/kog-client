@@ -106,6 +106,7 @@ void CKogLogin::Request(std::shared_ptr<IHttpRequest> pRequest, bool Secret)
 		pRequest->FollowRedirects(false);
 		pRequest->Sensitive(true);
 	}
+	pRequest->KogUserAgent();
 	pRequest->LogProgress(HTTPLOG::NONE);
 	pRequest->FailOnErrorStatus(false);
 	pRequest->MaxResponseSize(256 * 1024);
