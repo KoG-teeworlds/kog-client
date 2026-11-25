@@ -28,7 +28,7 @@ jobs:
           cmake-args: -G Ninja -DIPO=ON
           package-file: "*-linux_x86_64.tar.xz"
         - name: macos
-          os: macos-latest
+          os: macos-15
           cmake-args: -G Ninja -DIPO=ON
           package-file: "*-macos.dmg"
         - name: windows
