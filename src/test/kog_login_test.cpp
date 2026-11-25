@@ -367,6 +367,7 @@ TEST(KogLogin, NothingIsAnsweredToANonKogServer)
 	Decision.m_AutoLoginOn = true;
 	Decision.m_HasDeviceKey = true;
 	Decision.m_ServerIsKog = true;
+	Decision.m_CapabilityNegotiated = true;
 	EXPECT_TRUE(MayAnswerChallenge(Decision));
 
 	SJoinDecision Vanilla = Decision;
@@ -381,6 +382,9 @@ TEST(KogLogin, NothingIsAnsweredToANonKogServer)
 	EXPECT_FALSE(MayAnswerChallenge(Off));
 	Off = Decision;
 	Off.m_HasDeviceKey = false;
+	EXPECT_FALSE(MayAnswerChallenge(Off));
+	Off = Decision;
+	Off.m_CapabilityNegotiated = false;
 	EXPECT_FALSE(MayAnswerChallenge(Off));
 	Off = Decision;
 	Off.m_AlreadyLoggedIn = true;
