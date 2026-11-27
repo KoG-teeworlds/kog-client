@@ -9,7 +9,7 @@ Scenes:
   hud    the scoreboard, chat and kill feed with fake players: needs a client built with the dev hooks of
          scripts/kog/dev/README.md (the hooks are not part of the product: they fake a game state offline)
 
-Every scene runs once per theme (cl_kog_theme 0 = classic, 1 = KoG dark, 2 = KoG light) and `runs` times; the table shows the
+Every scene runs once per theme (cl_kog_theme 0 = classic, 1 = KoG dark, 2 = KoG light, 3 = KoG glass) and `runs` times; the table shows the
 median over the runs of the median, p95 and p99 frame time in microseconds (the first fifth of the frames of a run is dropped:
 start-up). The window is 1280x720 with vsync off and no frame limit, so the numbers are the cost of drawing, not of waiting.
 A temporary HOME keeps the run away from your settings. Runs are noisy (about 5 to 10 percent); compare medians of several runs.
@@ -32,7 +32,7 @@ SCENES = {
         ("chat and kill feed (64 players)", {"KOG_HUD": "1", "KOG_FIXTURE": "64", "KOG_NOSCORE": "1"}, ""),
     ],
 }
-THEMES = [(0, "classic"), (1, "dark"), (2, "light")]
+THEMES = [(0, "classic"), (1, "dark"), (2, "light"), (3, "glass")]
 
 
 def run_once(client, theme, env_extra, seconds):
