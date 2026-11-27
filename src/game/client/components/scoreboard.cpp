@@ -1085,6 +1085,7 @@ void CScoreboard::OnRender()
 		if(KogHud::On())
 		{
 			// columns of rows of the fixed height; what does not fit is counted, not shrunk
+			const CUIRect Panel = Scoreboard;
 			for(int Column = 0; Column < KogPlan.m_Columns; ++Column)
 			{
 				CUIRect ColumnRect;
@@ -1095,7 +1096,7 @@ void CScoreboard::OnRender()
 			{
 				char aMore[64];
 				str_format(aMore, sizeof(aMore), Localize("+%d players not shown"), NumPlayers - KogPlan.m_Shown);
-				CUIRect More = {Scoreboard.x, Scoreboard.y + Scoreboard.h - KogStyle::Hud::ROW - 5.0f, Scoreboard.w, KogStyle::Hud::ROW};
+				CUIRect More = {Panel.x, Panel.y + Panel.h - KogStyle::Hud::ROW - 5.0f, Panel.w, KogStyle::Hud::ROW};
 				Ui()->DoLabel(&More, aMore, KogStyle::Hud::TEXT, TEXTALIGN_MC);
 			}
 		}
