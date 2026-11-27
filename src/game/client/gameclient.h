@@ -723,6 +723,8 @@ public:
 	const char *DDNetVersionStr() const override;
 	bool KogMakeHello(class CAbstractPacker *pPacker) override { return m_KogHello.MakeHello(pPacker); }
 	void KogServerHello(CUnpacker *pUnpacker) override { m_KogHello.OnServerHello(pUnpacker); }
+	void KogLoginChallenge(CUnpacker *pUnpacker) override { m_KogLogin.OnLoginChallenge(pUnpacker); }
+	void KogLoginResult(CUnpacker *pUnpacker) override { m_KogLogin.OnLoginResult(pUnpacker); }
 	int ClientVersion7() const override;
 
 	void DoTeamChangeMessage7(const char *pName, int ClientId, int Team, const char *pPrefix = "");

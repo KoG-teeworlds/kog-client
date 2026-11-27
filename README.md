@@ -26,14 +26,16 @@ Done:
   keys are still placeholders, so stable does not update
 
 - login with a KoG account (OAuth 2.0 in the browser, no password in the game), on by default in canary and dev
-  builds only; proving the device to a game server is not built, see [docs/LOGIN.md](docs/LOGIN.md)
+  builds only; the client proves its device to KoG servers that ask for it (`cl_kog_auto_login`, off by default), see
+  [docs/LOGIN.md](docs/LOGIN.md)
+- KoG hello: tells KoG servers which KoG features the client supports and uses only what both sides have
+  (`kog_hello`, on in canary and dev builds only), see [docs/KOG-HELLO.md](docs/KOG-HELLO.md)
 - signed canary and dev releases and the download page at client.kog.tw
 
 Planned, not built yet:
 
 - stable releases (the stable keys are placeholders)
 - a Homebrew tap for macOS: the design is in [docs/HOMEBREW.md](docs/HOMEBREW.md)
-- KoG messages between client and server, announced with capabilities
 - opt-in client-side network statistics
 - a page that shows a returning player what changed and lets them decide each change, see [docs/WHATS-CHANGED.md](docs/WHATS-CHANGED.md)
 
