@@ -3,6 +3,9 @@
 # plus what the test needs to start a client without a display or a GPU.
 set -euo pipefail
 
+# what the test writes into /client belongs to the user who runs the container's host script
+trap 'chown -R "$HOST_OWNER" /client' EXIT
+
 if command -v apt-get >/dev/null; then
   export DEBIAN_FRONTEND=noninteractive
   apt-get update -qq

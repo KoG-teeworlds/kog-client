@@ -14,5 +14,5 @@ mkdir "$work/client"
 tar -xf "$tarball" -C "$work/client" --strip-components=1
 exe=$(sed -n 's/^#define KOG_CLIENT_EXECUTABLE "\(.*\)"$/\1/p' "$here/../../src/game/kog_version.h")
 
-docker run --rm -v "$work/client:/client" -v "$here:/scripts:ro" -e "EXE=$exe" -e "SECONDS_TO_RUN=$seconds" \
+docker run --rm -v "$work/client:/client" -v "$here:/scripts:ro" -e "EXE=$exe" -e "SECONDS_TO_RUN=$seconds" -e "HOST_OWNER=$(id -u):$(id -g)" \
   "$image" bash /scripts/linux_package_distro_inner.sh
