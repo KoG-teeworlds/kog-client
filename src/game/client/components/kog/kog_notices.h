@@ -5,28 +5,25 @@
 
 #include <game/client/component.h>
 
-#include <deque>
-#include <string>
+class CUnpacker;
 
-// A toast for the lines the KoG backend writes into the chat of a player (achievements) and the KoG server writes
-// for a completed quest. The line stays in the chat. Only on servers listed for the KoG community.
+// A toast for what a KoG server tells the player: achievements, quests, maintenance. From the typed message when the
+// server agreed to the capability notices (the text is then also written to the chat log, the server sends no chat
+// line), otherwise from the two chat lines the backend and the server write. Only on servers listed for the KoG community.
 class CKogNotices : public CComponent
 {
-	struct SToast
-	{
-		KogNotices::EKind m_Kind;
-		std::string m_Text;
-		float m_Start;
-	};
+	KogNotices::CToasts m_Toasts;
 
-	std::deque<SToast> m_Toasts;
-	KogNotices::CRateLimit m_RateLimit;
+	void Add(KogNotices::SToast Toast);
 
 public:
 	int Sizeof() const override { return sizeof(*this); }
 	void OnStateChange(int NewState, int OldState) override;
 	void OnMessage(int Msg, void *pRawMsg) override;
 	void OnRender() override;
+
+	// The message kog-notice, read only if the server agreed to notices on this connection
+	void OnNotice(CUnpacker *pUnpacker);
 };
 
 #endif

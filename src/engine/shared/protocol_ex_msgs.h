@@ -54,3 +54,6 @@ UUID(NETMSG_KOG_SERVER_HELLO, "kog-server-hello@kog.tw")
 UUID(NETMSG_KOG_LOGIN_CHALLENGE, "kog-login-challenge@kog.tw")
 UUID(NETMSG_KOG_LOGIN_PROOF, "kog-login-proof@kog.tw")
 UUID(NETMSG_KOG_LOGIN_RESULT, "kog-login-result@kog.tw")
+
+// KoG notice, only after notices was agreed (docs/KOG-NOTICE.md)
+UUID(NETMSG_KOG_NOTICE, "kog-notice@kog.tw")

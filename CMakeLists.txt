@@ -2523,6 +2523,8 @@ set_src(ENGINE_SHARED GLOB_RECURSE src/engine/shared
   kog_login.h
   kog_login_wire.cpp
   kog_login_wire.h
+  kog_notice_wire.cpp
+  kog_notice_wire.h
   kog_notices.h
   kog_protocol.h
   kog_update.cpp
@@ -3682,6 +3684,7 @@ if(GTEST_FOUND OR DOWNLOAD_GTEST)
     kog_keyfile_test.cpp
     kog_login_test.cpp
     kog_login_wire_test.cpp
+    kog_notice_wire_test.cpp
     kog_notices_test.cpp
     kog_style_test.cpp
     kog_update_test.cpp
