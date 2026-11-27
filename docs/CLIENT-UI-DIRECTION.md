@@ -1,6 +1,6 @@
 # Client UI direction: from black slabs to game glass
 
-Status: the system below is built for the HUD, the menu views, the start page, tooltips and toasts. What is not done is in section 8.
+Status: built for the HUD, menu views, controls, popups and the start page. What is not done or not seen is in section 8.
 Code: `src/game/client/kog_style.h` (tokens), `kog_draw.{h,cpp}` (primitives), `kog_theme.h`, `kog_hud.h` (what components ask).
 Tests: `src/test/kog_style_test.cpp`, `kog_draw_test.cpp`, `kog_hud_test.cpp`. Measurements: `scripts/kog/bench_hud.py`.
 
@@ -94,13 +94,13 @@ including the lighter top of a glass panel and the self row. Status colours diff
 
 ## 6. Where it applies
 
-| Screen | Done |
+| Screen | State |
 | --- | --- |
-| HUD: scoreboard, spectators, goals | glass panel, title with accent bar and hairline, muted headers, self row with a bar, no placeholder flags |
-| HUD: kill feed | glass pills with a small shadow |
-| HUD: chat lines | glass colour (lines keep the upstream quad container) |
-| Tooltips, toasts | glass, toast eases in |
+| HUD: scoreboard | glass panel, title with accent bar and hairline, muted headers, hairline rows instead of zebra, 1 unit separators between column groups, self row with a bar, palette ping colours (number always shown), no placeholder flags. Two variants were built (zebra rows, hairline rows with separators); the second is delivered, the first is in the comparison page |
+| HUD: kill feed, chat, tooltips, toasts, vote bar, emote wheel, spectator menu | glass pills and panels; chat lines get 0.45 em padding and 0.18 em spacing between wrapped rows (upstream: 0.17 and none) |
 | Menu views (browser, settings, demos, in-game pages) | glass view with a shadow (`KogTheme::DrawView`, 15 call sites) |
+| Controls | one style set: `KogTheme::DrawControl` (gradient, rim) for buttons and edit boxes; `KogTheme::Control` keeps the meaning of an upstream colour (green good, red bad, yellow warn, blue other) and replaces the colour with the palette's; cached buttons (dropdowns, `DoButton_Menu` with properties) too; grid headers (sorted column in the brand colour); popups and dropdown lists as one glass panel with a shadow |
+| Cards, list headers, rows | `KogTheme::MenuFill`: while the menus draw, upstream's translucent pure white becomes a theme layer in `CUIRect::Draw`; our own layers are white 0.996 so they are not dimmed twice |
 | Start page | scrim that lets the sky show, glass cards, brand gradient Play button |
 
 ## 7. Measurements
@@ -116,19 +116,21 @@ including the lighter top of a glass panel and the self row. Status colours diff
 | chat and kill feed (64 players) | 1652 / 3947 / 5691 | 1894 / 7110 / 18065 | 1707 / 3976 / 5540 | 1833 / 4638 / 8168 |
 
 Reading: the glass HUD costs the same as the dark and light themes within noise (and less than Classic at 64 and 128 players, because the KoG layout shows one fixed row height).
-The start page is the one place with a visible cost: about +130 us median (shadows of six buttons and the scrim); at 520 us that is still under 0.6 ms, but it is a cost and it is not hidden.
-Allocations per frame were not re-measured in this round (`scripts/kog/dev/allocs_per_frame.py`); by construction the only allocation is the 16 KB texture at start.
+A first run with 2 runs per cell showed the start page 130 us slower in glass. That was noise: `cl_menu_map "auto"` picks a random map per run. With 4 runs per cell the start page is 368 / 370 / 369 / 371 us median (classic / dark / light / glass), so no per-frame cache of the panel quads was needed.
+Allocations per frame (`scripts/kog/dev/allocs_per_frame.py`, includes the engine): scoreboard with 64 players 6321 classic against 5674 glass; start page 1178 classic against 1170 glass. No new allocation per frame comes from our code.
+
+Sanitizers: a RelWithDebInfo client with `-fsanitize=address,undefined` ran 20 scenes (HUD with 128 and 24 players, start page, browser, settings controls, each in 4 themes) with no ASan or UBSan report. LeakSanitizer is not supported on macOS arm64 and was off.
+
 
 ## 8. What is not done, and not verified
 
-- Vote UI, emote wheel, spectator menu, the settings pages' controls (sliders, the right-hand page list, upstream green and grey buttons, the yellow-green column headers of the browser): still upstream shapes in the glass palette.
-- Icons: no new icon set added (the shipped Font Awesome 6 Free stays); no texture atlas generator, because no new sprite was needed.
-- Chat line height for wrapped lines is upstream's.
-- Hover and press for most widgets is the upstream colour multiplication; only the start page eases.
+- **Not seen on screen:** the in-game menu (Esc), player list, chat input, connecting and loading screens, the vote bar, the emote wheel and the spectator menu need a live game; the dev hooks only fake the scoreboard, chat and kill feed. They use the same helpers and compile, but I have not looked at them. Treat them as unverified.
+- Hover and press: upstream's colour multiplication; only the start page eases. No keyboard focus rings beyond the start page. The settings page list on the right and the top tab bar keep upstream's shapes in the theme's colours.
+- Cached buttons (dropdowns) keep the colour they were built with until their rectangle changes, so switching the theme while one is on screen shows it in the old colour until the page is reopened.
+- Icons: no new icon set and no atlas script (the shipped Font Awesome 6 Free is the one set; no sprite was missing).
 - Sound feedback: none.
-- Keyboard focus rings only on the start page, as before.
-- Windows and Linux builds are verified by CI only; I built and ran the client on macOS (arm64, Release) and the unit tests there. Sanitizer run: not done in this round.
-- No fuzzing beyond the 20000 random cases of the shadow plan.
+- Contrast is tested for the palettes; it is not tested per widget.
+- Windows and Linux builds are verified by CI only; built, tested and run on macOS arm64.
 
 ## 9. Upstream merge points
 
