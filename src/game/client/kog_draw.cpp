@@ -42,15 +42,6 @@ void KogDraw::Init(IGraphics *pGraphics)
 	gs_ShadowTexture = gs_pGraphics->LoadTextureRawMove(Image, 0, "kog_shadow");
 }
 
-ColorRGBA KogDraw::Lightened(const ColorRGBA &Base, float Amount)
-{
-	return ColorRGBA(
-		Base.r + (1.0f - Base.r) * Amount,
-		Base.g + (1.0f - Base.g) * Amount,
-		Base.b + (1.0f - Base.b) * Amount,
-		Base.a);
-}
-
 void KogDraw::Shadow(const CUIRect &Rect, const KogStyle::Elevation::SLevel &Level)
 {
 	if(gs_pGraphics == nullptr || !gs_ShadowTexture.IsValid() || Level.m_Blur <= 0.0f || Level.m_ShadowAlpha <= 0.0f)

@@ -83,7 +83,14 @@ namespace KogDraw
 	void Pill(const CUIRect &Rect, ColorRGBA Color, const KogStyle::Elevation::SLevel &Level);
 
 	// The gradient of a glass panel: the colour of the top
-	ColorRGBA Lightened(const ColorRGBA &Base, float Amount);
+	inline ColorRGBA Lightened(const ColorRGBA &Base, float Amount)
+	{
+		return ColorRGBA(
+			Base.r + (1.0f - Base.r) * Amount,
+			Base.g + (1.0f - Base.g) * Amount,
+			Base.b + (1.0f - Base.b) * Amount,
+			Base.a);
+	}
 }
 
 #endif
