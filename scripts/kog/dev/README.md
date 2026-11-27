@@ -8,9 +8,9 @@ These are for developers. Nothing here is part of the client you ship, and the h
 client's own `benchmark_quit`. The `hud` scenes (scoreboard with 16, 64 and 128 players, chat and kill feed) need fake game
 state, which a client only has online; for that, a client built with the hooks below.
 
-## The hooks (`hud-bench-hooks.patch`)
+## The hooks (`hud-bench-hooks.diff`)
 
-`git apply scripts/kog/dev/hud-bench-hooks.patch` on the branch you measure. It adds, to the client only:
+`git apply scripts/kog/dev/hud-bench-hooks.diff` on the branch you measure. It adds, to the client only:
 
 - `components/kog/kog_fixture.{h,cpp}`: with `KOG_FIXTURE=<n>` in the environment, fills the game client with n fake players, six
   chat lines and four kills, once, and keeps the fixture in the snapshot.
