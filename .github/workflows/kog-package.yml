@@ -26,7 +26,7 @@ jobs:
         # The oldest hosted image, so the binary needs an old glibc; FFmpeg and its codecs come from ddnet-libs and are linked statically
         - name: linux
           os: ubuntu-22.04
-          cmake-args: -G Ninja -DIPO=ON -DPREFER_BUNDLED_LIBS=ON
+          cmake-args: -G Ninja -DIPO=ON -DPREFER_BUNDLED_LIBS=ON -DCMAKE_SKIP_BUILD_RPATH=ON
           package-file: "*-linux_x86_64.tar.xz"
         - name: macos
           os: macos-15

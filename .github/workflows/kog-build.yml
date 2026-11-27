@@ -52,7 +52,7 @@ jobs:
         include:
         - name: linux
           os: ubuntu-22.04
-          cmake-args: -G Ninja -DPREFER_BUNDLED_LIBS=ON
+          cmake-args: -G Ninja -DPREFER_BUNDLED_LIBS=ON -DCMAKE_SKIP_BUILD_RPATH=ON
           # The bundled zlib declares read and write differently from glibc; with LTO under -Werror that is a link error
           cmake-args-release: -DIPO=ON -DCMAKE_EXE_LINKER_FLAGS=-Wno-error=lto-type-mismatch
           cmake-init-env: CXXFLAGS=-Werror
