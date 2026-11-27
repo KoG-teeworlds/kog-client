@@ -4434,7 +4434,7 @@ set(KOG_STRICT_SOURCES
   src/test/kog_pacing_test.cpp
 )
 if(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
-  set(KOG_STRICT_FLAGS -Wall -Wextra -Wconversion -Wno-sign-conversion -Wno-shorten-64-to-32 -Wshadow -Wnon-virtual-dtor -Woverloaded-virtual -Wcast-qual)
+  set(KOG_STRICT_FLAGS -Wall -Wextra -Wconversion -Wshadow -Wnon-virtual-dtor -Woverloaded-virtual -Wcast-qual)
   if(KOG_WERROR)
     list(APPEND KOG_STRICT_FLAGS -Werror)
   endif()

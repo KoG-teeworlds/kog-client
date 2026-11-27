@@ -40,7 +40,7 @@ void Base64UrlEncode(char *pDst, size_t DstSize, const void *pData, size_t DataS
 
 int Base64UrlDecode(void *pDst, size_t DstSize, const char *pSrc)
 {
-	const size_t Length = str_length(pSrc);
+	const size_t Length = static_cast<size_t>(str_length(pSrc));
 	if(Length % 4 == 1)
 		return -1;
 	uint8_t *pOut = static_cast<uint8_t *>(pDst);
@@ -73,12 +73,12 @@ void UrlEncode(char *pDst, size_t DstSize, const char *pSrc)
 	size_t Out = 0;
 	for(; *pSrc; pSrc++)
 	{
-		const unsigned char c = *pSrc;
+		const unsigned char c = static_cast<unsigned char>(*pSrc);
 		const bool Plain = (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || (c >= '0' && c <= '9') || c == '-' || c == '.' || c == '_' || c == '~';
 		if(Out + (Plain ? 1 : 3) + 1 > DstSize)
 			break;
 		if(Plain)
-			pDst[Out++] = c;
+			pDst[Out++] = static_cast<char>(c);
 		else
 		{
 			pDst[Out++] = '%';
@@ -154,7 +154,7 @@ void MakeState(char (&aState)[STATE_LENGTH + 1])
 
 void CodeChallenge(const char *pVerifier, char (&aChallenge)[CHALLENGE_LENGTH + 1])
 {
-	const SHA256_DIGEST Digest = sha256(pVerifier, str_length(pVerifier));
+	const SHA256_DIGEST Digest = sha256(pVerifier, static_cast<size_t>(str_length(pVerifier)));
 	Base64UrlEncode(aChallenge, sizeof(aChallenge), Digest.data, sizeof(Digest.data));
 }
 
@@ -162,7 +162,7 @@ void CutDeviceName(char *pDst, size_t DstSize, const char *pSrc)
 {
 	char aCopy[512];
 	str_copy(aCopy, pSrc);
-	str_utf8_truncate(pDst, DstSize, str_utf8_skip_whitespaces(aCopy), MAX_DEVICE_NAME);
+	str_utf8_truncate(pDst, static_cast<int>(DstSize), str_utf8_skip_whitespaces(aCopy), static_cast<int>(MAX_DEVICE_NAME));
 	str_utf8_trim_right(pDst);
 }
 
@@ -185,15 +185,15 @@ bool BuildAuthorizeUrl(char *pBuf, size_t Size, const char *pAuthorizeEndpoint, 
 	UrlEncode(aRedirect, sizeof(aRedirect), pRedirectUri);
 	UrlEncode(aScope, sizeof(aScope), SCOPE);
 	UrlEncode(aDevice, sizeof(aDevice), pDeviceName);
-	const int Length = str_format(pBuf, Size, "%s%cresponse_type=code&client_id=%s&redirect_uri=%s&scope=%s&state=%s&code_challenge=%s&code_challenge_method=S256&device_name=%s",
+	const int Length = str_format(pBuf, static_cast<int>(Size), "%s%cresponse_type=code&client_id=%s&redirect_uri=%s&scope=%s&state=%s&code_challenge=%s&code_challenge_method=S256&device_name=%s",
 		pAuthorizeEndpoint, strchr(pAuthorizeEndpoint, '?') ? '&' : '?', CLIENT_ID, aRedirect, aScope, pState, pChallenge, aDevice);
 	return Length > 0 && (size_t)Length < Size;
 }
 
 static bool ConstantTimeEquals(const char *pA, const char *pB)
 {
-	const size_t LengthA = str_length(pA);
-	const size_t LengthB = str_length(pB);
+	const size_t LengthA = static_cast<size_t>(str_length(pA));
+	const size_t LengthB = static_cast<size_t>(str_length(pB));
 	unsigned Diff = (unsigned)(LengthA ^ LengthB);
 	for(size_t i = 0; i < LengthA; i++)
 		Diff |= (unsigned char)pA[i] ^ (unsigned char)pB[LengthB ? i % LengthB : 0];
@@ -210,7 +210,7 @@ ECallback ParseCallback(const char *pRequest, size_t Length, const char *pExpect
 	const char *pLineEnd = static_cast<const char *>(memchr(pRequest, '\n', Length));
 	if(!pLineEnd)
 		return ECallback::MALFORMED;
-	size_t LineLength = pLineEnd - pRequest;
+	size_t LineLength = static_cast<size_t>(pLineEnd - pRequest);
 	if(LineLength > 0 && pRequest[LineLength - 1] == '\r')
 		LineLength--;
 
@@ -221,13 +221,13 @@ ECallback ParseCallback(const char *pRequest, size_t Length, const char *pExpect
 	}
 	const char *pTarget = pRequest + 4;
 	const char *pLine = pRequest + LineLength;
-	const char *pTargetEnd = static_cast<const char *>(memchr(pTarget, ' ', pLine - pTarget));
+	const char *pTargetEnd = static_cast<const char *>(memchr(pTarget, ' ', static_cast<size_t>(pLine - pTarget)));
 	if(!pTargetEnd || pLine - pTargetEnd < 9 || str_comp_num(pTargetEnd + 1, "HTTP/1.", 7) != 0)
 		return ECallback::MALFORMED;
 
-	const char *pQuery = static_cast<const char *>(memchr(pTarget, '?', pTargetEnd - pTarget));
-	const size_t PathLength = (pQuery ? pQuery : pTargetEnd) - pTarget;
-	if(PathLength != (size_t)str_length(CALLBACK_PATH) || str_comp_num(pTarget, CALLBACK_PATH, PathLength) != 0)
+	const char *pQuery = static_cast<const char *>(memchr(pTarget, '?', static_cast<size_t>(pTargetEnd - pTarget)));
+	const size_t PathLength = static_cast<size_t>((pQuery ? pQuery : pTargetEnd) - pTarget);
+	if(PathLength != (size_t)str_length(CALLBACK_PATH) || str_comp_num(pTarget, CALLBACK_PATH, static_cast<int>(PathLength)) != 0)
 		return ECallback::WRONG_PATH;
 	if(!pQuery)
 		return ECallback::BAD_STATE;
@@ -238,12 +238,12 @@ ECallback ParseCallback(const char *pRequest, size_t Length, const char *pExpect
 	const char *pPos = pQuery;
 	while(pPos < pTargetEnd)
 	{
-		const char *pAmp = static_cast<const char *>(memchr(pPos, '&', pTargetEnd - pPos));
+		const char *pAmp = static_cast<const char *>(memchr(pPos, '&', static_cast<size_t>(pTargetEnd - pPos)));
 		const char *pEnd = pAmp ? pAmp : pTargetEnd;
-		const char *pEq = static_cast<const char *>(memchr(pPos, '=', pEnd - pPos));
+		const char *pEq = static_cast<const char *>(memchr(pPos, '=', static_cast<size_t>(pEnd - pPos)));
 		if(pEq)
 		{
-			const size_t NameLength = pEq - pPos;
+			const size_t NameLength = static_cast<size_t>(pEq - pPos);
 			char *pValue = nullptr;
 			size_t ValueSize = 0;
 			bool *pHave = nullptr;
@@ -270,7 +270,7 @@ ECallback ParseCallback(const char *pRequest, size_t Length, const char *pExpect
 				if(*pHave)
 					Duplicate = true;
 				*pHave = true;
-				if(!UrlDecode(pValue, ValueSize, pEq + 1, pEnd - (pEq + 1)))
+				if(!UrlDecode(pValue, ValueSize, pEq + 1, static_cast<size_t>(pEnd - (pEq + 1))))
 				{
 					Wipe(aCode, sizeof(aCode));
 					return ECallback::MALFORMED;
@@ -288,13 +288,13 @@ ECallback ParseCallback(const char *pRequest, size_t Length, const char *pExpect
 	else if(HaveErr)
 	{
 		if(pError && ErrorSize)
-			str_copy(pError, aErr, ErrorSize);
+			str_copy(pError, aErr, static_cast<int>(ErrorSize));
 		Result = ECallback::SERVER_ERROR;
 	}
 	else if(!HaveCode || aCode[0] == '\0')
 		Result = ECallback::MISSING_CODE;
 	else if(pCode && CodeSize)
-		str_copy(pCode, aCode, CodeSize);
+		str_copy(pCode, aCode, static_cast<int>(CodeSize));
 	Wipe(aCode, sizeof(aCode));
 	return Result;
 }
@@ -339,8 +339,8 @@ bool ParseUuid(const char *pText, uint8_t (&aUuid)[UUID_SIZE])
 
 size_t BuildChallengeMessage(uint8_t *pOut, size_t OutSize, const char *pServerAddress, const uint8_t *pNonce, size_t NonceSize, const uint8_t (&aDeviceId)[UUID_SIZE], const uint8_t (&aSessionId)[UUID_SIZE])
 {
-	const size_t PrefixLength = str_length(CHALLENGE_PREFIX);
-	const size_t AddressLength = str_length(pServerAddress);
+	const size_t PrefixLength = static_cast<size_t>(str_length(CHALLENGE_PREFIX));
+	const size_t AddressLength = static_cast<size_t>(str_length(pServerAddress));
 	if(AddressLength == 0 || AddressLength > 255 || NonceSize != NONCE_SIZE)
 		return 0;
 	const size_t Total = PrefixLength + 1 + 1 + AddressLength + NONCE_SIZE + UUID_SIZE + UUID_SIZE;
@@ -433,7 +433,7 @@ static bool ParseOrigin(const char *pUrl, size_t UrlLength, char (&aScheme)[8], 
 	const char *pColon = nullptr;
 	if(pRest < pAuthorityEnd && *pRest == '[')
 	{
-		const char *pClose = static_cast<const char *>(memchr(pRest, ']', pAuthorityEnd - pRest));
+		const char *pClose = static_cast<const char *>(memchr(pRest, ']', static_cast<size_t>(pAuthorityEnd - pRest)));
 		if(!pClose)
 			return false;
 		pHostEnd = pClose + 1;
@@ -498,7 +498,7 @@ static bool OriginAllowedByList(const char *pScheme, const char *pHost, int Port
 			char aScheme[8], aHost[256];
 			int ListPort;
 			bool HasPath;
-			if(ParseOrigin(p, pEnd - p, aScheme, aHost, &ListPort, &HasPath) && !HasPath && str_comp(aScheme, "https") == 0 &&
+			if(ParseOrigin(p, static_cast<size_t>(pEnd - p), aScheme, aHost, &ListPort, &HasPath) && !HasPath && str_comp(aScheme, "https") == 0 &&
 				str_comp(aScheme, pScheme) == 0 && str_comp(aHost, pHost) == 0 && ListPort == Port)
 				return true;
 		}
@@ -512,14 +512,14 @@ bool EndpointAllowed(const char *pBaseUrl, const char *pEndpoint, const char *pE
 	char aBaseScheme[8], aBaseHost[256], aScheme[8], aHost[256];
 	int BasePort, Port;
 	bool HasPath;
-	if(!ParseOrigin(pBaseUrl, str_length(pBaseUrl), aBaseScheme, aBaseHost, &BasePort, &HasPath) ||
-		!ParseOrigin(pEndpoint, str_length(pEndpoint), aScheme, aHost, &Port, &HasPath))
+	if(!ParseOrigin(pBaseUrl, static_cast<size_t>(str_length(pBaseUrl)), aBaseScheme, aBaseHost, &BasePort, &HasPath) ||
+		!ParseOrigin(pEndpoint, static_cast<size_t>(str_length(pEndpoint)), aScheme, aHost, &Port, &HasPath))
 		return false;
 	if(str_comp(aBaseScheme, aScheme) == 0 && str_comp(aBaseHost, aHost) == 0 && BasePort == Port)
 		return true;
 	if(str_comp(aScheme, "https") != 0)
 		return false;
-	const size_t HostLength = str_length(aHost);
+	const size_t HostLength = static_cast<size_t>(str_length(aHost));
 	static const char SUFFIX[] = ".kog.tw";
 	if(Port == 443 && HostLength > sizeof(SUFFIX) - 1 && str_comp(aHost + HostLength - (sizeof(SUFFIX) - 1), SUFFIX) == 0)
 		return true;
@@ -530,7 +530,7 @@ bool EncodeKey(const SDeviceKey &Key, char *pBuf, size_t Size)
 {
 	char aSeed[64];
 	Base64UrlEncode(aSeed, sizeof(aSeed), Key.m_aSeed, sizeof(Key.m_aSeed));
-	const int Length = str_format(pBuf, Size, "v1\n%s\n%s", Key.m_aId, aSeed);
+	const int Length = str_format(pBuf, static_cast<int>(Size), "v1\n%s\n%s", Key.m_aId, aSeed);
 	Wipe(aSeed, sizeof(aSeed));
 	return Length > 0 && (size_t)Length < Size;
 }
@@ -550,7 +550,7 @@ bool DecodeKey(const char *pBlob, SDeviceKey *pKey)
 		Wipe(aSeed, sizeof(aSeed));
 		return false;
 	}
-	str_truncate(pKey->m_aId, sizeof(pKey->m_aId), pId, pNewline - pId);
+	str_truncate(pKey->m_aId, sizeof(pKey->m_aId), pId, static_cast<int>(pNewline - pId));
 	mem_copy(pKey->m_aSeed, aSeed, SEED_SIZE);
 	Wipe(aSeed, sizeof(aSeed));
 	return true;
@@ -655,7 +655,7 @@ bool CLoopbackListener::Start(const char *pState, int64_t TimeoutMs)
 
 void CLoopbackListener::RedirectUri(char *pBuf, size_t Size) const
 {
-	str_format(pBuf, Size, "http://%s:%d%s", m_Ipv6 ? "[::1]" : "127.0.0.1", m_Port, CALLBACK_PATH);
+	str_format(pBuf, static_cast<int>(Size), "http://%s:%d%s", m_Ipv6 ? "[::1]" : "127.0.0.1", m_Port, CALLBACK_PATH);
 }
 
 void CLoopbackListener::CloseConn(SConn &Conn)
@@ -783,7 +783,7 @@ CLoopbackListener::EState CLoopbackListener::Poll()
 				CloseConn(Conn);
 				break;
 			}
-			Conn.m_Length += Bytes;
+			Conn.m_Length += static_cast<size_t>(Bytes);
 			if(memchr(Conn.m_aRequest, '\n', Conn.m_Length) || Conn.m_Length >= sizeof(Conn.m_aRequest))
 			{
 				HandleRequest(Conn);
