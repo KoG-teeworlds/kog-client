@@ -136,9 +136,10 @@ void CMenusStart::RenderKogStartMenu(CUIRect MainView, int &NewPage)
 	// the rails: glass over the sky, the shadow of the left one falls on the page
 	const CUIRect LeftRail = {MainView.x, Top, Plan.m_RailWidth, MainView.h};
 	KogDraw::Panel(LeftRail, {Pal().m_Panel, &Elevation::FLOATING, 0.0f, IGraphics::CORNER_NONE, Elevation::GLASS_TOP_LIGHTEN});
-	const float RightTop = Top + Start::RIGHT_TOP;
+	const float LinkCell = 60.0f;
+	const float RightHeight = 3.0f * LinkCell + 2.0f * Space::S;
 	const float RightBottom = Bottom - Start::RIGHT_BOTTOM;
-	const CUIRect RightRail = {MainView.x + MainView.w - Plan.m_RightWidth, RightTop, Plan.m_RightWidth, std::max(RightBottom - RightTop, 1.0f)};
+	const CUIRect RightRail = {MainView.x + MainView.w - Plan.m_RightWidth, std::max(RightBottom - RightHeight, Top + Start::RIGHT_TOP), Plan.m_RightWidth, RightHeight};
 	KogDraw::Panel(RightRail, {Pal().m_Panel, &Elevation::RAISED, Radius::Panel, IGraphics::CORNER_L, Elevation::GLASS_TOP_LIGHTEN});
 
 	const auto DrawLogo = [&](const CUIRect &Rect) {
@@ -337,7 +338,7 @@ void CMenusStart::RenderKogStartMenu(CUIRect MainView, int &NewPage)
 		Text.VSplitLeft(Socket + 2.0f * Space::S, nullptr, &Text);
 		Text.VSplitRight(Space::S, &Text, nullptr);
 		CUIRect Caption, Name;
-		Text.HSplitMid(&Caption, &Name);
+		Text.HSplitMid(&Caption, &Name, Space::XS);
 		const char *pCaption = Busy ? Localize("Logging in...") : (LoggedIn ? Localize("Logged in as") : Localize("Not logged in"));
 		{
 			SLabelProperties Props;
@@ -371,7 +372,7 @@ void CMenusStart::RenderKogStartMenu(CUIRect MainView, int &NewPage)
 			const char *m_pIcon;
 			const char *m_pText;
 		} aLinks[3] = {{FontIcon::NEWSPAPER, Localize("News")}, {FontIcon::EARTH_AMERICAS, Localize("Website")}, {FontIcon::QUESTION, Localize("Tutorial")}};
-		const float Item = 60.0f;
+		const float Item = LinkCell;
 		for(int i = 0; i < 3; ++i)
 		{
 			const CUIRect Cell = {RightRail.x, RightRail.y + RightRail.h - Space::S - (3 - i) * Item, RightRail.w, Item};

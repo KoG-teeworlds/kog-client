@@ -363,7 +363,8 @@ namespace KogStyle
 			Plan.m_CentreWidth = std::max(Width - Plan.m_RailWidth - Plan.m_RightWidth, 1.0f);
 			const float Scale = std::min(1.0f, Height / 560.0f);
 			Plan.m_HeroLogoHeight = 120.0f * Scale;
-			Plan.m_HeroLogoY = Height * 0.18f;
+			const float HeroHeight = Plan.m_HeroLogoHeight + Space::XL + Size::Hero;
+			Plan.m_HeroLogoY = std::max(Space::XXL, (Height - HeroHeight) / 2.0f - Height * 0.06f);
 			Plan.m_PlayWidth = std::min(HERO_PLAY_MAX, std::max(Plan.m_CentreWidth - 2.0f * Space::L, 1.0f));
 			Plan.m_PlayY = Plan.m_HeroLogoY + Plan.m_HeroLogoHeight + Space::XL;
 			Plan.m_NavY = LOGO_BLOCK + Space::S;
