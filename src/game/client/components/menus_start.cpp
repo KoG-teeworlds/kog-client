@@ -13,6 +13,7 @@
 #include <generated/client_data.h>
 
 #include <game/client/gameclient.h>
+#include <game/client/kog_theme.h>
 #include <game/client/ui.h>
 #include <game/localization.h>
 #include <game/version.h>
@@ -28,7 +29,17 @@ void CMenusStart::RenderStartMenu(CUIRect MainView)
 #endif
 	GameClient()->m_MenuBackground.ChangePosition(CMenuBackground::POS_START);
 
-	// render logo
+	int NewPage = -1;
+	if(KogTheme::On())
+		RenderKogStartMenu(MainView, NewPage);
+	else
+		RenderClassicStartMenu(MainView, NewPage);
+	RenderStartFooter(MainView, NewPage);
+}
+
+void CMenusStart::RenderClassicStartMenu(CUIRect MainView, int &NewPage)
+{
+
 	Graphics()->TextureSet(g_pData->m_aImages[IMAGE_BANNER].m_Id);
 	Graphics()->QuadsBegin();
 	Graphics()->SetColor(1, 1, 1, 1);
@@ -42,7 +53,6 @@ void CMenusStart::RenderStartMenu(CUIRect MainView)
 	const float VMargin = MainView.w / 2 - 190.0f;
 
 	CUIRect Button;
-	int NewPage = -1;
 
 	CUIRect ExtMenu;
 	MainView.VSplitLeft(30.0f, nullptr, &ExtMenu);
@@ -151,6 +161,12 @@ void CMenusStart::RenderStartMenu(CUIRect MainView)
 	{
 		NewPage = g_Config.m_UiPage >= CMenus::PAGE_INTERNET && g_Config.m_UiPage <= CMenus::PAGE_FAVORITE_COMMUNITY_5 ? g_Config.m_UiPage : CMenus::PAGE_INTERNET;
 	}
+
+}
+
+void CMenusStart::RenderStartFooter(CUIRect MainView, int NewPage)
+{
+	const float VMargin = MainView.w / 2 - 190.0f;
 
 	// render version
 	CUIRect CurVersion, ConsoleButton;

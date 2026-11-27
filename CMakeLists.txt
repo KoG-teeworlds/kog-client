@@ -2858,6 +2858,7 @@ if(CLIENT)
     components/kog/kog_hello.h
     components/kog/kog_login.cpp
     components/kog/kog_login.h
+    components/kog/kog_menu_start.cpp
     components/local_server.cpp
     components/local_server.h
     components/mapimages.cpp
