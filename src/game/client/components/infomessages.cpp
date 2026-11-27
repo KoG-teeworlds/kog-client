@@ -474,7 +474,9 @@ void CInfoMessages::RenderKogBackground(float x, float y, float Width)
 {
 	const float Pad = KogStyle::Hud::PAD * KogStyle::Hud::KILL_FEED_SCALE;
 	Graphics()->TextureClear();
-	CUIRect Rect = {x - Width - Pad, y, Width + 2.0f * Pad, RowHeight()};
+	// a pill of the row height minus a gap, the text ends at x, so the pill ends Pad to the right of it
+	const float Gap = 2.0f * KogStyle::Hud::KILL_FEED_SCALE;
+	CUIRect Rect = {x - Width - Pad, y + Gap / 2.0f, Width + 2.0f * Pad, RowHeight() - Gap};
 	Rect.Draw(KogHud::Panel(ColorRGBA(0.0f, 0.0f, 0.0f, 0.5f)), IGraphics::CORNER_ALL, KogHud::Radius(0.0f) * KogStyle::Hud::KILL_FEED_SCALE);
 }
 
@@ -495,7 +497,7 @@ void CInfoMessages::OnRender()
 	if(IVideo::Current())
 		Showfps = 0;
 #endif
-	const float StartX = Width - 10.0f;
+	const float StartX = Width - 10.0f - (KogHud::On() ? KogStyle::Hud::PAD * KogStyle::Hud::KILL_FEED_SCALE : 0.0f);
 	const float StartY = 30.0f + (Showfps ? 100.0f : 0.0f) + (g_Config.m_ClShowpred && Client()->State() != IClient::STATE_DEMOPLAYBACK ? 100.0f : 0.0f);
 
 	float y = StartY;
