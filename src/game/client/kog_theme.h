@@ -1,10 +1,13 @@
 #ifndef GAME_CLIENT_KOG_THEME_H
 #define GAME_CLIENT_KOG_THEME_H
 
+#include "kog_draw.h"
 #include "kog_style.h"
 
 #include <engine/shared/config.h>
 #include <engine/textrender.h>
+
+#include <game/client/ui_rect.h>
 
 // What the shared UI code asks: is the KoG look on, and which colours does it use. Classic returns exactly the
 // values the code used before, so a file that asks stays identical to upstream when the theme is Classic.
@@ -15,7 +18,12 @@ namespace KogTheme
 	inline bool On() { return Current() != KogStyle::ETheme::CLASSIC; }
 	inline bool IsLight() { return Current() == KogStyle::ETheme::LIGHT; }
 
-	inline const KogStyle::SPalette &Palette() { return IsLight() ? KogStyle::LIGHT : KogStyle::DARK; }
+	inline bool IsGlass() { return Current() == KogStyle::ETheme::GLASS; }
+
+	inline const KogStyle::SPalette &Palette()
+	{
+		return IsLight() ? KogStyle::LIGHT : (IsGlass() ? KogStyle::GLASS : KogStyle::DARK);
+	}
 
 	// The neutral layer of the look: white over dark panels, black over light ones
 	inline ColorRGBA Layer(float Alpha) { return IsLight() ? ColorRGBA(0.0f, 0.0f, 0.0f, Alpha) : ColorRGBA(1.0f, 1.0f, 1.0f, Alpha); }
@@ -56,6 +64,17 @@ namespace KogTheme
 			return ColorRGBA(1.0f, 1.0f, 1.0f, 0.25f * HoverMul);
 		return Checked ? Palette().m_Brand.WithAlpha(std::min(1.0f, 0.55f * HoverMul + 0.2f)) : Layer(0.12f * HoverMul);
 	}
+	// The view of a menu page: the classic flat rectangle, or a glass panel with a shadow
+	inline void DrawView(const CUIRect &Rect, const ColorRGBA &Classic, int Corners, float ClassicRadius)
+	{
+		if(!On())
+		{
+			Rect.Draw(Classic, Corners, ClassicRadius);
+			return;
+		}
+		KogDraw::Panel(Rect, {Classic, &KogStyle::Elevation::RAISED, KogStyle::Radius::Panel, Corners, KogStyle::Elevation::GLASS_TOP_LIGHTEN});
+	}
+
 	// While it lives, the menus draw their text with the colours of the theme; the destructor puts the defaults back
 	// so the game view, the HUD and the console keep their white text.
 	class CMenuTextScope

@@ -20,6 +20,12 @@
 #include <game/localization.h>
 
 static constexpr float CLASSIC_ROW_HEIGHT = 46.0f;
+// the small elevation in the 3 times larger space of the kill feed
+static constexpr KogStyle::Elevation::SLevel KILL_FEED_LEVEL = {
+	KogStyle::Elevation::SMALL.m_Blur * KogStyle::Hud::KILL_FEED_SCALE,
+	KogStyle::Elevation::SMALL.m_OffsetY * KogStyle::Hud::KILL_FEED_SCALE,
+	KogStyle::Elevation::SMALL.m_ShadowAlpha,
+	KogStyle::Elevation::SMALL.m_RimAlpha};
 // the kill feed draws in a space three times larger than the UI (see OnRender), so a row of Hud::ROW_KILL_FEED units is three times that
 static float RowHeight() { return KogHud::On() ? std::max(CLASSIC_ROW_HEIGHT, KogStyle::Hud::ROW_KILL_FEED * KogStyle::Hud::KILL_FEED_SCALE) : CLASSIC_ROW_HEIGHT; }
 static constexpr float FONT_SIZE = 36.0f; // 12 units in the space of the kill feed, the smallest text of the KoG look
@@ -477,7 +483,7 @@ void CInfoMessages::RenderKogBackground(float x, float y, float Width)
 	// a pill of the row height minus a gap, the text ends at x, so the pill ends Pad to the right of it
 	const float Gap = 2.0f * KogStyle::Hud::KILL_FEED_SCALE;
 	CUIRect Rect = {x - Width - Pad, y + Gap / 2.0f, Width + 2.0f * Pad, RowHeight() - Gap};
-	Rect.Draw(KogHud::Panel(ColorRGBA(0.0f, 0.0f, 0.0f, 0.5f)), IGraphics::CORNER_ALL, KogHud::Radius(0.0f) * KogStyle::Hud::KILL_FEED_SCALE);
+	KogDraw::Pill(Rect, KogHud::Panel(ColorRGBA(0.0f, 0.0f, 0.0f, 0.5f)), KILL_FEED_LEVEL);
 }
 
 void CInfoMessages::OnRender()

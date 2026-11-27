@@ -16,13 +16,14 @@ namespace KogStyle
 		CLASSIC = 0, // the look of upstream, nothing of this file is applied
 		DARK = 1,
 		LIGHT = 2,
+		GLASS = 3, // dark, tinted like the game's evening sky, translucent panels with depth
 		NUM_THEMES
 	};
 
 	// The theme of a saved setting: a missing, old or damaged value is Classic, never an out-of-range index
 	inline constexpr ETheme ThemeFromSetting(int Value)
 	{
-		return Value == (int)ETheme::DARK ? ETheme::DARK : (Value == (int)ETheme::LIGHT ? ETheme::LIGHT : ETheme::CLASSIC);
+		return Value == (int)ETheme::DARK ? ETheme::DARK : (Value == (int)ETheme::LIGHT ? ETheme::LIGHT : (Value == (int)ETheme::GLASS ? ETheme::GLASS : ETheme::CLASSIC));
 	}
 
 	struct SPalette
@@ -72,6 +73,24 @@ namespace KogStyle
 		ColorRGBA(0xa16207U),
 		ColorRGBA(0x7f1d1dU)};
 
+	// Game glass: the dark palette moved towards the blue-violet of the Teeworlds sky, so a panel over the game looks like a
+	// piece of the same world and not a black slab. Panels are translucent (the world shows through, no blur: see
+	// docs/CLIENT-UI-DIRECTION.md), the text colour is warm white, the accent is the same orange.
+	inline constexpr SPalette GLASS = {
+		ColorRGBA(0x14122aU),
+		ColorRGBA(0x2a2750U),
+		ColorRGBA(0x1b1838U).WithAlpha(0.78f),
+		ColorRGBA(0x302c5aU).WithAlpha(0.80f),
+		ColorRGBA(0xffffffU).WithAlpha(0.14f),
+		ColorRGBA(0xfaf6ecU),
+		ColorRGBA(0xc4c2dcU),
+		ColorRGBA(0xf06a30U),
+		ColorRGBA(0xff9060U),
+		ColorRGBA(0x14122aU),
+		ColorRGBA(0x8ff0b8U),
+		ColorRGBA(0xf5c04eU),
+		ColorRGBA(0xff9090U)};
+
 	namespace Space
 	{
 		inline constexpr float XS = 4.0f;
@@ -86,6 +105,8 @@ namespace KogStyle
 	{
 		inline constexpr float Control = 6.0f; // buttons, inputs, list rows
 		inline constexpr float Card = 10.0f; // cards, popups, the hero button
+		inline constexpr float Panel = 12.0f; // panels of the glass look (menu views, scoreboard, popups)
+		inline constexpr float Pill = 1000.0f; // clamped to half the height: chips, kill feed rows, toasts
 	}
 
 	namespace Font
@@ -110,6 +131,45 @@ namespace KogStyle
 	{
 		inline constexpr float Hover = 0.10f; // seconds, hover and focus colour changes
 		inline constexpr float Panel = 0.18f; // seconds, panels and popups appearing
+		inline constexpr float Toast = 0.20f; // seconds, a toast sliding in
+	}
+
+	// How far a surface floats over what is behind it. Each level has a shadow (soft, drawn from a generated 9-slice texture)
+	// and a rim light on the top edge. Flat has neither: list rows, inputs.
+	namespace Elevation
+	{
+		struct SLevel
+		{
+			float m_Blur; // UI units the shadow reaches beyond the panel
+			float m_OffsetY; // the shadow is lower than the panel: light comes from above
+			float m_ShadowAlpha;
+			float m_RimAlpha; // white 1 unit line along the top edge
+		};
+		inline constexpr SLevel FLAT = {0.0f, 0.0f, 0.0f, 0.0f};
+		inline constexpr SLevel RAISED = {10.0f, 2.0f, 0.30f, 0.16f}; // cards, scoreboard, chat lines
+		inline constexpr SLevel FLOATING = {18.0f, 5.0f, 0.38f, 0.20f}; // popups, toasts, the menu view
+		inline constexpr SLevel SMALL = {5.0f, 1.0f, 0.28f, 0.14f}; // kill feed pills, chips, tooltips
+		inline constexpr float GLASS_TOP_LIGHTEN = 0.07f; // the top of a glass panel is this much lighter than its bottom
+	}
+
+	namespace Icon
+	{
+		inline constexpr float Small = 12.0f;
+		inline constexpr float Medium = 16.0f;
+		inline constexpr float Large = 24.0f;
+	}
+
+	// Easing for transitions of 120 to 200 ms. T is clamped to [0, 1]; a value that is not a number is the end.
+	inline float Clamp01(float T) { return T >= 0.0f ? (T <= 1.0f ? T : 1.0f) : (T < 0.0f ? 0.0f : 1.0f); }
+	inline float EaseOutCubic(float T)
+	{
+		const float U = 1.0f - Clamp01(T);
+		return 1.0f - U * U * U;
+	}
+	// Progress of a transition that began Elapsed seconds ago and lasts Duration; reduce motion (or a duration of 0) jumps to the end
+	inline float Progress(float Elapsed, float Duration, bool ReduceMotion)
+	{
+		return (ReduceMotion || !(Duration > 0.0f)) ? 1.0f : EaseOutCubic(Elapsed / Duration);
 	}
 
 	// Layers over a panel for hover and press, so a state change is a change of alpha and never of hue.
@@ -138,9 +198,10 @@ namespace KogStyle
 		inline constexpr float ROW_KILL_FEED = MIN_ROW;
 		inline constexpr float ROW_CHAT = MIN_ROW;
 
-		inline constexpr float RADIUS = 2.0f;
+		inline constexpr float RADIUS = 4.0f; // rows (self, kill feed)
+		inline constexpr float PANEL_RADIUS = Radius::Panel;
 		inline constexpr float PAD = Space::S - 2.0f; // 6
-		inline constexpr float PANEL_ALPHA = 0.92f;
+		inline constexpr float PANEL_ALPHA = 0.92f; // dark and light; the glass palette has its own
 		inline constexpr float ZEBRA_ALPHA = 0.06f;
 		inline constexpr float SELF_ALPHA = 0.35f;
 		inline constexpr float MIN_COLUMN_WIDTH = 250.0f; // score, name, clan, ping at the text size above
