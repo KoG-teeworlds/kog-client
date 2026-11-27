@@ -126,6 +126,7 @@ inline constexpr float MIN_ROW = 18.0f; // the smallest row that holds 12 unit t
 inline constexpr float TEXT = MIN_TEXT; // rows of the scoreboard, chat lines, kill feed
 inline constexpr float TEXT_HEADER = MIN_TEXT; // column headers and the title strip
 inline constexpr float TEXT_TOOLTIP = Font::Body;
+inline constexpr float TEXT_NOTICE = Font::Label; // the body of a notice toast
 inline constexpr float ROW = MIN_ROW;
 inline constexpr float ROW_TITLE = MIN_ROW;
 inline constexpr float ROW_KILL_FEED = MIN_ROW;
@@ -145,7 +146,7 @@ struct SToken
 	float m_Value;
 };
 
-inline constexpr SToken TEXT_SIZES[] = {{"TEXT", TEXT}, {"TEXT_HEADER", TEXT_HEADER}, {"TEXT_TOOLTIP", TEXT_TOOLTIP}};
+inline constexpr SToken TEXT_SIZES[] = {{"TEXT", TEXT}, {"TEXT_HEADER", TEXT_HEADER}, {"TEXT_TOOLTIP", TEXT_TOOLTIP}, {"TEXT_NOTICE", TEXT_NOTICE}};
 inline constexpr SToken ROW_HEIGHTS[] = {{"ROW", ROW}, {"ROW_TITLE", ROW_TITLE}, {"ROW_KILL_FEED", ROW_KILL_FEED}, {"ROW_CHAT", ROW_CHAT}};
 
 // How many columns of rows the scoreboard needs on a screen of this size: at the fixed text size and row height, never smaller.

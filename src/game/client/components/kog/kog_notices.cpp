@@ -69,8 +69,8 @@ void CKogNotices::OnRender()
 		const float Alpha = std::min(FadeIn, FadeOut);
 
 		const char *pTitle = Toast.m_Kind == KogNotices::EKind::ACHIEVEMENT ? Localize("Achievement unlocked") : Localize("Quest completed");
-		const float Width = std::min(pScreen->w - 2.0f * Space::L, std::max(TextRender()->TextWidth(Font::Label, Toast.m_Text.c_str()), TextRender()->TextWidth(Font::Caption, pTitle)) + 2.0f * Space::XL);
-		const float Height = Font::Caption + Font::Label + 2.0f * Space::M + Space::XS;
+		const float Width = std::min(pScreen->w - 2.0f * Space::L, std::max(TextRender()->TextWidth(Hud::TEXT_NOTICE, Toast.m_Text.c_str()), TextRender()->TextWidth(Hud::TEXT, pTitle)) + 2.0f * Space::XL);
+		const float Height = Hud::TEXT + Hud::TEXT_NOTICE + 2.0f * Space::M + Space::XS;
 		CUIRect Box(pScreen->w / 2.0f - Width / 2.0f, Y - (1.0f - FadeIn) * Space::M, Width, Height);
 
 		const ColorRGBA Fill = Themed ? Palette.m_Panel2.WithMultipliedAlpha(Alpha) : ColorRGBA(0.0f, 0.0f, 0.0f, 0.6f * Alpha);
@@ -79,7 +79,7 @@ void CKogNotices::OnRender()
 		const ColorRGBA Muted = Themed ? Palette.m_BrandSoft.WithAlpha(Alpha) : ColorRGBA(1.0f, 1.0f, 1.0f, 0.8f * Alpha);
 
 		Graphics()->TextureClear();
-		Box.Draw(Fill, IGraphics::CORNER_ALL, Radius::Card);
+		Box.Draw(Fill, IGraphics::CORNER_ALL, Hud::RADIUS);
 		CUIRect Bar;
 		Box.VSplitLeft(Space::XS, &Bar, nullptr);
 		Bar.HMargin(Space::S, &Bar);
@@ -88,15 +88,15 @@ void CKogNotices::OnRender()
 		CUIRect Content, Title, Body;
 		Box.VMargin(Space::XL, &Content);
 		Content.HMargin(Space::M, &Content);
-		Content.HSplitTop(Font::Caption + Space::XS, &Title, &Body);
+		Content.HSplitTop(Hud::TEXT + Space::XS, &Title, &Body);
 		SLabelProperties TitleProps;
 		const KogTheme::CTextColor TitlePropsColor(TextRender(), Muted);
-		Ui()->DoLabel(&Title, pTitle, Font::Caption, TEXTALIGN_ML, TitleProps);
+		Ui()->DoLabel(&Title, pTitle, Hud::TEXT, TEXTALIGN_ML, TitleProps);
 		SLabelProperties BodyProps;
 		const KogTheme::CTextColor BodyPropsColor(TextRender(), Fg);
 		BodyProps.m_MaxWidth = Body.w;
 		BodyProps.m_EllipsisAtEnd = true;
-		Ui()->DoLabel(&Body, Toast.m_Text.c_str(), Font::Label, TEXTALIGN_ML, BodyProps);
+		Ui()->DoLabel(&Body, Toast.m_Text.c_str(), Hud::TEXT_NOTICE, TEXTALIGN_ML, BodyProps);
 
 		Y += Height + Space::S;
 	}
