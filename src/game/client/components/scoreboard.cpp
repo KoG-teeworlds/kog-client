@@ -322,6 +322,15 @@ void CScoreboard::RenderGoals(CUIRect Goals)
 
 void CScoreboard::RenderSpectators(CUIRect Spectators)
 {
+	if(KogHud::On())
+	{
+		// no spectators: a one line panel, not a tall empty one
+		bool Any = false;
+		for(const CNetObj_PlayerInfo *pInfo : GameClient()->m_Snap.m_apInfoByName)
+			Any = Any || (pInfo && pInfo->m_Team == TEAM_SPECTATORS);
+		if(!Any)
+			Spectators.h = std::min(Spectators.h, KogStyle::Hud::ROW + 10.0f);
+	}
 	KogHud::DrawPanel(Spectators, ColorRGBA(0.0f, 0.0f, 0.0f, 0.5f), IGraphics::CORNER_ALL, 7.5f);
 	constexpr float SpectatorCut = 5.0f;
 	Spectators.Margin(SpectatorCut, &Spectators);

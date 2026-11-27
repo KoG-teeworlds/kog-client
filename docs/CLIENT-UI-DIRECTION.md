@@ -148,3 +148,48 @@ scoreboard (real, 14 players), Esc menu, chat input, emote wheel, rank boxes, ki
 New code: `kog_draw.{h,cpp}`, additions to `kog_style.h`, `kog_theme.h`, `kog_hud.h`. Edits in upstream-shared files, each a one-line call:
 `ui.cpp` (`KogDraw::Init`), `scoreboard.cpp` (panels, title, headline colour, self mark, flag skip), `infomessages.cpp` (pill), `tooltips.cpp`,
 `menus*.cpp` (15 `Draw` to `KogTheme::DrawView` plus includes), `menus_settings_graphics.cpp` (theme button, reduce motion), `config_variables_kog.h`.
+
+## 10. The start page after ddnet-rs, and the QA checklist
+
+### ddnet-rs start screen (observed in its issue screenshots, 1928x1024)
+
+Left rail 244 px wide (12.7 percent), full height, translucent dark blue over the sky: the logo block on top (about 110 px), five
+navigation rows of about 58 px (icon at 45 px, label at 90 px, the current row darker), a divider, free space, a divider, then at the
+bottom the account row (round avatar, a small blue "Logged as" caption over the name in yellow, a log-in icon on the right) and the Settings row. A slim right rail
+(76 px) with friend avatars on top and three entries at its bottom (online count, new messages, newsletter), each an icon with a tiny caption,
+that opens into a 318 px "Friends" panel. The middle is empty: the blurred sky and a large pale mascot.
+
+### What the KoG start page does with it (`kog_menu_start.cpp`, `KogStyle::Start::PlanStart`)
+
+| ddnet-rs | KoG |
+| --- | --- |
+| left rail with logo, navigation | glass rail 160 to 232 units wide, logo, Demos, Editor, Run server |
+| account lower left | tee in a socket, "Logged in as" or "Not logged in", the name or "Log in with KoG", a status mark; a click logs in, cancels, or opens Log out and Devices on kog.tw |
+| Settings at the bottom of the rail | Settings and Quit at the bottom of the rail |
+| empty middle | the logo and the one primary Play button |
+| right rail with online, messages, newsletter | right rail with News, Website, Tutorial |
+| (version) | version, console and update status where the footer draws them |
+
+Not in KoG: a friends panel (the client has the friends tab in the browser), a Discord link (no KoG Discord address is known to the client).
+
+### QA checklist (macOS screenshots, glass theme unless named)
+
+| Screen | Seen | Finding | Fixed |
+| --- | --- | --- | --- |
+| Start page 16:9, 4:3, 640x480, dark, light, glass | yes | the first rail was inset by the menu's margin; hero off centre; caption lines touching | rails run to the window edge, hero centred, 4 unit gap |
+| Server browser | yes | grey and green buttons, yellow-green headers, blue and purple text | palette colours (PR #60, #61) |
+| Favourites, demos, news pages | yes | glass views, nothing wrong seen | |
+| Settings controls and graphics | yes | light grey cards and key fields, dark pills on the sky in the light theme | theme layers, rail panels |
+| Esc menu | yes | large tab text | open |
+| Connecting dialog | yes | black slab and grey button | glass popup |
+| Quit popup | captured (`qa-quit`), not looked at closely | | |
+| HUD: scoreboard, chat, kill feed, rank boxes, emote wheel | yes, live | light grey rank slabs, cramped wrapped chat, ghost flags | glass boxes, spacing, flags skipped |
+| Spectators panel | yes, live | tall and empty | one line when empty |
+| Chat input | yes, live | bare text | glass box |
+| Toasts | no (needs a server notice) | | |
+| Editor frame | not looked at | | |
+| Vote bar, spectator menu, loading screen | not seen | | |
+| Long names and translations | partly: ellipsis everywhere new code draws text, tested by `check_hud_label_lengths.py` for the HUD | | |
+| Fractional scales | not checked | | |
+
+Performance: the start page with the rails, measured like before, is in the bench table of section 7.
