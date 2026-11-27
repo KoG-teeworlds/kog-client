@@ -15,6 +15,7 @@ enum class ETheme
 {
 	CLASSIC = 0, // the look of upstream, nothing of this file is applied
 	DARK = 1,
+	LIGHT = 2,
 	NUM_THEMES
 };
 
@@ -49,6 +50,21 @@ inline constexpr SPalette DARK = {
 	ColorRGBA(0x8ff0b8U),
 	ColorRGBA(0xf2b84bU),
 	ColorRGBA(0xff8a8aU)};
+
+inline constexpr SPalette LIGHT = {
+	ColorRGBA(0xf6f5f1U),
+	ColorRGBA(0xdcdad3U),
+	ColorRGBA(0xf6f5f1U).WithAlpha(0.88f),
+	ColorRGBA(0xffffffU).WithAlpha(0.92f),
+	ColorRGBA(0x000000U).WithAlpha(0.12f),
+	ColorRGBA(0x17171bU),
+	ColorRGBA(0x4a4a55U),
+	ColorRGBA(0xc2410cU),
+	ColorRGBA(0xc2410cU),
+	ColorRGBA(0xffffffU),
+	ColorRGBA(0x166534U),
+	ColorRGBA(0xa16207U),
+	ColorRGBA(0x7f1d1dU)};
 
 namespace Space
 {

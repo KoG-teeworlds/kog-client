@@ -171,7 +171,7 @@ CListboxItem CListBox::DoNextItem(const void *pId, bool Selected, float CornerRa
 	}
 	if(Ui()->HotItem() == pId && !m_ScrollRegion.Animating())
 	{
-		Item.m_Rect.Draw(ColorRGBA(1.0f, 1.0f, 1.0f, 0.33f), IGraphics::CORNER_ALL, CornerRadius);
+		Item.m_Rect.Draw(KogTheme::Neutral(0.33f), IGraphics::CORNER_ALL, CornerRadius);
 	}
 
 	return Item;
@@ -180,7 +180,7 @@ CListboxItem CListBox::DoNextItem(const void *pId, bool Selected, float CornerRa
 CListboxItem CListBox::DoSubheader()
 {
 	CListboxItem Item = DoNextRow();
-	Item.m_Rect.Draw(ColorRGBA(1.0f, 1.0f, 1.0f, 0.2f), IGraphics::CORNER_NONE, 0.0f);
+	Item.m_Rect.Draw(KogTheme::Neutral(0.2f), IGraphics::CORNER_NONE, 0.0f);
 	return Item;
 }
 
