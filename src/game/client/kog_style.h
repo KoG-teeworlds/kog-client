@@ -79,8 +79,8 @@ namespace KogStyle
 	inline constexpr SPalette GLASS = {
 		ColorRGBA(0x14122aU),
 		ColorRGBA(0x2a2750U),
-		ColorRGBA(0x1b1838U).WithAlpha(0.78f),
-		ColorRGBA(0x302c5aU).WithAlpha(0.80f),
+		ColorRGBA(0x1b1838U).WithAlpha(0.86f),
+		ColorRGBA(0x2a2650U).WithAlpha(0.90f),
 		ColorRGBA(0xffffffU).WithAlpha(0.14f),
 		ColorRGBA(0xfaf6ecU),
 		ColorRGBA(0xc4c2dcU),

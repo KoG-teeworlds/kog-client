@@ -51,12 +51,12 @@ namespace KogDraw
 		SNineSlice Plan;
 		Plan.m_aX[0] = Left;
 		Plan.m_aX[1] = Left + CornerX;
-		Plan.m_aX[2] = Left + OuterWidth - CornerX;
-		Plan.m_aX[3] = Left + OuterWidth;
+		Plan.m_aX[2] = std::max(Plan.m_aX[1], Left + OuterWidth - CornerX);
+		Plan.m_aX[3] = std::max(Plan.m_aX[2], Left + OuterWidth);
 		Plan.m_aY[0] = Top;
 		Plan.m_aY[1] = Top + CornerY;
-		Plan.m_aY[2] = Top + OuterHeight - CornerY;
-		Plan.m_aY[3] = Top + OuterHeight;
+		Plan.m_aY[2] = std::max(Plan.m_aY[1], Top + OuterHeight - CornerY);
+		Plan.m_aY[3] = std::max(Plan.m_aY[2], Top + OuterHeight);
 		return Plan;
 	}
 	

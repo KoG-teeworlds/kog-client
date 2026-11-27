@@ -33,7 +33,8 @@ TEST(KogHud, ASettingThatIsNotATheme)
 	EXPECT_EQ(ThemeFromSetting(0), ETheme::CLASSIC);
 	EXPECT_EQ(ThemeFromSetting(1), ETheme::DARK);
 	EXPECT_EQ(ThemeFromSetting(2), ETheme::LIGHT);
-	for(int Value : {-1, 3, 4, 100, -2147483647 - 1, 2147483647})
+	EXPECT_EQ(ThemeFromSetting(3), ETheme::GLASS);
+	for(int Value : {-1, 4, 100, -2147483647 - 1, 2147483647})
 		EXPECT_EQ(ThemeFromSetting(Value), ETheme::CLASSIC) << Value;
 }
 
