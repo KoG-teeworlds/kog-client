@@ -37,8 +37,8 @@ namespace KogTheme
 	// change of alpha), colours that carry a meaning (green, red) are kept.
 	inline ColorRGBA Control(const ColorRGBA &Classic)
 	{
-		const bool Neutral = Classic.r == 1.0f && Classic.g == 1.0f && Classic.b == 1.0f;
-		if(!On() || !Neutral)
+		const bool IsNeutral = Classic.r == 1.0f && Classic.g == 1.0f && Classic.b == 1.0f;
+		if(!On() || !IsNeutral)
 			return Classic;
 		return IsLight() ? Layer(Classic.a * 0.22f) : Classic.WithMultipliedAlpha(0.22f);
 	}
