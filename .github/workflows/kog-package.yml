@@ -110,3 +110,10 @@ jobs:
         path: release/artifacts
         if-no-files-found: error
         retention-days: 7
+
+    # The last step: it moves Homebrew away to show that the app does not load anything from it
+    - name: Check the macOS app
+      if: runner.os == 'macOS'
+      env:
+        HIDE_HOMEBREW: "1"
+      run: bash scripts/kog/macos_package_check.sh release/artifacts/*-macos.dmg
