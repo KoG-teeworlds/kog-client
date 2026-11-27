@@ -321,6 +321,57 @@ namespace KogStyle
 		return ESemantic::OTHER;
 	}
 
+	// The start page: a left rail with the navigation and the account (as in ddnet-rs), the hero in the middle, a slim right rail with
+	// the links. Pure: the same screen is the same plan, everything is finite and inside the screen.
+	namespace Start
+	{
+		inline constexpr float RAIL_MIN = 160.0f;
+		inline constexpr float RAIL_MAX = 232.0f;
+		inline constexpr float RAIL_FRACTION = 0.17f;
+		inline constexpr float RIGHT_RAIL = 64.0f;
+		inline constexpr float RIGHT_TOP = 64.0f; // below the version labels the footer draws
+		inline constexpr float RIGHT_BOTTOM = 56.0f; // above the console button and the version
+		inline constexpr float ROW = 36.0f; // a row of the rail
+		inline constexpr float LOGO_BLOCK = 76.0f;
+		inline constexpr float ACCOUNT_BLOCK = 64.0f;
+		inline constexpr float ACCOUNT_ACTION = 32.0f; // a row of the opened account block
+		inline constexpr float HERO_PLAY_MAX = 360.0f;
+
+		struct SPlan
+		{
+			float m_RailWidth;
+			float m_RightWidth;
+			float m_CentreX; // the middle between the rails
+			float m_CentreWidth;
+			float m_HeroLogoHeight;
+			float m_HeroLogoY;
+			float m_PlayWidth;
+			float m_PlayY;
+			float m_NavY; // first row of the navigation in the rail
+			float m_BottomRows; // the height of Settings and Quit and their gap at the bottom of the rail
+		};
+
+		inline SPlan PlanStart(float Width, float Height)
+		{
+			Width = Width >= 1.0f ? std::min(Width, 100000.0f) : 1.0f;
+			Height = Height >= 1.0f ? std::min(Height, 100000.0f) : 1.0f;
+			SPlan Plan{};
+			// the rails never take more than half of a very narrow screen between them
+			Plan.m_RailWidth = std::min(std::clamp(Width * RAIL_FRACTION, RAIL_MIN, RAIL_MAX), Width * 0.3f);
+			Plan.m_RightWidth = std::min(RIGHT_RAIL, Width * 0.1f);
+			Plan.m_CentreX = Plan.m_RailWidth + (Width - Plan.m_RailWidth - Plan.m_RightWidth) / 2.0f;
+			Plan.m_CentreWidth = std::max(Width - Plan.m_RailWidth - Plan.m_RightWidth, 1.0f);
+			const float Scale = std::min(1.0f, Height / 560.0f);
+			Plan.m_HeroLogoHeight = 120.0f * Scale;
+			Plan.m_HeroLogoY = Height * 0.18f;
+			Plan.m_PlayWidth = std::min(HERO_PLAY_MAX, std::max(Plan.m_CentreWidth - 2.0f * Space::L, 1.0f));
+			Plan.m_PlayY = Plan.m_HeroLogoY + Plan.m_HeroLogoHeight + Space::XL;
+			Plan.m_NavY = LOGO_BLOCK + Space::S;
+			Plan.m_BottomRows = 2.0f * ROW + Space::S;
+			return Plan;
+		}
+	}
+
 	// WCAG 2.x, sRGB channels in [0, 1]
 	inline float ChannelLuminance(float C)
 	{

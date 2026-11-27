@@ -245,3 +245,33 @@ TEST(KogHud, InputsThatAreNotScreensGiveAValidPlan)
 		}
 	}
 }
+
+TEST(KogStart, PlanIsValidForEveryScreen)
+{
+	for(const float Width : {0.0f, 1.0f, 320.0f, 600.0f, 800.0f, 1067.0f, 1400.0f, 4000.0f, 1e9f})
+	{
+		for(const float Height : {0.0f, 1.0f, 300.0f, 600.0f, 1e9f})
+		{
+			const Start::SPlan Plan = Start::PlanStart(Width, Height);
+			const float W = std::clamp(Width, 1.0f, 100000.0f);
+			for(const float V : {Plan.m_RailWidth, Plan.m_RightWidth, Plan.m_CentreX, Plan.m_CentreWidth, Plan.m_HeroLogoHeight, Plan.m_PlayWidth, Plan.m_PlayY})
+				EXPECT_TRUE(std::isfinite(V));
+			EXPECT_GE(Plan.m_RailWidth, 0.0f);
+			EXPECT_LE(Plan.m_RailWidth + Plan.m_RightWidth, W);
+			EXPECT_GT(Plan.m_CentreWidth, 0.0f);
+			EXPECT_LE(Plan.m_PlayWidth, Start::HERO_PLAY_MAX);
+		}
+	}
+}
+
+TEST(KogStart, TheRailKeepsAUsefulWidthOnCommonScreens)
+{
+	for(const float Width : {600.0f, 800.0f, 1067.0f, 1400.0f})
+	{
+		const Start::SPlan Plan = Start::PlanStart(Width, 600.0f);
+		EXPECT_GE(Plan.m_RailWidth, Start::RAIL_MIN);
+		EXPECT_LE(Plan.m_RailWidth, Start::RAIL_MAX);
+		// the Play button and the hero fit between the rails
+		EXPECT_LE(Plan.m_PlayWidth, Plan.m_CentreWidth);
+	}
+}
