@@ -2523,6 +2523,7 @@ set_src(ENGINE_SHARED GLOB_RECURSE src/engine/shared
   kog_login.h
   kog_login_wire.cpp
   kog_login_wire.h
+  kog_notices.h
   kog_protocol.h
   kog_update.cpp
   kog_update.h
@@ -2858,6 +2859,8 @@ if(CLIENT)
     components/kog/kog_hello.h
     components/kog/kog_login.cpp
     components/kog/kog_login.h
+    components/kog/kog_notices.cpp
+    components/kog/kog_notices.h
     components/local_server.cpp
     components/local_server.h
     components/mapimages.cpp
@@ -3679,6 +3682,7 @@ if(GTEST_FOUND OR DOWNLOAD_GTEST)
     kog_keyfile_test.cpp
     kog_login_test.cpp
     kog_login_wire_test.cpp
+    kog_notices_test.cpp
     kog_style_test.cpp
     kog_update_test.cpp
     kog_user_agent_test.cpp
