@@ -172,6 +172,7 @@ option(MYSQL "Enable mysql support" OFF)
 option(TEST_MYSQL "Test mysql support in unit tests (also sets -DMYSQL=ON)" OFF)
 option(AUTOUPDATE "Enable the autoupdater" OFF)
 option(INFORM_UPDATE "Inform about available updates" ON)
+option(KOG_WERROR "Treat warnings in the files of KOG_STRICT_SOURCES as errors" OFF)
 option(KOG_ALLOW_PLACEHOLDER_KEY "Allow a release build with the update signing key still being the placeholder" OFF)
 option(VIDEORECORDER "Enable video recording support via FFmpeg" ON)
 option(UPNP "Enable UPnP support" OFF)
@@ -4418,6 +4419,28 @@ if(PRECOMPILE_HEADERS AND NOT CMAKE_VERSION VERSION_LESS 3.16)
   if(TARGET testrunner)
     target_precompile_headers(testrunner PRIVATE <gtest/gtest.h>)
   endif()
+endif()
+
+# The engine files that are ours are compiled with strict warnings (the list is also what scripts/kog/check_engine.sh checks
+# with clang-tidy). Files of upstream keep the warnings of the repository.
+set(KOG_STRICT_SOURCES
+  src/engine/client/kog_keystore.cpp
+  src/engine/shared/kog_failsafe.cpp
+  src/engine/shared/kog_hello.cpp
+  src/engine/shared/kog_keyfile.cpp
+  src/engine/shared/kog_login.cpp
+  src/engine/shared/kog_login_wire.cpp
+  src/engine/shared/kog_update.cpp
+  src/test/kog_pacing_test.cpp
+)
+if(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+  set(KOG_STRICT_FLAGS -Wall -Wextra -Wconversion -Wno-sign-conversion -Wno-shorten-64-to-32 -Wshadow -Wnon-virtual-dtor -Woverloaded-virtual -Wcast-qual)
+  if(KOG_WERROR)
+    list(APPEND KOG_STRICT_FLAGS -Werror)
+  endif()
+  foreach(source ${KOG_STRICT_SOURCES})
+    set_property(SOURCE ${source} APPEND PROPERTY COMPILE_OPTIONS ${KOG_STRICT_FLAGS})
+  endforeach()
 endif()
 
 foreach(target ${TARGETS_OWN})

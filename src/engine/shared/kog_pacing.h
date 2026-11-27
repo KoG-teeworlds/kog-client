@@ -30,7 +30,7 @@ class CPacing
 	EWindow m_LastWindow = EWindow::FOCUSED;
 
 public:
-	bool RenderDue(int64_t Now, EWindow Window) const
+	[[nodiscard]] bool RenderDue(int64_t Now, EWindow Window) const
 	{
 		if(Window == EWindow::HIDDEN)
 			return false;
@@ -38,7 +38,7 @@ public:
 	}
 
 	// When the loop has to run again at the latest, in the units of Now.
-	int64_t WakeTime(int64_t Now, int64_t Freq, EWindow Window) const
+	[[nodiscard]] int64_t WakeTime(int64_t Now, int64_t Freq, EWindow Window) const
 	{
 		if(Window == EWindow::HIDDEN)
 			return Now + Freq * HIDDEN_WAKE_MS / 1000;
@@ -57,7 +57,7 @@ public:
 
 	void RequestRedraw() { m_RedrawRequested = true; }
 
-	static int RateOf(EWindow Window) { return Window == EWindow::FOCUSED ? RATE_FOCUSED : RATE_UNFOCUSED; }
+	[[nodiscard]] static int RateOf(EWindow Window) { return Window == EWindow::FOCUSED ? RATE_FOCUSED : RATE_UNFOCUSED; }
 };
 } // namespace KogPacing
 

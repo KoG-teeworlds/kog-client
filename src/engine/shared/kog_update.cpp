@@ -173,9 +173,9 @@ static bool StringIs(const unsigned char *pData, size_t Length, const char *pStr
 static void PutU32(std::vector<unsigned char> *pOut, uint32_t Value)
 {
 	pOut->push_back(Value >> 24);
-	pOut->push_back(Value >> 16);
-	pOut->push_back(Value >> 8);
-	pOut->push_back(Value);
+	pOut->push_back(static_cast<uint8_t>(Value >> 16));
+	pOut->push_back(static_cast<uint8_t>(Value >> 8));
+	pOut->push_back(static_cast<uint8_t>(Value));
 }
 
 static void PutString(std::vector<unsigned char> *pOut, const void *pData, size_t Length)
