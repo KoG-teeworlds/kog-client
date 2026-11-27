@@ -39,7 +39,9 @@ jobs:
     name: Build (${{ matrix.name }})
     needs: changes
     runs-on: ${{ matrix.os }}
-    timeout-minutes: 90
+    # Homebrew preparation on the hosted Intel runner can consume more than an
+    # hour; leave enough time for both debug and release builds to finish.
+    timeout-minutes: 120
     permissions:
       contents: read
     env:
