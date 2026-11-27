@@ -1,6 +1,6 @@
 # Client style: one design system, kept in one place
 
-Status: tokens, theme switch, start page and quest card are built (this series). The rest is listed in section 9.
+Status: tokens, theme switch, start page, quest card, notice toast and icons are built (this series). The rest is listed in section 9.
 Code: `src/game/client/kog_style.h` (the numbers, no configuration, tested) and `src/game/client/kog_theme.h` (the switch).
 Test: `src/test/kog_style_test.cpp` (contrast, scales, status colours).
 
@@ -80,12 +80,12 @@ test. Open decision for the owner.
 | Progress | rail white 25%, fill `Brand` 90% |
 | Card, popup | `Panel`, radius 10, 1 unit `Line` |
 | Tooltip | existing, unchanged until the HUD step |
-| Focus | 2 unit `Brand` outline on the keyboard-focused item (start page: planned with the rail) |
+| Focus | 2 unit `Brand` outline on the keyboard-focused item (start page: built; other pages keep the engine's own handling) |
 
 ## 5. Start page
 
 `cl_kog_theme 1`: a scrim (gradient quad over the menu map, `Bg` at 55 to 80%) so the map is quiet without a blur; the
-logo; one `Brand` Play button; Demos, Editor and Run server in a row; Settings; Quit as a quiet button; News, Website and
+logo; one `Brand` Play button; Demos and Editor, Run server and Settings in two columns; Quit as a quiet button; News, Website and
 Tutorial as text links; the account state as a chip (dot and a word); the existing version, console and update row.
 All hotkeys (P, Enter, D, E, R, S, Q, N, Esc) are unchanged. The old page is still there for Classic (`menus_start.cpp`
 only gained a function boundary).
