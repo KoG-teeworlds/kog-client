@@ -396,6 +396,87 @@ bool VerifyChallenge(const uint8_t (&aPublicKey)[PUBLIC_KEY_SIZE], const char *p
 	return Length != 0 && crypto_ed25519_check(aSignature, aPublicKey, aMessage, Length) == 0;
 }
 
+size_t BuildRegisterMessage(uint8_t *pOut, size_t OutSize, const char *pDeviceName)
+{
+	const size_t PrefixLength = str_length(REGISTER_PREFIX) + 1; // includes the 0 byte
+	const size_t NameLength = str_length(pDeviceName);
+	if(NameLength == 0 || PrefixLength + NameLength > OutSize)
+		return 0;
+	mem_copy(pOut, REGISTER_PREFIX, PrefixLength);
+	mem_copy(pOut + PrefixLength, pDeviceName, NameLength);
+	return PrefixLength + NameLength;
+}
+
+enum
+{
+	MAX_REGISTER_MESSAGE = 16 + 4 * MAX_DEVICE_NAME + 64,
+};
+
+bool SignRegistration(const uint8_t (&aSeed)[SEED_SIZE], const char *pDeviceName, char (&aProof)[PROOF_LENGTH + 1])
+{
+	uint8_t aMessage[MAX_REGISTER_MESSAGE];
+	const size_t Length = BuildRegisterMessage(aMessage, sizeof(aMessage), pDeviceName);
+	if(Length == 0)
+		return false;
+	uint8_t aSeedCopy[SEED_SIZE];
+	uint8_t aSecret[64];
+	uint8_t aPublic[PUBLIC_KEY_SIZE];
+	uint8_t aSignature[SIGNATURE_SIZE];
+	mem_copy(aSeedCopy, aSeed, sizeof(aSeedCopy));
+	crypto_ed25519_key_pair(aSecret, aPublic, aSeedCopy);
+	crypto_ed25519_sign(aSignature, aSecret, aMessage, Length);
+	Wipe(aSecret, sizeof(aSecret));
+	Wipe(aSeedCopy, sizeof(aSeedCopy));
+	Base64UrlEncode(aProof, sizeof(aProof), aSignature, sizeof(aSignature));
+	return true;
+}
+
+bool VerifyRegistration(const uint8_t (&aPublicKey)[PUBLIC_KEY_SIZE], const char *pDeviceName, const char *pProof)
+{
+	uint8_t aMessage[MAX_REGISTER_MESSAGE];
+	const size_t Length = BuildRegisterMessage(aMessage, sizeof(aMessage), pDeviceName);
+	uint8_t aSignature[SIGNATURE_SIZE];
+	if(Length == 0 || str_length(pProof) != PROOF_LENGTH || Base64UrlDecode(aSignature, sizeof(aSignature), pProof) != (int)SIGNATURE_SIZE)
+		return false;
+	return crypto_ed25519_check(aSignature, aPublicKey, aMessage, Length) == 0;
+}
+
+void Fingerprint(const uint8_t (&aPublicKey)[PUBLIC_KEY_SIZE], char (&aFingerprint)[FINGERPRINT_LENGTH + 1])
+{
+	char aHex[SHA256_MAXSTRSIZE];
+	sha256_str(sha256(aPublicKey, sizeof(aPublicKey)), aHex, sizeof(aHex));
+	mem_copy(aFingerprint, aHex, FINGERPRINT_LENGTH);
+	aFingerprint[FINGERPRINT_LENGTH] = '\0';
+}
+
+ERegisterError ClassifyRegisterAnswer(int Status, const char *pErrorWord)
+{
+	if(Status == 201)
+		return ERegisterError::NONE;
+	if(Status == 409 && str_comp(pErrorWord, "device_limit") == 0)
+		return ERegisterError::DEVICE_LIMIT;
+	if(Status == 409 && str_comp(pErrorWord, "key_registered") == 0)
+		return ERegisterError::KEY_REGISTERED;
+	if(Status == 400 && str_comp(pErrorWord, "invalid_proof") == 0)
+		return ERegisterError::INVALID_PROOF;
+	if(Status == 429)
+		return ERegisterError::RATE_LIMITED;
+	if(Status == 401 || Status == 403)
+		return ERegisterError::UNAUTHORIZED;
+	return ERegisterError::OTHER;
+}
+
+int64_t RetryDelayMs(int Failures, ERegisterError Error)
+{
+	if(Failures <= 0)
+		return 0;
+	const int Doublings = Failures - 1 < 6 ? Failures - 1 : 6;
+	int64_t Delay = int64_t(5000) << Doublings;
+	if(Error == ERegisterError::RATE_LIMITED && Delay < 60 * 1000)
+		Delay = 60 * 1000;
+	return Delay < MAX_RETRY_MS ? Delay : MAX_RETRY_MS;
+}
+
 // Origin of an https/http URL in lower case, with the default port made explicit. False for anything odd.
 static bool ParseOrigin(const char *pUrl, size_t UrlLength, char (&aScheme)[8], char (&aHost)[256], int *pPort, bool *pHasPath)
 {

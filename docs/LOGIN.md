@@ -30,7 +30,7 @@ Client                           Browser                     kog.tw
   |<--------------------------------------------- access token |
   | GET userinfo (account name, for the settings) ------------>|
   | make Ed25519 key pair; private key into the key file       |
-  | POST /api/client/device {device_name, public_key} -------->|
+  | POST /api/client/device {device_name, public_key, proof} ->|
   |<--------------------------------------- 201 {id, name}    |
   | discard the access token                                   |
 ```
@@ -91,6 +91,41 @@ because the browser's fetch follows them; the origin check above is what protect
 
 The authorization code may be up to 4096 characters (the callback request up to 8 KB): the league/oauth2-server library
 hands out an encrypted token, which with a hex encoding easily passes 1 KB. A longer code is refused, not cut.
+
+## Registering the device
+
+The key is made on this machine after the account login and registered for that account only: a key without an account does not
+exist, and an account may have a limited number of keys (the website says how many and lists them under "Devices and install keys"
+on `kog.tw/account`, where each one can be revoked). The same key answers the join proof and the attestation ([CLIENT-ATTEST.md](CLIENT-ATTEST.md)).
+
+The registration carries a proof of possession, so nobody can register a public key they only saw:
+
+```
+proof = base64url(Ed25519 signature by the new key over "KoG-register-v1" 0x00 || device_name)
+```
+
+The name is the one sent in the same request. The prefix is not the one of the join proof, so a registration proof is never a
+valid login proof (a test checks it).
+
+If the account server refuses, the settings say why in plain words and nothing is registered or stored:
+
+| Answer | Message |
+| --- | --- |
+| 409 `device_limit` | the account has as many devices as it may: remove one under your devices on kog.tw, then log in again |
+| 409 `key_registered` | the key is registered already: log in again to make a new one |
+| 400 `invalid_proof` | the proof was not accepted: update the client |
+| 429 | too many attempts: wait a few minutes |
+| 401, 403 | the login was refused |
+| anything else, or no answer | the status, or a network problem |
+
+There is no retry on a timer and no loop. After a failure that reached the account server the next "Log in with KoG" waits: 5 seconds,
+doubling to 5 minutes, at least a minute after a 429, and the settings say how long. A cancelled browser step does not count.
+It resets when a login works. The wait is only in memory.
+
+The KoG account box has a line "Install key" with the fingerprint (the first 16 hex characters of the SHA-256 of the public key,
+as the account page shows it), whether this server asked for the key check, a note when the server did not accept the key (it may
+have been removed or revoked), and a button that opens `kog.tw/account` in the browser. The client is never told why a key was
+revoked or banned; the website is the place to see and change that. A key ban that a server enforces ends the connection with the server's own message.
 
 ## Join proof
 
@@ -161,7 +196,7 @@ and the public key are sent to register the device. The default name has no host
 
 `src/test/kog_login_wire_test.cpp`: the three message names, the challenge of the worked example of the server page, every malformed challenge (short parts, a time that is too short or too long), the proof bytes, the result (a refusal never carries a name, a result that is not one, a long name, control characters). `src/test/kog_login_test.cpp` has the spelling of the address.
 
-`src/test/kog_login_test.cpp`: the RFC 7636 PKCE vector, the RFC 8032 Ed25519 vectors, parsing of the callback (wrong path,
+`src/test/kog_login_test.cpp`: the registration proof (message, verification, the wrong key, name and domain, never a join proof), the fingerprint, how the answers of the account server are told apart, the growth and the cap of the wait after failures, the RFC 7636 PKCE vector, the RFC 8032 Ed25519 vectors, parsing of the callback (wrong path,
 wrong state, duplicate parameters, other methods), the listener (first matching request only, idle connections, refusal and timeout, close, a code of the maximum length), the allowed endpoint origins, the challenge bytes and signature (layout, the old ambiguity, a vector made outside this code base, binding to server, nonce, device and session), the neutral device name, the wiping of request bodies, a 307 that the token POST must not follow (against a loopback server and real libcurl), and the decision not to answer non-KoG servers or servers that did not agree to `client_login`.
 `src/test/kog_keyfile_test.cpp`: the plain and the locked file round trip, mode 0600, a link at the temporary name, wrong and too long passphrases, a changed or truncated file (every byte region), limits on the cost in the header, that a locked or damaged file is never replaced, and the migration (moves once, leaves an existing file alone, refuses garbage).
 The HTTP steps of the flow, the macOS and Windows migration source, the file access list on Windows, the settings box and the exchange with a running KoG server (challenge, proof, result on a real connection) need a running account server, a desktop session or a server and have no automated test.

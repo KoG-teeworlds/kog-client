@@ -58,6 +58,12 @@ public:
 	void Unlock(const char *pPassphrase);
 	void SetPassphrase(const char *pNew, const char *pCurrent);
 	void RemovePassphrase(const char *pCurrent);
+	// The fingerprint of the key as kog.tw lists it, 16 hex characters. Empty: no key, or it is locked.
+	const char *Fingerprint();
+	// The account page of the website, where the devices are listed and revoked. False: the account address is unusable.
+	bool AccountPageUrl(char *pBuf, size_t Size) const;
+	// Seconds until the next login may start after failures in a row, 0 when it may start now
+	int RetryInSeconds() const;
 	EStep Step() const { return m_Step; }
 	// Plain words for the settings box
 	const char *Message() const { return m_aMessage; }
@@ -106,6 +112,9 @@ private:
 
 	EKeyState m_KeyState = EKeyState::NONE;
 	KogLogin::SDeviceKey m_UnlockedKey;
+	char m_aFingerprint[KogLogin::FINGERPRINT_LENGTH + 1] = "";
+	int m_Failures = 0;
+	int64_t m_RetryAtMs = 0;
 	bool m_ManualLogin = false;
 	bool m_AnsweredThisJoin = false;
 	EJoinState m_JoinState = EJoinState::NONE;
@@ -137,6 +146,8 @@ private:
 	void ReleaseRequest();
 	void SetBearer(IHttpRequest *pRequest);
 	void FailHttp(const char *pWhat);
+	// A failure that reached the account server counts for the wait before the next login
+	void CountFailure(KogLogin::ERegisterError Error);
 
 	void BeginBrowser();
 	void BeginToken(const char *pCode);
@@ -147,6 +158,7 @@ private:
 	void StepToken();
 	void StepUserinfo();
 	void StepDevice();
+	void FailRegistration();
 	void StepRevoke();
 };
 
