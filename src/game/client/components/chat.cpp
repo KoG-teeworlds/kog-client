@@ -1225,6 +1225,8 @@ void CChat::OnRender()
 	if(m_Mode != MODE_NONE)
 	{
 		// render chat input
+		if(KogHud::On())
+			KogHud::DrawBox300(CUIRect{x - 3.0f, y - 2.0f, std::max(Width - 190.0f, 190.0f) + 6.0f, ScaledFontSize + 5.0f}, ColorRGBA(0.0f, 0.0f, 0.0f, 0.4f), IGraphics::CORNER_ALL, 4.0f);
 		CTextCursor InputCursor;
 		InputCursor.SetPosition(vec2(x, y));
 		InputCursor.m_FontSize = ScaledFontSize;
