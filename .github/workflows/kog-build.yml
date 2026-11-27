@@ -52,7 +52,7 @@ jobs:
         include:
         - name: linux
           os: ubuntu-22.04
-          cmake-args: -G Ninja
+          cmake-args: -G Ninja -DPREFER_BUNDLED_LIBS=ON
           cmake-args-release: -DIPO=ON
           cmake-init-env: CXXFLAGS=-Werror
           package-file: "*-linux_x86_64.tar.xz"
@@ -84,7 +84,7 @@ jobs:
       if: matrix.run == 'yes' && (runner.os == 'Linux')
       run: |
         sudo apt-get update -y
-        sudo apt-get install -y cmake glslang-tools libavcodec-dev libavformat-dev libavutil-dev libcurl4-openssl-dev libfreetype6-dev libglew-dev libnotify-dev libogg-dev libopus-dev libopusfile-dev libpng-dev libsdl2-dev libsqlite3-dev libssl-dev libswresample-dev libswscale-dev libvulkan-dev libwavpack-dev libx264-dev ninja-build pkg-config spirv-tools zlib1g-dev xvfb xauth libgl1-mesa-dri libglx-mesa0
+        sudo apt-get install -y cmake glslang-tools libcurl4-openssl-dev libfreetype6-dev libglew-dev libnotify-dev libogg-dev libopus-dev libopusfile-dev libpng-dev libsdl2-dev libsqlite3-dev libssl-dev libvulkan-dev libwavpack-dev ninja-build pkg-config spirv-tools zlib1g-dev xvfb xauth libgl1-mesa-dri libglx-mesa0
 
     - name: Prepare macOS
       if: matrix.run == 'yes' && (runner.os == 'macOS')
