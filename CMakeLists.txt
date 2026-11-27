@@ -1740,6 +1740,7 @@ set(EXPECTED_DATA
   gui_icons.png
   gui_logo.png
   hud.png
+  kog_icon.png
   languages/README.txt
   languages/arabic.txt
   languages/azerbaijani.txt
@@ -4054,6 +4055,7 @@ if(NOT DEV)
     endif()
   endforeach()
   if(TARGET game-client)
+    install(FILES other/brand/logo/logo_short_black.svg DESTINATION ${CMAKE_INSTALL_DATAROOTDIR}/icons/hicolor/scalable/apps RENAME ${KOG_CLIENT_ID_LOWER}.svg COMPONENT client)
     foreach(SIZE 64 128 512)
       install(FILES other/icons/${CLIENT_EXECUTABLE}_${SIZE}x${SIZE}x32.png DESTINATION ${CMAKE_INSTALL_DATAROOTDIR}/icons/hicolor/${SIZE}x${SIZE}/apps RENAME ${KOG_CLIENT_ID_LOWER}.png COMPONENT client)
     endforeach()
