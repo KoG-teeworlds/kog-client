@@ -141,34 +141,62 @@ void CMenusStart::RenderKogStartMenu(CUIRect MainView, int &NewPage)
 	Column.VMargin(std::max(Space::L, (MainView.w - 380.0f) / 2.0f), &Column);
 
 	static float s_aHover[8] = {};
+	// keyboard: Up, Down, Left and Right move a focus ring over the buttons in reading order, Enter presses the focused
+	// one (without focus, Enter is Play). The mouse is unchanged.
+	enum
+	{
+		FOCUS_PLAY,
+		FOCUS_DEMOS,
+		FOCUS_EDITOR,
+		FOCUS_SERVER,
+		FOCUS_SETTINGS,
+		FOCUS_QUIT,
+		NUM_FOCUS
+	};
+	static int s_Focus = -1;
+	CUIRect aFocusRects[NUM_FOCUS];
+	const bool Enter = Ui()->ConsumeHotkey(CUi::HOTKEY_ENTER);
+	if(CheckHotKey(KEY_DOWN) || CheckHotKey(KEY_RIGHT))
+		s_Focus = (s_Focus + 1) % NUM_FOCUS;
+	else if(CheckHotKey(KEY_UP) || CheckHotKey(KEY_LEFT))
+		s_Focus = s_Focus < 0 ? NUM_FOCUS - 1 : (s_Focus + NUM_FOCUS - 1) % NUM_FOCUS;
 	static CButtonContainer s_PlayButton, s_DemosButton, s_EditorButton, s_ServerButton, s_SettingsButton, s_QuitButton;
 	CUIRect Row;
 
 	Column.HSplitTop(Size::Hero, &Row, &Column);
-	if(DoKogButton(&s_PlayButton, &s_aHover[0], Row, FontIcon::PLAY, Localize("Play", "Start menu"), (int)EButtonKind::PRIMARY, ColorRGBA(0.0f, 0.0f, 0.0f, 0.0f)) || Ui()->ConsumeHotkey(CUi::HOTKEY_ENTER) || CheckHotKey(KEY_P))
+	aFocusRects[FOCUS_PLAY] = Row;
+	if(DoKogButton(&s_PlayButton, &s_aHover[0], Row, FontIcon::PLAY, Localize("Play", "Start menu"), (int)EButtonKind::PRIMARY, ColorRGBA(0.0f, 0.0f, 0.0f, 0.0f)) || (Enter && s_Focus <= FOCUS_PLAY) || CheckHotKey(KEY_P))
 		NewPage = g_Config.m_UiPage >= CMenus::PAGE_INTERNET && g_Config.m_UiPage <= CMenus::PAGE_FAVORITE_COMMUNITY_5 ? g_Config.m_UiPage : CMenus::PAGE_INTERNET;
 
 	Column.HSplitTop(Space::S, nullptr, &Column);
 	Column.HSplitTop(Size::Button, &Row, &Column);
-	CUIRect Left, Middle, Right;
-	const float ThirdWidth = (Row.w - 2.0f * Space::S) / 3.0f;
-	Row.VSplitLeft(ThirdWidth, &Left, &Row);
-	Row.VSplitLeft(Space::S, nullptr, &Row);
-	Row.VSplitLeft(ThirdWidth, &Middle, &Row);
+	// two columns: the longest translations of "Run server" need about 150 units at the body size
+	CUIRect Left, Right;
+	const float HalfWidth = (Row.w - Space::S) / 2.0f;
+	Row.VSplitLeft(HalfWidth, &Left, &Row);
 	Row.VSplitLeft(Space::S, nullptr, &Right);
+	aFocusRects[FOCUS_DEMOS] = Left;
+	aFocusRects[FOCUS_EDITOR] = Right;
 
-	if(DoKogButton(&s_DemosButton, &s_aHover[1], Left, FontIcon::FILM, Localize("Demos"), (int)EButtonKind::SECONDARY, ColorRGBA(0.0f, 0.0f, 0.0f, 0.0f)) || CheckHotKey(KEY_D))
+	if(DoKogButton(&s_DemosButton, &s_aHover[1], Left, FontIcon::FILM, Localize("Demos"), (int)EButtonKind::SECONDARY, ColorRGBA(0.0f, 0.0f, 0.0f, 0.0f)) || (Enter && s_Focus == FOCUS_DEMOS) || CheckHotKey(KEY_D))
 		NewPage = CMenus::PAGE_DEMOS;
 
 	const bool Unsaved = GameClient()->Editor()->HasUnsavedData();
-	if(DoKogButton(&s_EditorButton, &s_aHover[2], Middle, FontIcon::PEN_TO_SQUARE, Localize("Editor"), (int)EButtonKind::SECONDARY, Unsaved ? DARK.m_Warn : ColorRGBA(0.0f, 0.0f, 0.0f, 0.0f)) || CheckHotKey(KEY_E))
+	if(DoKogButton(&s_EditorButton, &s_aHover[2], Right, FontIcon::PEN_TO_SQUARE, Localize("Editor"), (int)EButtonKind::SECONDARY, Unsaved ? DARK.m_Warn : ColorRGBA(0.0f, 0.0f, 0.0f, 0.0f)) || (Enter && s_Focus == FOCUS_EDITOR) || CheckHotKey(KEY_E))
 	{
 		g_Config.m_ClEditor = 1;
 		Input()->MouseModeRelative();
 	}
 
+	Column.HSplitTop(Space::S, nullptr, &Column);
+	Column.HSplitTop(Size::Button, &Row, &Column);
+	Row.VSplitLeft(HalfWidth, &Left, &Row);
+	Row.VSplitLeft(Space::S, nullptr, &Right);
+	aFocusRects[FOCUS_SERVER] = Left;
+	aFocusRects[FOCUS_SETTINGS] = Right;
+
 	const bool ServerRunning = GameClient()->m_LocalServer.IsServerRunning();
-	if(DoKogButton(&s_ServerButton, &s_aHover[3], Right, FontIcon::TERMINAL, ServerRunning ? Localize("Stop server") : Localize("Run server"), (int)EButtonKind::SECONDARY, ServerRunning ? DARK.m_Ok : ColorRGBA(0.0f, 0.0f, 0.0f, 0.0f)) || (CheckHotKey(KEY_R) && Input()->KeyPress(KEY_R)))
+	if(DoKogButton(&s_ServerButton, &s_aHover[3], Left, FontIcon::TERMINAL, ServerRunning ? Localize("Stop server") : Localize("Run server"), (int)EButtonKind::SECONDARY, ServerRunning ? DARK.m_Ok : ColorRGBA(0.0f, 0.0f, 0.0f, 0.0f)) || (Enter && s_Focus == FOCUS_SERVER) || (CheckHotKey(KEY_R) && Input()->KeyPress(KEY_R)))
 	{
 		if(ServerRunning)
 			GameClient()->m_LocalServer.KillServer();
@@ -176,20 +204,38 @@ void CMenusStart::RenderKogStartMenu(CUIRect MainView, int &NewPage)
 			GameClient()->m_LocalServer.RunServer({});
 	}
 
-	Column.HSplitTop(Space::S, nullptr, &Column);
-	Column.HSplitTop(Size::Button, &Row, &Column);
-	if(DoKogButton(&s_SettingsButton, &s_aHover[4], Row, FontIcon::GEAR, Localize("Settings"), (int)EButtonKind::SECONDARY, ColorRGBA(0.0f, 0.0f, 0.0f, 0.0f)) || CheckHotKey(KEY_S))
+	if(DoKogButton(&s_SettingsButton, &s_aHover[4], Right, FontIcon::GEAR, Localize("Settings"), (int)EButtonKind::SECONDARY, ColorRGBA(0.0f, 0.0f, 0.0f, 0.0f)) || (Enter && s_Focus == FOCUS_SETTINGS) || CheckHotKey(KEY_S))
 		NewPage = CMenus::PAGE_SETTINGS;
 
 	Column.HSplitTop(Space::XL, nullptr, &Column);
 	Column.HSplitTop(Size::Button, &Row, &Column);
+	aFocusRects[FOCUS_QUIT] = Row;
 	bool UsedEscape = false;
-	if(DoKogButton(&s_QuitButton, &s_aHover[5], Row, FontIcon::POWER_OFF, Localize("Quit"), (int)EButtonKind::QUIET, ColorRGBA(0.0f, 0.0f, 0.0f, 0.0f)) || (UsedEscape = Ui()->ConsumeHotkey(CUi::HOTKEY_ESCAPE)) || CheckHotKey(KEY_Q))
+	if(DoKogButton(&s_QuitButton, &s_aHover[5], Row, FontIcon::POWER_OFF, Localize("Quit"), (int)EButtonKind::QUIET, ColorRGBA(0.0f, 0.0f, 0.0f, 0.0f)) || (Enter && s_Focus == FOCUS_QUIT) || (UsedEscape = Ui()->ConsumeHotkey(CUi::HOTKEY_ESCAPE)) || CheckHotKey(KEY_Q))
 	{
 		if(UsedEscape || GameClient()->Editor()->HasUnsavedData() || (GameClient()->CurrentRaceTime() / 60 >= g_Config.m_ClConfirmQuitTime && g_Config.m_ClConfirmQuitTime >= 0))
 			GameClient()->m_Menus.ShowQuitPopup();
 		else
 			Client()->Quit();
+	}
+
+	if(s_Focus >= 0)
+	{
+		// a 2 unit outline outside the button, in the brand colour (3:1 against the panel is tested in kog_style_test)
+		const CUIRect &Focused = aFocusRects[s_Focus];
+		const float W = Size::Focus;
+		const ColorRGBA Ring = DARK.m_Brand;
+		CUIRect Outer = Focused;
+		Outer.Margin(-W, &Outer);
+		CUIRect Edge;
+		Outer.HSplitTop(W, &Edge, &Outer);
+		Edge.Draw(Ring, IGraphics::CORNER_NONE, 0.0f);
+		Outer.HSplitBottom(W, &Outer, &Edge);
+		Edge.Draw(Ring, IGraphics::CORNER_NONE, 0.0f);
+		Outer.VSplitLeft(W, &Edge, &Outer);
+		Edge.Draw(Ring, IGraphics::CORNER_NONE, 0.0f);
+		Outer.VSplitRight(W, &Outer, &Edge);
+		Edge.Draw(Ring, IGraphics::CORNER_NONE, 0.0f);
 	}
 
 	// links, bottom left
