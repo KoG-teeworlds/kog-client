@@ -35,7 +35,9 @@ const char *MasterHost()
 
 const char *MirrorChannel()
 {
-	return str_comp(KOG_CLIENT_CHANNEL, "canary") == 0 || str_comp(KOG_CLIENT_CHANNEL, "dev") == 0 ? KOG_CLIENT_CHANNEL : "stable";
+	if(str_comp(KOG_CLIENT_CHANNEL, "canary") == 0 || str_comp(KOG_CLIENT_CHANNEL, "dev") == 0)
+		return KOG_CLIENT_CHANNEL;
+	return "stable";
 }
 
 } // namespace
