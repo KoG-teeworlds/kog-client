@@ -82,7 +82,8 @@ void CKogNotices::OnRender()
 		Box.Draw(Fill, IGraphics::CORNER_ALL, Radius::Card);
 		CUIRect Bar;
 		Box.VSplitLeft(Space::XS, &Bar, nullptr);
-		Bar.Draw(Accent, IGraphics::CORNER_L, Radius::Card);
+		Bar.HMargin(Space::S, &Bar);
+		Bar.Draw(Accent, IGraphics::CORNER_ALL, Space::XS / 2.0f);
 
 		CUIRect Content, Title, Body;
 		Box.VMargin(Space::XL, &Content);
