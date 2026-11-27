@@ -1,0 +1,42 @@
+name: KoG engine checks
+
+on:
+  pull_request:
+    paths:
+      - 'src/engine/**'
+      - 'src/game/client/**'
+      - 'src/test/kog_**'
+      - 'scripts/kog/check_engine.sh'
+      - 'scripts/kog/clang-tidy-engine.yaml'
+      - 'CMakeLists.txt'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  tidy:
+    name: Strict warnings and clang-tidy on the changed KoG files
+    runs-on: ubuntu-22.04
+    timeout-minutes: 60
+    env:
+      CARGO_HTTP_MULTIPLEXING: false
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          submodules: recursive
+          fetch-depth: 0
+          persist-credentials: false
+      - name: Prepare Linux
+        run: |
+          sudo apt-get update -y
+          sudo apt-get install -y clang-15 clang-tidy-15 cmake glslang-tools libavcodec-dev libavformat-dev libavutil-dev libcurl4-openssl-dev libfreetype6-dev libglew-dev libnotify-dev libogg-dev libopus-dev libopusfile-dev libpng-dev libsdl2-dev libsqlite3-dev libssl-dev libswresample-dev libswscale-dev libvulkan-dev libwavpack-dev libx264-dev ninja-build pkg-config spirv-tools zlib1g-dev
+      - name: Configure and generate the headers
+        run: |
+          cmake -S . -B build -G Ninja -DCMAKE_C_COMPILER=clang-15 -DCMAKE_CXX_COMPILER=clang++-15 -DCMAKE_BUILD_TYPE=Debug -DPRECOMPILE_HEADERS=OFF -DDOWNLOAD_GTEST=ON -DKOG_WERROR=ON -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
+          cmake --build build --target generate_protocol generate_content_types
+      - name: Check the changed files
+        run: CLANG_TIDY=clang-tidy-15 bash scripts/kog/check_engine.sh build --changed "origin/${{ github.base_ref }}"

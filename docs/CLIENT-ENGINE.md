@@ -82,6 +82,23 @@ the render thread's frame; today there are three separate primitives (socket, SD
 wake-up through `SDL_PushEvent` from a socket thread and from the render thread, which touches the network code and needs a
 server to test; it is the next step with the largest gain on laptops (a full core while playing).
 
+### Strictness
+
+* `KOG_STRICT_SOURCES` in `CMakeLists.txt`: the engine files that are ours compile with `-Wall -Wextra -Wconversion
+  -Wshadow -Wnon-virtual-dtor -Woverloaded-virtual -Wcast-qual` under clang (sign conversion and 64 to 32 bit narrowing are
+  switched off: 13 findings in `kog_login.cpp`, `kog_update.cpp` where upstream APIs take `int` for sizes are the backlog).
+  `-DKOG_WERROR=ON` makes them errors; CI sets it. The findings in `kog_update.cpp` that were real (byte pushes without a
+  cast) are fixed.
+* `scripts/kog/check_engine.sh <build> --changed <base>`: the same warnings on the `kog_*.cpp` files a branch adds or changes,
+  and clang-tidy (`scripts/kog/clang-tidy-engine.yaml`: bugprone, performance, nodiscard, member init, narrowing) on the ones
+  it adds. `--all` runs both on the whole list. Upstream files are not checked: their headers do not pass `-Wconversion`
+  (thousands of findings). The older KoG files still have tidy findings (uninitialised locals, missing const, signed
+  bitwise operators in `kog_update.cpp`), which is why tidy gates only new files.
+* `.github/workflows/kog-engine-checks.yml` runs that on pull requests that touch the engine. Verified locally with Apple
+  clang and clang-tidy 23; the Linux job is only verified by running it.
+* Not done: TSan run of the render thread hand-off, RAII for the graphics handles (texture, buffer and quad container
+  indices are plain ints owned by the callers), `std::span` for the bounds of the command buffer.
+
 ## Merge points (upstream-shared files)
 
 | file | change | size |
@@ -89,7 +106,10 @@ server to test; it is the next step with the largest gain on laptops (a full cor
 | `src/engine/client/client.cpp` | include, `KogPacing::CPacing Pacing`, `Paced` flag in the render block, `WaitForEvent` in the wait | about 30 lines in `CClient::Run` |
 | `src/engine/client/input.cpp`, `input.h` | `WaitForEvent`, `m_WindowHidden` kept from the window events | about 25 lines |
 | `src/engine/input.h` | two virtual functions on `IEngineInput` | 4 lines |
-| `CMakeLists.txt` | the header and the test in the lists | 2 lines |
+| `CMakeLists.txt` | `KOG_STRICT_SOURCES`, `KOG_WERROR`, the header and the test | about 25 lines |
+
+Everything else is in new KoG files. A merge conflict in `CClient::Run` is resolved by keeping upstream's loop and re-adding
+the `Paced` block: it only overrides `RenderDue`, `AsyncRenderOld`, `WakeTime` and the wait.
 
 ## Measuring
 

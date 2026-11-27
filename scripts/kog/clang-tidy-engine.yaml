@@ -1,0 +1,26 @@
+# The checks of scripts/kog/check_engine.sh, for the files of KoG_STRICT_SOURCES in CMakeLists.txt.
+# They come on top of the repository's .clang-tidy (which CI applies to the whole tree), so nothing here has to hold for
+# files of upstream.
+InheritParentConfig: true
+HeaderFilterRegex: '/kog_[^/]*$'
+ExcludeHeaderFilterRegex: '^$'
+Checks: >
+  bugprone-*,
+  -bugprone-easily-swappable-parameters,
+  -bugprone-branch-clone,
+  performance-*,
+  -performance-enum-size,
+  -performance-noexcept-*,
+  modernize-use-nodiscard,
+  modernize-use-override,
+  modernize-use-using,
+  modernize-use-default-member-init,
+  cppcoreguidelines-init-variables,
+  cppcoreguidelines-pro-type-member-init,
+  cppcoreguidelines-pro-type-cstyle-cast,
+  cppcoreguidelines-narrowing-conversions,
+  cppcoreguidelines-prefer-member-initializer,
+  misc-const-correctness,
+  readability-container-contains,
+  readability-redundant-member-init
+WarningsAsErrors: '*'
