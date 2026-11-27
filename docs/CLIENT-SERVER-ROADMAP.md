@@ -5,6 +5,15 @@ documents in `KoG-teeworlds/kog-2.0-server` (`docs/protocol/*`, `docs/MAP-QUESTS
 `feat/event-signing`). Labels: **[R]** read in code or a document, **[N]** not verified by running it. I did not build or run
 the server (not allowed), so nothing here was tested against a live KoG server.
 
+## 0. The rule: stock clients first
+
+Owner rule (2026-11-27): every feature must work for Teeworlds (0.6 and 0.7) and DDNet clients. So for each feature the
+**vanilla path** comes first: what a stock client sees through a chat line, a broadcast, a snapshot item or a console
+command, and that path is complete on its own. A KoG client message is only an addition: it is sent only to a client that
+announced the capability in the hello and that the server agreed to, and it never replaces the information on the vanilla
+path in a way that loses it (the server sends one or the other, never neither). 0.7 clients get chat and broadcast through
+the same server functions as 0.6 (the server translates), so "chat line" below covers both.
+
 ## 1. The finding that shapes the list
 
 The server's own protocol index says it: KoG adds almost nothing of its own to the game connection. What exists on the wire
@@ -35,17 +44,19 @@ Everything else a KoG server shows a player goes through standard DDNet parts, w
 
 ## 2. Candidates, checked one by one
 
-| Candidate from the request | Verdict | Why |
-| --- | --- | --- |
-| In-game notices and achievement popups (`PLAYER_NOTICES`) | **Blocked on the server** | No message and no capability exist. The achievements document is not in the server's `docs/` on `main`. Design the message in `docs/protocol/` first (capability id 2 is the next free one), then build both sides |
-| Map quests: list and progress | **List built**, progress blocked | The quest lines are in the map file, the client can read them without any network message. Progress is not sent; the server only writes the completion as a chat line |
-| Tournament and 1v1 status display | Nothing to do | The clock and texts are stock. A richer panel (bracket, next opponent) needs data the server does not send |
-| Maintenance and drain countdown | Nothing to do | No countdown is sent; only the name suffix and the refusal text. A banner needs a server message with the planned time |
-| Moderation visibility (disguises, trolls) | Nothing to do | Done on the server per viewer: every client with an auth level sees through a disguise |
-| Login status and account name | **Built before** (PR #8, #28) | The start page now shows the state (this series, section 4 of `CLIENT-STYLE.md`) |
-| Certified server badge in the browser | Open | Needs PR #29 (certificate check) and a flag in the server list; PR #30 reads the signed master list. Build after both merge |
-| Checkpoint and time display from new score messages | Nothing to do | There are no new score messages; the stock race HUD shows them |
-| Save and load feedback | Nothing to do | Chat lines |
+| Candidate | Vanilla path (Teeworlds 0.6/0.7, DDNet) | KoG client addition | Verdict |
+| --- | --- | --- | --- |
+| Achievement notices (`PLAYER_NOTICES`) | A server chat line to that player, built (backend `ChatMessage`) | A toast on the same line today; a structured message later (section 4b) | Vanilla path built; the message is a proposal |
+| Quest completion | The chat line `Quest completed: <name>` | The same toast | Built |
+| Quest list | Lines in the map's server settings that every client ignores; nothing to see | The quest card on the Server info page, read from the map file | Built here |
+| Quest progress | None today. Vanilla path to add on the server: a chat line at completion only (already), optionally a broadcast of "x of y" at most once a minute | A progress notice (capability `quest_progress`) | Needs server work; vanilla part first |
+| Tournament and 1v1 status | The round clock (game info item), broadcast and chat texts, `/tournament` | Nothing needed | Nothing to do |
+| Maintenance and drain countdown | Today: the name suffix ` [UPDATING]`, the refusal text, the start warning. Vanilla path to add: one chat line and one broadcast "Server restarts in 5 minutes", repeated at 5, 1 minute and 10 seconds | A banner with a local countdown from one notice | Needs server work; vanilla part first |
+| Moderation visibility | The per-viewer player info item (disguises) | Nothing needed | Nothing to do |
+| Login status and account name | `/login` chat command, chat answer | Device key login (built), the state chip on the start page | Built before |
+| Certified server badge | None (stock clients ignore it) | Badge after PR 29 and 30 | Open |
+| Checkpoint, rank and time display | Stock race messages and HUD | Nothing needed | Nothing to do |
+| Save and load feedback | Chat lines | Nothing needed | Nothing to do |
 
 ## 3. Built in this series
 
@@ -109,9 +120,11 @@ Capability ids in the number space of the hello (`client_login` is 1): **2 `noti
 `quest_progress`** (kind 4; separate so it can be switched off alone, because it can be frequent). The server offers each
 with its own setting like `sv_kog_cap_client_login`; the client offers each when it can draw it.
 
-**Fail-safe rule: one path, never two.** The server has one function `SendNotice(client, kind, key, text, value, limit)`:
-if the client negotiated `notices`, it sends the message and **no chat line**; otherwise it sends the chat line exactly as
-today. So a vanilla client, a KoG client without the capability, and a KoG client talking to an old server all behave as now,
+**Vanilla path first, one path, never two.** The primary path is the chat line (and, for maintenance, a broadcast): it is what
+a Teeworlds 0.6, 0.7 or DDNet client gets and it carries the complete text. The KoG message is an enhancement only for clients
+that negotiated it. The server has one function `SendNotice(client, kind, key, text, value, limit)`:
+if the client negotiated `notices`, it sends the message and **no chat line** (the KoG client writes the same text into its chat
+log, so history is the same); otherwise it sends the chat line exactly as today (and the broadcast for maintenance). So a vanilla client, a KoG client without the capability, and a KoG client talking to an old server all behave as now,
 and a capable client never sees the line twice. The client also writes every notice it shows to the chat log, so nothing is lost.
 
 **Limits on the client.** Read only if negotiated (as the login messages); text cut at 250 bytes and control characters
@@ -160,6 +173,19 @@ game server's own code, never the backend queue? (Recommended: never the queue.)
 only on a server listed for the KoG community (the same test as the hello), and the line stays in the chat. A server that is
 not a KoG server never gets a toast; a stock server sends no such lines. The text of a line is displayed, never interpreted. When
 the proposal above is built, the same component takes the message instead of the line.
+
+## 4d. Tests for the fallback
+
+Where the repository has test infrastructure the fallback is tested:
+
+- Client (built): `src/test/kog_notices_test.cpp` checks that only the exact words of the backend and the server make a notice, and that a
+  line is never changed (the chat keeps it); the toast code runs only for servers listed for the KoG community, so a stock
+  server or a stock client pairing shows exactly the old chat. `kog_quests_test.cpp`: a map without `kog_quest` lines gives an
+  empty list, a vanilla map is unchanged.
+- Server and backend (proposed, in their repositories when built): a client without the capability gets the chat line and no
+  message; a client with it gets the message and no line; a 0.7 client gets the chat line; the backend uses `ChatMessage` when the
+  game server has no `SERVER_CAPABILITY_PLAYER_NOTICE`; unknown kinds and capability ids are ignored.
+- Not testable here: a running 0.6, 0.7 and DDNet client against a KoG server (needs the server, which was not built).
 
 ## 5. Rules kept
 
