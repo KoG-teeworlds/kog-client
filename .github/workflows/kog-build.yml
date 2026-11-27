@@ -186,3 +186,8 @@ jobs:
     - name: Check the macOS app
       if: matrix.run == 'yes' && (runner.os == 'macOS')
       run: bash scripts/kog/macos_package_check.sh release/artifacts/*-macos.dmg
+
+    - name: Check the Windows package
+      if: matrix.run == 'yes' && (runner.os == 'Windows')
+      shell: bash
+      run: python3 -I scripts/kog/windows_package_check.py release/artifacts/*-win64.zip

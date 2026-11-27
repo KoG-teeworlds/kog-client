@@ -19,6 +19,7 @@ check true data/languages/german.txt
 check true cmake/FindFoo.cmake
 check true scripts/kog/make_package.sh
 check true scripts/kog/macos_package_check.py
+check true scripts/kog/windows_package_check.py
 check true .github/workflows/kog-build.yml
 check true .github/workflows/kog-package.yml
 check true Cargo.lock
