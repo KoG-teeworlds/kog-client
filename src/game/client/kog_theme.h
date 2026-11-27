@@ -131,6 +131,17 @@ namespace KogTheme
 			Edge.Draw(Ring, IGraphics::CORNER_NONE, 0.0f);
 	}
 
+	// The box of a popup (connecting, messages, quit): classic colour and radius, or one glass panel with a shadow
+	inline void DrawPopupBox(const CUIRect &Rect, const ColorRGBA &Classic, float ClassicRadius)
+	{
+		if(!On())
+		{
+			Rect.Draw(Classic, IGraphics::CORNER_ALL, ClassicRadius);
+			return;
+		}
+		KogDraw::Panel(Rect, {Palette().m_Panel2.WithAlpha(0.94f), &KogStyle::Elevation::FLOATING, KogStyle::Radius::Panel, IGraphics::CORNER_ALL, KogStyle::Elevation::GLASS_TOP_LIGHTEN});
+	}
+
 	// Header cells of lists (column titles): a quiet layer, the sorted column in the brand colour
 	inline ColorRGBA GridHeader(const ColorRGBA &Classic, int Checked)
 	{
