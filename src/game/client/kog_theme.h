@@ -85,6 +85,17 @@ namespace KogTheme
 		return Layer(Classic.a * 0.22f * (IsLight() ? 1.0f : Classic.r));
 	}
 
+	// Text colours of the server browser: a search hit, the game type, the ping. The KoG look takes them from the palette so that
+	// no list shows a hue of its own (blue, purple, a green to red scale); the ping keeps three steps that differ in lightness.
+	inline ColorRGBA Highlight(const ColorRGBA &Classic) { return On() ? Palette().m_BrandSoft : Classic; }
+	inline ColorRGBA GametypeText(const ColorRGBA &Classic) { return On() ? Palette().m_Muted : Classic; }
+	inline ColorRGBA PingText(const ColorRGBA &Classic, int Latency)
+	{
+		if(!On())
+			return Classic;
+		return Latency <= 60 ? Palette().m_Ok : (Latency <= 150 ? Palette().m_Warn : Palette().m_Err);
+	}
+
 	// A button, input or box: the control fill with the corners of the glass look, a lighter top and a rim light
 	inline void DrawControl(const CUIRect &Rect, const ColorRGBA &Classic, int Corners, float ClassicRounding)
 	{

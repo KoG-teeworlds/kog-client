@@ -439,6 +439,8 @@ int CMenus::DoButton_CheckBox_Number(const void *pId, const char *pText, int Che
 void CMenus::RenderMenubar(CUIRect Box, IClient::EClientState ClientState)
 {
 	CUIRect Button;
+	if(KogTheme::On())
+		KogDraw::Panel(Box, {KogTheme::Palette().m_Panel, &KogStyle::Elevation::SMALL, 0.0f, IGraphics::CORNER_NONE, KogStyle::Elevation::GLASS_TOP_LIGHTEN});
 
 	int NewPage = -1;
 	int ActivePage = -1;

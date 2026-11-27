@@ -17,6 +17,7 @@
 #include <engine/shared/config.h>
 
 #include <game/client/kog_draw.h>
+#include <game/client/kog_motion.h>
 #include <game/client/kog_theme.h>
 #include <game/localization.h>
 
@@ -50,6 +51,7 @@ void CUIElement::SUIElementRect::Reset()
 	m_Height = -1;
 	m_Rounding = -1.0f;
 	m_Corners = -1;
+	m_KogTheme = -1;
 	m_Text.clear();
 	m_Cursor = CTextCursor();
 	m_TextColor = ColorRGBA(-1, -1, -1, -1);
@@ -448,7 +450,15 @@ float CUi::ButtonColorMul(const void *pId)
 {
 	if(CheckActiveItem(pId))
 		return ButtonColorMulActive();
-	else if(HotItem() == pId)
+	if(KogTheme::On())
+	{
+		// the KoG look fades between the default and the hot colour (reduce motion and "no smooth scrolling" jump)
+		static KogMotion::CHoverTable s_Hover;
+		const bool Instant = g_Config.m_ClKogReduceMotion != 0 || g_Config.m_UiSmoothScrollTime <= 0;
+		const float Mix = s_Hover.Update(pId, HotItem() == pId, Client()->GlobalTime(), Instant ? 0.0f : KogStyle::Motion::Hover);
+		return ButtonColorMulDefault() + (ButtonColorMulHot() - ButtonColorMulDefault()) * Mix;
+	}
+	if(HotItem() == pId)
 		return ButtonColorMulHot();
 	return ButtonColorMulDefault();
 }
@@ -1079,7 +1089,7 @@ int CUi::DoButton_Menu(CUIElement &UIElement, const CButtonContainer *pId, const
 
 	if(!UIElement.AreRectsInit() || Props.m_HintRequiresStringCheck || Props.m_HintCanChangePositionOrSize || !UIElement.Rect(0)->m_UITextContainer.Valid())
 	{
-		bool NeedsRecalc = !UIElement.AreRectsInit() || !UIElement.Rect(0)->m_UITextContainer.Valid();
+		bool NeedsRecalc = !UIElement.AreRectsInit() || !UIElement.Rect(0)->m_UITextContainer.Valid() || UIElement.Rect(0)->m_KogTheme != g_Config.m_ClKogTheme;
 		if(Props.m_HintCanChangePositionOrSize)
 		{
 			if(UIElement.AreRectsInit())
@@ -1130,6 +1140,7 @@ int CUi::DoButton_Menu(CUIElement &UIElement, const CButtonContainer *pId, const
 				NewRect.m_Height = pRect->h;
 				NewRect.m_Rounding = Props.m_Rounding;
 				NewRect.m_Corners = Props.m_Corners;
+				NewRect.m_KogTheme = g_Config.m_ClKogTheme;
 				if(i == 0)
 				{
 					if(pText == nullptr)

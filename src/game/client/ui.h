@@ -169,6 +169,7 @@ public:
 		float m_Height;
 		float m_Rounding;
 		int m_Corners;
+		int m_KogTheme = -1; // the theme the cached quads were made for
 
 		std::string m_Text;
 		int m_ReadCursorGlyphCount;
