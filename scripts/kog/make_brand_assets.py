@@ -4,6 +4,8 @@
 Needs rsvg-convert (librsvg 2.63.4 was used) and Pillow. The artwork itself is never edited, only scaled.
 Icons: logo_short_black.svg (the fox carries its own outline, so it reads on light and dark).
 Menu banner: logo_long_white.svg (the menu background is dark).
+Outputs: other/icons (ICO 16 to 256, ICNS, PNG for the hicolor theme and the .desktop file), data/kog_icon.png (window icon),
+data/tclient/gui_logo.png (menu logo). The Linux scalable icon is the unmodified logo_short_black.svg, installed by CMake.
 """
 import io
 import os
@@ -17,7 +19,8 @@ from PIL import Image
 LOGO = "other/brand/logo"
 OUT_ICONS = "other/icons"
 SIZES = (16, 32, 48, 64, 128, 256, 512)
-ICO_SIZES = (16, 32, 48, 256)
+WINDOW_ICON_SIZE = 256  # data/kog_icon.png, set as the window icon at runtime (SDL_SetWindowIcon)
+ICO_SIZES = (16, 24, 32, 48, 64, 128, 256)
 ICNS_SIZES = (16, 32, 64, 128, 256, 512, 1024)
 BANNER_WIDTH = 768
 NAME = re.search(r'#define KOG_CLIENT_NAME "([^"]+)"', open("src/game/kog_version.h").read()).group(1)
@@ -50,6 +53,7 @@ def main():
     ico = [render("logo_short_black.svg", s) for s in ICO_SIZES]
     ico[-1].save(f"{OUT_ICONS}/{ID}.ico", sizes=[(s, s) for s in ICO_SIZES], append_images=ico[:-1])
     write_icns(f"{OUT_ICONS}/{ID}.icns")
+    render("logo_short_black.svg", WINDOW_ICON_SIZE).save("data/kog_icon.png", optimize=True)
     render("logo_long_white.svg", BANNER_WIDTH).save("data/tclient/gui_logo.png", optimize=True)
     open(f"{OUT_ICONS}/{ID}.rc", "w").write(f'ID ICON "{ID}.ico"\n')
     open(f"other/{ID.lower()}.desktop", "w").write(

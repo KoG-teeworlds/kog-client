@@ -4,6 +4,7 @@
 #include <GL/glew.h>
 #endif
 
+#include <base/io.h>
 #include <base/log.h>
 #include <base/math.h>
 #include <base/sphore.h>
@@ -45,7 +46,9 @@
 
 #include "graphics_threaded.h"
 
+#include <engine/gfx/image_loader.h>
 #include <engine/graphics.h>
+#include <engine/storage.h>
 
 #include <algorithm>
 
@@ -945,6 +948,24 @@ CGraphicsBackend_SDL_GL::CGraphicsBackend_SDL_GL(TTranslateFunc &&TranslateFunc)
 	m_aErrorString[0] = '\0';
 }
 
+static void SetKogWindowIcon(SDL_Window *pWindow, IStorage *pStorage)
+{
+	CImageInfo Image;
+	int PngliteIncompatible = 0;
+	if(!CImageLoader::LoadPng(pStorage->OpenFile("kog_icon.png", IOFLAG_READ, IStorage::TYPE_ALL), "kog_icon.png", Image, PngliteIncompatible))
+		return;
+	if(Image.m_Format == CImageInfo::FORMAT_RGBA)
+	{
+		SDL_Surface *pSurface = SDL_CreateRGBSurfaceWithFormatFrom(Image.m_pData, (int)Image.m_Width, (int)Image.m_Height, 32, (int)Image.m_Width * 4, SDL_PIXELFORMAT_RGBA32);
+		if(pSurface != nullptr)
+		{
+			SDL_SetWindowIcon(pWindow, pSurface);
+			SDL_FreeSurface(pSurface);
+		}
+	}
+	Image.Free();
+}
+
 int CGraphicsBackend_SDL_GL::Init(const char *pName, int *pScreen, int *pWidth, int *pHeight, int *pRefreshRate, int *pFsaaSamples, int Flags, int *pDesktopWidth, int *pDesktopHeight, int *pCurrentWidth, int *pCurrentHeight, IStorage *pStorage)
 {
 #if defined(CONF_HEADLESS_CLIENT)
@@ -1161,6 +1182,10 @@ int CGraphicsBackend_SDL_GL::Init(const char *pName, int *pScreen, int *pWidth, 
 		*pWidth,
 		*pHeight,
 		SdlFlags);
+
+	// the KoG icon of the window; where the platform takes the icon from the executable or the bundle this changes nothing
+	if(m_pWindow != nullptr && pStorage != nullptr)
+		SetKogWindowIcon(m_pWindow, pStorage);
 
 	// set caption
 	if(m_pWindow == nullptr)
