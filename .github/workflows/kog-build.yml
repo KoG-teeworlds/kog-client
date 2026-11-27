@@ -169,6 +169,10 @@ jobs:
         if-no-files-found: ignore
         retention-days: 14
 
+    - name: Check the dynamic dependencies
+      if: matrix.run == 'yes' && (runner.os == 'Linux')
+      run: bash scripts/kog/linux_package_check.sh "release/$KOG_EXE"
+
     - name: Package
       if: matrix.run == 'yes'
       run: |
@@ -176,6 +180,10 @@ jobs:
         cmake --build . --config Release --target package_default
         mkdir artifacts
         mv ${{ matrix.package-file }} artifacts
+
+    - name: Start the package on clean distributions
+      if: matrix.run == 'yes' && (runner.os == 'Linux')
+      run: bash scripts/kog/linux_package_distros.sh release/artifacts/*-linux_x86_64.tar.xz
 
     - name: Upload build
       if: matrix.run == 'yes'
