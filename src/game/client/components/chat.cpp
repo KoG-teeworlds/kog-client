@@ -1209,6 +1209,9 @@ void CChat::OnRender()
 	const float Width = Height * Graphics()->ScreenAspect();
 	Graphics()->MapScreenToSize(Width, Height);
 	const KogTheme::CMenuTextScope TextScope(TextRender());
+	// no room beside the scoreboard of the KoG look on a screen that is not wide: the lines wait until it closes
+	if(KogHud::On() && m_Mode == MODE_NONE && GameClient()->m_Scoreboard.IsActive() && Graphics()->ScreenAspect() <= KogStyle::Hud::WIDE_ASPECT)
+		return;
 
 	float x = 5.0f;
 

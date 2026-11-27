@@ -19,6 +19,12 @@ enum class ETheme
 	NUM_THEMES
 };
 
+// The theme of a saved setting: a missing, old or damaged value is Classic, never an out-of-range index
+inline constexpr ETheme ThemeFromSetting(int Value)
+{
+	return Value == (int)ETheme::DARK ? ETheme::DARK : (Value == (int)ETheme::LIGHT ? ETheme::LIGHT : ETheme::CLASSIC);
+}
+
 struct SPalette
 {
 	ColorRGBA m_Bg; // base, the darkest surface
@@ -149,8 +155,16 @@ struct SToken
 inline constexpr SToken TEXT_SIZES[] = {{"TEXT", TEXT}, {"TEXT_HEADER", TEXT_HEADER}, {"TEXT_TOOLTIP", TEXT_TOOLTIP}, {"TEXT_NOTICE", TEXT_NOTICE}};
 inline constexpr SToken ROW_HEIGHTS[] = {{"ROW", ROW}, {"ROW_TITLE", ROW_TITLE}, {"ROW_KILL_FEED", ROW_KILL_FEED}, {"ROW_CHAT", ROW_CHAT}};
 
-// How many columns of rows the scoreboard needs on a screen of this size: at the fixed text size and row height, never smaller.
-// What does not fit is not drawn small; Truncated says so and the scoreboard shows how many players are not shown.
+inline constexpr float WIDE_ASPECT = 1.7f; // the aspect ratio above which upstream's chat keeps a narrow strip beside the scoreboard
+inline constexpr float CHAT_RESERVE = 190.0f; // UI units kept free on the left for that strip (the chat box and its margin)
+inline constexpr float SCOREBOARD_TOP = 100.0f; // below the kill feed rows that fit above it
+inline constexpr float SCREEN_MARGIN = 10.0f;
+inline constexpr float TITLE_BAR = 30.0f;
+inline constexpr float SPECTATORS_MIN = 2.0f * ROW; // a spectators panel lower than this is not drawn
+
+// The layout of the scoreboard on a screen of this size, in UI units. Pure and deterministic: the same input is the same plan,
+// every number is finite and inside the screen, and it never shrinks the text: what does not fit is counted (m_Truncated), the
+// text size and the row height come from the tokens above.
 struct SScoreboardPlan
 {
 	int m_Columns;
@@ -158,20 +172,63 @@ struct SScoreboardPlan
 	int m_Shown;
 	bool m_Truncated;
 	float m_ColumnWidth;
+	float m_X; // the panel
+	float m_Y;
+	float m_Width;
+	float m_Height;
+	float m_ChatReserve; // the width on the left that the panel leaves free for the chat strip, 0 on a screen that is not wide
+	bool m_ChatHidden; // on a screen that is not wide the chat is not drawn while the scoreboard is open: there is no room for it
 };
 
 inline SScoreboardPlan PlanScoreboard(float Width, float Height, int NumPlayers)
 {
-	const float Usable = Height - 2.0f * Space::XXL - ROW_TITLE - ROW; // title, headline, margins above and below
-	const int MaxRows = std::max(1, (int)(Usable / ROW));
-	const int MaxColumns = std::max(1, (int)((Width - 2.0f * Space::L) / MIN_COLUMN_WIDTH));
-	SScoreboardPlan Plan;
+	// a screen of no size, or one that is not a number, is a screen of one unit: the plan stays valid and nothing is drawn outside
+	Width = Width >= 1.0f ? std::min(Width, 100000.0f) : 1.0f;
+	Height = Height >= 1.0f ? std::min(Height, 100000.0f) : 1.0f;
+	NumPlayers = std::clamp(NumPlayers, 0, 100000);
+
+	SScoreboardPlan Plan{};
+	const bool Wide = Width / Height > WIDE_ASPECT;
+	Plan.m_ChatReserve = Wide ? CHAT_RESERVE : 0.0f;
+	Plan.m_ChatHidden = !Wide;
+
+	const float FixedHeight = TITLE_BAR + 2.0f * TEXT_HEADER + 10.0f + ROW; // title, headline, padding, the row for the count of hidden players
+	const int MaxRows = std::max(1, (int)((Height - 2.0f * SCREEN_MARGIN - FixedHeight) / ROW));
+	const float Available = Width - Plan.m_ChatReserve - 2.0f * Space::L;
+	const int MaxColumns = std::max(1, (int)(Available / MIN_COLUMN_WIDTH));
+
 	Plan.m_Columns = std::clamp((NumPlayers + MaxRows - 1) / MaxRows, 1, MaxColumns);
 	Plan.m_Shown = std::min(NumPlayers, Plan.m_Columns * MaxRows);
 	Plan.m_RowsPerColumn = std::min(MaxRows, std::max(1, (Plan.m_Shown + Plan.m_Columns - 1) / Plan.m_Columns));
 	Plan.m_Truncated = Plan.m_Shown < NumPlayers;
-	Plan.m_ColumnWidth = (Width - 2.0f * Space::L) / Plan.m_Columns;
+	// a column is as wide as the room allows up to 300; a screen too narrow for one minimum column gets one narrower column
+	Plan.m_ColumnWidth = std::min(300.0f, std::max(Available, 1.0f) / Plan.m_Columns);
+	Plan.m_Width = Plan.m_Columns * Plan.m_ColumnWidth;
+	Plan.m_Height = FixedHeight - ROW + Plan.m_RowsPerColumn * ROW + (Plan.m_Truncated ? ROW : 0.0f);
+	Plan.m_Height = std::min(Plan.m_Height, std::max(Height - 2.0f * SCREEN_MARGIN, 1.0f));
+	// centred on the screen when that leaves the chat strip free, else pushed right of it
+	Plan.m_X = std::max(Plan.m_ChatReserve + Space::L, (Width - Plan.m_Width) / 2.0f);
+	Plan.m_X = std::min(Plan.m_X, std::max(Width - Plan.m_Width, 0.0f));
+	Plan.m_Y = std::clamp(Height - SCREEN_MARGIN - Plan.m_Height, 0.0f, SCOREBOARD_TOP);
 	return Plan;
+}
+
+// The height of the spectators panel under the scoreboard: what is left of the screen, at most the classic 100; 0 when it does not fit
+inline float PlanSpectatorsHeight(float Height, float PanelBottom)
+{
+	const float Room = Height - PanelBottom - 5.0f - SCREEN_MARGIN;
+	return Room >= SPECTATORS_MIN ? std::min(100.0f, Room) : 0.0f;
+}
+
+// How many kill feed rows fit between the top of the screen and a scoreboard that starts at TopOfScoreboard (UI units).
+// ScoreboardOpen false: the classic limit, the feed has the whole height.
+inline int PlanKillFeedRows(bool ScoreboardOpen, float TopOfScoreboard, int MaxRows)
+{
+	MaxRows = std::max(MaxRows, 0);
+	if(!ScoreboardOpen)
+		return MaxRows;
+	const float Room = TopOfScoreboard - SCREEN_MARGIN - SCREEN_MARGIN;
+	return std::clamp((int)(Room / ROW_KILL_FEED), 0, MaxRows);
 }
 }
 

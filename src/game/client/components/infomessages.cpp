@@ -501,6 +501,15 @@ void CInfoMessages::OnRender()
 	const float StartY = 30.0f + (Showfps ? 100.0f : 0.0f) + (g_Config.m_ClShowpred && Client()->State() != IClient::STATE_DEMOPLAYBACK ? 100.0f : 0.0f);
 
 	float y = StartY;
+	// next to an open scoreboard of the KoG look only the newest messages that fit above it are drawn
+	int Skip = 0;
+	if(KogHud::On() && GameClient()->m_Scoreboard.IsActive())
+	{
+		int Shown = 0;
+		for(const CInfoMsg &Msg : m_aInfoMsgs)
+			Shown += Msg.m_Tick != -1 && ((Msg.m_Type == EType::TYPE_KILL && g_Config.m_ClShowKillMessages) || (Msg.m_Type == EType::TYPE_FINISH && g_Config.m_ClShowFinishMessages));
+		Skip = std::max(0, Shown - KogStyle::Hud::PlanKillFeedRows(true, GameClient()->m_Scoreboard.KogTopY(), MAX_INFOMSGS));
+	}
 	for(int i = 1; i <= MAX_INFOMSGS; i++)
 	{
 		CInfoMsg &InfoMsg = m_aInfoMsgs[(m_InfoMsgCurrent + i) % MAX_INFOMSGS];
@@ -515,6 +524,13 @@ void CInfoMessages::OnRender()
 		}
 
 		CreateTextContainersIfNotCreated(InfoMsg);
+
+		const bool Displayed = (InfoMsg.m_Type == EType::TYPE_KILL && g_Config.m_ClShowKillMessages) || (InfoMsg.m_Type == EType::TYPE_FINISH && g_Config.m_ClShowFinishMessages);
+		if(Displayed && Skip > 0)
+		{
+			--Skip;
+			continue;
+		}
 
 		if(InfoMsg.m_Type == EType::TYPE_KILL && g_Config.m_ClShowKillMessages)
 		{

@@ -328,7 +328,7 @@ void CScoreboard::RenderSpectators(CUIRect Spectators)
 
 	CTextCursor Cursor;
 	Cursor.SetPosition(Spectators.TopLeft());
-	Cursor.m_FontSize = 11.0f;
+	Cursor.m_FontSize = KogHud::Text(11.0f);
 	Cursor.m_LineWidth = Spectators.w;
 	Cursor.m_MaxLines = round_truncate(Spectators.h / Cursor.m_FontSize);
 
@@ -973,9 +973,8 @@ void CScoreboard::OnRender()
 	if(KogHud::On() && !Teams)
 	{
 		KogPlan = KogStyle::Hud::PlanScoreboard(Screen.w, Screen.h, NumPlayers);
-		const float Width = KogPlan.m_Columns * std::min(KogPlan.m_ColumnWidth, 300.0f);
-		const float Height = TitleHeight + 2.0f * KogStyle::Hud::TEXT_HEADER + KogPlan.m_RowsPerColumn * KogStyle::Hud::ROW + (KogPlan.m_Truncated ? KogStyle::Hud::ROW : 0.0f) + 10.0f;
-		Scoreboard = {(Screen.w - Width) / 2.0f, std::min(75.0f, Screen.h - Height - 10.0f), Width, Height};
+		Scoreboard = {KogPlan.m_X, KogPlan.m_Y, KogPlan.m_Width, KogPlan.m_Height};
+		m_KogTopY = Scoreboard.y;
 	}
 	CScoreboardRenderState RenderState{};
 
@@ -1136,14 +1135,17 @@ void CScoreboard::OnRender()
 	}
 
 	CUIRect Spectators = {(Screen.w - ScoreboardSmallWidth) / 2.0f, Scoreboard.y + Scoreboard.h + 5.0f, ScoreboardSmallWidth, 100.0f};
-	if(pGameInfoObj && (pGameInfoObj->m_ScoreLimit || pGameInfoObj->m_TimeLimit || (pGameInfoObj->m_RoundNum && pGameInfoObj->m_RoundCurrent)))
+	// the KoG look keeps the panel on the screen and leaves it out where there is no room for it
+	const bool DrawSpectators = !KogHud::On() || (Spectators.h = KogStyle::Hud::PlanSpectatorsHeight(Screen.h, Scoreboard.y + Scoreboard.h)) > 0.0f;
+	if(DrawSpectators && pGameInfoObj && (pGameInfoObj->m_ScoreLimit || pGameInfoObj->m_TimeLimit || (pGameInfoObj->m_RoundNum && pGameInfoObj->m_RoundCurrent)))
 	{
 		CUIRect Goals;
 		Spectators.HSplitTop(25.0f, &Goals, &Spectators);
 		Spectators.HSplitTop(5.0f, nullptr, &Spectators);
 		RenderGoals(Goals);
 	}
-	RenderSpectators(Spectators);
+	if(DrawSpectators)
+		RenderSpectators(Spectators);
 
 	RenderRecordingNotification((Screen.w / 7) * 4 + 10);
 

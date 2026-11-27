@@ -27,6 +27,7 @@ class CScoreboard : public CComponent
 	void RenderTitleBar(CUIRect TitleBar, int Team, const char *pTitle);
 	void RenderGoals(CUIRect Goals);
 	void RenderSpectators(CUIRect Spectators);
+	float m_KogTopY = 1.0e9f; // top of the panel in the KoG look, for the kill feed
 	void RenderScoreboard(CUIRect Scoreboard, int Team, int CountStart, int CountEnd, CScoreboardRenderState &State, int NumPlayersForSize = -1);
 	void RenderRecordingNotification(float x);
 
@@ -112,6 +113,7 @@ public:
 	bool OnInput(const IInput::CEvent &Event) override;
 
 	bool IsActive() const;
+	float KogTopY() const { return m_KogTopY; }
 };
 
 #endif

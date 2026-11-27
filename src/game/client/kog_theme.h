@@ -10,17 +10,7 @@
 // values the code used before, so a file that asks stays identical to upstream when the theme is Classic.
 namespace KogTheme
 {
-inline KogStyle::ETheme Current()
-{
-	switch(g_Config.m_ClKogTheme)
-	{
-	case (int)KogStyle::ETheme::DARK:
-		return KogStyle::ETheme::DARK;
-	case (int)KogStyle::ETheme::LIGHT:
-		return KogStyle::ETheme::LIGHT;
-	}
-	return KogStyle::ETheme::CLASSIC;
-}
+inline KogStyle::ETheme Current() { return KogStyle::ThemeFromSetting(g_Config.m_ClKogTheme); }
 
 inline bool On() { return Current() != KogStyle::ETheme::CLASSIC; }
 inline bool IsLight() { return Current() == KogStyle::ETheme::LIGHT; }
