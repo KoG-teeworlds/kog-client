@@ -13,6 +13,7 @@
 #include <generated/protocol7.h>
 
 #include <game/client/component.h>
+#include <game/client/kog_hud.h>
 #include <game/client/lineinput.h>
 #include <game/client/render.h>
 
@@ -193,7 +194,7 @@ public:
 	void EnsureCoherentFontSize() const;
 	void EnsureCoherentWidth() const;
 
-	float FontSize() const { return g_Config.m_ClChatFontSize / 10.0f; }
+	float FontSize() const { return KogHud::TextIn300(g_Config.m_ClChatFontSize / 10.0f); }
 	float MessagePaddingX() const { return FontSize() * (5 / 6.f); }
 	float MessagePaddingY() const { return FontSize() * (1 / 6.f); }
 	float MessageTeeSize() const { return FontSize() * (7 / 6.f); }

@@ -1208,6 +1208,7 @@ void CChat::OnRender()
 	const float Height = 300.0f;
 	const float Width = Height * Graphics()->ScreenAspect();
 	Graphics()->MapScreenToSize(Width, Height);
+	const KogTheme::CMenuTextScope TextScope(TextRender());
 
 	float x = 5.0f;
 
@@ -1332,7 +1333,7 @@ void CChat::OnRender()
 			Graphics()->TextureClear();
 			if(Line.m_QuadContainerIndex != -1)
 			{
-				Graphics()->SetColor(color_cast<ColorRGBA>(ColorHSLA(g_Config.m_ClChatBackgroundColor, true)).WithMultipliedAlpha(Blend));
+				Graphics()->SetColor(KogHud::Panel(color_cast<ColorRGBA>(ColorHSLA(g_Config.m_ClChatBackgroundColor, true))).WithMultipliedAlpha(Blend));
 				Graphics()->RenderQuadContainerEx(Line.m_QuadContainerIndex, 0, -1, 0, ((y + RealMsgPaddingY / 2.0f) - Line.m_TextYOffset));
 			}
 		}

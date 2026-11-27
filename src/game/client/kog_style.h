@@ -114,6 +114,66 @@ inline constexpr float PressOverlay = 0.16f;
 inline constexpr float DisabledAlpha = 0.45f;
 }
 
+// The HUD (scoreboard, chat, kill feed, notices, tooltips): design C, compact and tabular. Every size of text and every row
+// height of the HUD is named here and listed in TEXT_SIZES and ROW_HEIGHTS, and kog_hud_test.cpp fails on anything below the
+// minimum, so a later change cannot bring back 11 point text. Units are UI units (600 high); the kill feed draws in a space
+// three times larger, KILL_FEED_SCALE converts.
+namespace Hud
+{
+inline constexpr float MIN_TEXT = Font::Caption; // 12, the smallest readable text of the client
+inline constexpr float MIN_ROW = 18.0f; // the smallest row that holds 12 unit text with room above and below
+
+inline constexpr float TEXT = MIN_TEXT; // rows of the scoreboard, chat lines, kill feed
+inline constexpr float TEXT_HEADER = MIN_TEXT; // column headers and the title strip
+inline constexpr float TEXT_TOOLTIP = Font::Body;
+inline constexpr float ROW = MIN_ROW;
+inline constexpr float ROW_TITLE = MIN_ROW;
+inline constexpr float ROW_KILL_FEED = MIN_ROW;
+inline constexpr float ROW_CHAT = MIN_ROW;
+
+inline constexpr float RADIUS = 2.0f;
+inline constexpr float PAD = Space::S - 2.0f; // 6
+inline constexpr float PANEL_ALPHA = 0.92f;
+inline constexpr float ZEBRA_ALPHA = 0.06f;
+inline constexpr float SELF_ALPHA = 0.35f;
+inline constexpr float MIN_COLUMN_WIDTH = 250.0f; // score, name, clan, ping at the text size above
+inline constexpr float KILL_FEED_SCALE = 3.0f;
+
+struct SToken
+{
+	const char *m_pName;
+	float m_Value;
+};
+
+inline constexpr SToken TEXT_SIZES[] = {{"TEXT", TEXT}, {"TEXT_HEADER", TEXT_HEADER}, {"TEXT_TOOLTIP", TEXT_TOOLTIP}};
+inline constexpr SToken ROW_HEIGHTS[] = {{"ROW", ROW}, {"ROW_TITLE", ROW_TITLE}, {"ROW_KILL_FEED", ROW_KILL_FEED}, {"ROW_CHAT", ROW_CHAT}};
+
+// How many columns of rows the scoreboard needs on a screen of this size: at the fixed text size and row height, never smaller.
+// What does not fit is not drawn small; Truncated says so and the scoreboard shows how many players are not shown.
+struct SScoreboardPlan
+{
+	int m_Columns;
+	int m_RowsPerColumn;
+	int m_Shown;
+	bool m_Truncated;
+	float m_ColumnWidth;
+};
+
+inline SScoreboardPlan PlanScoreboard(float Width, float Height, int NumPlayers)
+{
+	const float Usable = Height - 2.0f * Space::XXL - ROW_TITLE - ROW; // title, headline, margins above and below
+	const int MaxRows = std::max(1, (int)(Usable / ROW));
+	const int MaxColumns = std::max(1, (int)((Width - 2.0f * Space::L) / MIN_COLUMN_WIDTH));
+	SScoreboardPlan Plan;
+	Plan.m_Columns = std::clamp((NumPlayers + MaxRows - 1) / MaxRows, 1, MaxColumns);
+	Plan.m_Shown = std::min(NumPlayers, Plan.m_Columns * MaxRows);
+	Plan.m_RowsPerColumn = std::min(MaxRows, std::max(1, (Plan.m_Shown + Plan.m_Columns - 1) / Plan.m_Columns));
+	Plan.m_Truncated = Plan.m_Shown < NumPlayers;
+	Plan.m_ColumnWidth = (Width - 2.0f * Space::L) / Plan.m_Columns;
+	return Plan;
+}
+}
+
 // WCAG 2.x, sRGB channels in [0, 1]
 inline float ChannelLuminance(float C)
 {
