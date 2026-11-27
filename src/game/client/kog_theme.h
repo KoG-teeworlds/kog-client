@@ -27,7 +27,25 @@ namespace KogTheme
 	}
 
 	// The neutral layer of the look: white over dark panels, black over light ones
-	inline ColorRGBA Layer(float Alpha) { return IsLight() ? ColorRGBA(0.0f, 0.0f, 0.0f, Alpha) : ColorRGBA(1.0f, 1.0f, 1.0f, Alpha); }
+	// A layer of the look is white a hair below 1.0, so that the menu fill below (which turns the translucent pure white of upstream
+	// code into a layer) never takes a layer of ours for upstream's white and dims it twice
+	inline constexpr float LAYER_WHITE = 0.996f;
+	inline ColorRGBA Layer(float Alpha) { return IsLight() ? ColorRGBA(0.0f, 0.0f, 0.0f, Alpha) : ColorRGBA(LAYER_WHITE, LAYER_WHITE, LAYER_WHITE, Alpha); }
+
+	// True while the menus draw (CMenuTextScope lives): only then are the rectangles of upstream code restyled
+	inline bool &InMenus()
+	{
+		static bool s_InMenus = false;
+		return s_InMenus;
+	}
+
+	// A rectangle of upstream code in the menus: translucent pure white (cards, headers, rows) becomes a quiet layer of the theme
+	inline ColorRGBA MenuFill(const ColorRGBA &Classic)
+	{
+		if(!InMenus() || !On() || Classic.r != 1.0f || Classic.g != 1.0f || Classic.b != 1.0f || Classic.a >= 0.95f)
+			return Classic;
+		return Layer(Classic.a * 0.45f);
+	}
 
 	// A neutral layer in a place that was white in the classic look (rails, hover, headers)
 	inline ColorRGBA Neutral(float Alpha) { return On() ? Layer(Alpha) : ColorRGBA(1.0f, 1.0f, 1.0f, Alpha); }
@@ -64,7 +82,7 @@ namespace KogTheme
 		}
 		if(Classic.r < 0.1f) // black layers (disabled, shadows) stay
 			return Classic;
-		return IsLight() ? Layer(Classic.a * 0.22f) : Classic.WithMultipliedAlpha(0.22f * Classic.r);
+		return Layer(Classic.a * 0.22f * (IsLight() ? 1.0f : Classic.r));
 	}
 
 	// A button, input or box: the control fill with the corners of the glass look, a lighter top and a rim light
@@ -125,6 +143,7 @@ namespace KogTheme
 		ITextRender *m_pTextRender;
 		ColorRGBA m_PreviousColor;
 		ColorRGBA m_PreviousOutline;
+		bool m_PreviousInMenus = false;
 
 		void Set(ColorRGBA Color, ColorRGBA Outline)
 		{
@@ -139,9 +158,15 @@ namespace KogTheme
 			m_PreviousColor(pTextRender->DefaultTextColor()),
 			m_PreviousOutline(pTextRender->DefaultTextOutlineColor())
 		{
+			m_PreviousInMenus = InMenus();
+			InMenus() = true;
 			Set(TextColor(), TextOutlineColor());
 		}
-		~CMenuTextScope() { Set(m_PreviousColor, m_PreviousOutline); }
+		~CMenuTextScope()
+		{
+			InMenus() = m_PreviousInMenus;
+			Set(m_PreviousColor, m_PreviousOutline);
+		}
 		CMenuTextScope(const CMenuTextScope &) = delete;
 		CMenuTextScope &operator=(const CMenuTextScope &) = delete;
 	};
