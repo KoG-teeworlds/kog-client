@@ -90,10 +90,10 @@ void CKogNotices::OnRender()
 		Content.HMargin(Space::M, &Content);
 		Content.HSplitTop(Font::Caption + Space::XS, &Title, &Body);
 		SLabelProperties TitleProps;
-		TitleProps.SetColor(Muted);
+		const KogTheme::CTextColor TitlePropsColor(TextRender(), Muted);
 		Ui()->DoLabel(&Title, pTitle, Font::Caption, TEXTALIGN_ML, TitleProps);
 		SLabelProperties BodyProps;
-		BodyProps.SetColor(Fg);
+		const KogTheme::CTextColor BodyPropsColor(TextRender(), Fg);
 		BodyProps.m_MaxWidth = Body.w;
 		BodyProps.m_EllipsisAtEnd = true;
 		Ui()->DoLabel(&Body, Toast.m_Text.c_str(), Font::Label, TEXTALIGN_ML, BodyProps);
