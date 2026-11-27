@@ -176,6 +176,7 @@ void CGameClient::OnConsoleInit()
 					      &m_Chat,
 					      &m_Broadcast,
 					      &m_ImportantAlert,
+					      &m_KogNotices, // KoG
 					      &m_DebugHud,
 					      &m_TouchControls,
 					      &m_Scoreboard,
