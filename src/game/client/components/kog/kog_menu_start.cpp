@@ -17,6 +17,8 @@
 
 using namespace KogStyle;
 
+static const SPalette &Pal() { return KogTheme::Palette(); }
+
 namespace
 {
 enum class EButtonKind
@@ -46,7 +48,7 @@ float Approach(float Value, float Target, float FrameTime)
 void DrawCard(const CUIRect &Rect, const ColorRGBA &Fill, float Radius)
 {
 	CUIRect Inner;
-	Rect.Draw(DARK.m_Line, IGraphics::CORNER_ALL, Radius);
+	Rect.Draw(Pal().m_Line, IGraphics::CORNER_ALL, Radius);
 	Rect.Margin(1.0f, &Inner);
 	Inner.Draw(Fill, IGraphics::CORNER_ALL, Radius - 1.0f);
 }
@@ -56,8 +58,8 @@ void CMenusStart::DrawKogScrim(const CUIRect &Screen)
 {
 	Graphics()->TextureClear();
 	Graphics()->QuadsBegin();
-	const ColorRGBA Top = DARK.m_Bg.WithAlpha(0.55f);
-	const ColorRGBA Bottom = DARK.m_Bg.WithAlpha(0.80f);
+	const ColorRGBA Top = Pal().m_Bg.WithAlpha(0.55f);
+	const ColorRGBA Bottom = Pal().m_Bg.WithAlpha(0.80f);
 	Graphics()->SetColor4(Top, Top, Bottom, Bottom);
 	const IGraphics::CQuadItem Quad(Screen.x, Screen.y, Screen.w, Screen.h);
 	Graphics()->QuadsDrawTL(&Quad, 1);
@@ -72,13 +74,13 @@ bool CMenusStart::DoKogButton(const void *pId, float *pHover, const CUIRect &Rec
 	*pHover = Approach(*pHover, Hot ? 1.0f : 0.0f, Client()->RenderFrameTime());
 	const float Overlay = Ui()->CheckActiveItem(pId) ? State::PressOverlay : *pHover * State::HoverOverlay;
 
-	ColorRGBA Fill = Primary ? DARK.m_Brand : (Quiet ? DARK.m_Panel : DARK.m_Panel2);
-	const ColorRGBA TextColor = Primary ? DARK.m_OnBrand : (Quiet ? DARK.m_Muted : DARK.m_Fg);
+	ColorRGBA Fill = Primary ? Pal().m_Brand : (Quiet ? Pal().m_Panel : Pal().m_Panel2);
+	const ColorRGBA TextColor = Primary ? Pal().m_OnBrand : (Quiet ? Pal().m_Muted : Pal().m_Fg);
 	const float Radius = Primary ? Radius::Card : Radius::Control;
 	// the overlay is a lighter layer on dark fills and a darker one on the brand fill
-	const ColorRGBA OverlayColor = Primary ? ColorRGBA(0.0f, 0.0f, 0.0f, Overlay) : ColorRGBA(1.0f, 1.0f, 1.0f, Overlay);
+	const ColorRGBA OverlayColor = Primary ? ColorRGBA(0.0f, 0.0f, 0.0f, Overlay) : KogTheme::Layer(Overlay);
 	Fill = Over(OverlayColor, Fill.WithAlpha(Fill.a));
-	Fill.a = Primary ? 1.0f : (Quiet ? DARK.m_Panel.a : DARK.m_Panel2.a);
+	Fill.a = Primary ? 1.0f : (Quiet ? Pal().m_Panel.a : Pal().m_Panel2.a);
 
 	if(Primary)
 		Rect.Draw(Fill, IGraphics::CORNER_ALL, Radius);
@@ -97,7 +99,7 @@ bool CMenusStart::DoKogButton(const void *pId, float *pHover, const CUIRect &Rec
 		TextRender()->SetFontPreset(EFontPreset::ICON_FONT);
 		TextRender()->SetRenderFlags(ETextRenderFlags::TEXT_RENDER_FLAG_ONLY_ADVANCE_WIDTH | ETextRenderFlags::TEXT_RENDER_FLAG_NO_X_BEARING | ETextRenderFlags::TEXT_RENDER_FLAG_NO_Y_BEARING | ETextRenderFlags::TEXT_RENDER_FLAG_NO_PIXEL_ALIGNMENT | ETextRenderFlags::TEXT_RENDER_FLAG_NO_OVERSIZE);
 		SLabelProperties IconProps;
-		IconProps.SetColor(Primary ? DARK.m_OnBrand : DARK.m_BrandSoft);
+		IconProps.SetColor(Primary ? Pal().m_OnBrand : Pal().m_BrandSoft);
 		Ui()->DoLabel(&Icon, pIcon, FontSize * 0.9f, TEXTALIGN_MC, IconProps);
 		TextRender()->SetRenderFlags(0);
 		TextRender()->SetFontPreset(EFontPreset::DEFAULT_FONT);
@@ -182,7 +184,7 @@ void CMenusStart::RenderKogStartMenu(CUIRect MainView, int &NewPage)
 		NewPage = CMenus::PAGE_DEMOS;
 
 	const bool Unsaved = GameClient()->Editor()->HasUnsavedData();
-	if(DoKogButton(&s_EditorButton, &s_aHover[2], Right, FontIcon::PEN_TO_SQUARE, Localize("Editor"), (int)EButtonKind::SECONDARY, Unsaved ? DARK.m_Warn : ColorRGBA(0.0f, 0.0f, 0.0f, 0.0f)) || (Enter && s_Focus == FOCUS_EDITOR) || CheckHotKey(KEY_E))
+	if(DoKogButton(&s_EditorButton, &s_aHover[2], Right, FontIcon::PEN_TO_SQUARE, Localize("Editor"), (int)EButtonKind::SECONDARY, Unsaved ? Pal().m_Warn : ColorRGBA(0.0f, 0.0f, 0.0f, 0.0f)) || (Enter && s_Focus == FOCUS_EDITOR) || CheckHotKey(KEY_E))
 	{
 		g_Config.m_ClEditor = 1;
 		Input()->MouseModeRelative();
@@ -196,7 +198,7 @@ void CMenusStart::RenderKogStartMenu(CUIRect MainView, int &NewPage)
 	aFocusRects[FOCUS_SETTINGS] = Right;
 
 	const bool ServerRunning = GameClient()->m_LocalServer.IsServerRunning();
-	if(DoKogButton(&s_ServerButton, &s_aHover[3], Left, FontIcon::TERMINAL, ServerRunning ? Localize("Stop server") : Localize("Run server"), (int)EButtonKind::SECONDARY, ServerRunning ? DARK.m_Ok : ColorRGBA(0.0f, 0.0f, 0.0f, 0.0f)) || (Enter && s_Focus == FOCUS_SERVER) || (CheckHotKey(KEY_R) && Input()->KeyPress(KEY_R)))
+	if(DoKogButton(&s_ServerButton, &s_aHover[3], Left, FontIcon::TERMINAL, ServerRunning ? Localize("Stop server") : Localize("Run server"), (int)EButtonKind::SECONDARY, ServerRunning ? Pal().m_Ok : ColorRGBA(0.0f, 0.0f, 0.0f, 0.0f)) || (Enter && s_Focus == FOCUS_SERVER) || (CheckHotKey(KEY_R) && Input()->KeyPress(KEY_R)))
 	{
 		if(ServerRunning)
 			GameClient()->m_LocalServer.KillServer();
@@ -224,7 +226,7 @@ void CMenusStart::RenderKogStartMenu(CUIRect MainView, int &NewPage)
 		// a 2 unit outline outside the button, in the brand colour (3:1 against the panel is tested in kog_style_test)
 		const CUIRect &Focused = aFocusRects[s_Focus];
 		const float W = Size::Focus;
-		const ColorRGBA Ring = DARK.m_Brand;
+		const ColorRGBA Ring = Pal().m_Brand;
 		CUIRect Outer = Focused;
 		Outer.Margin(-W, &Outer);
 		CUIRect Edge;
@@ -256,7 +258,7 @@ void CMenusStart::RenderKogStartMenu(CUIRect MainView, int &NewPage)
 		Row.VSplitLeft(Space::XS, nullptr, &Row);
 		const bool Hot = Ui()->HotItem() == &s_aLinkButtons[Link.m_Id];
 		SLabelProperties Props;
-		Props.SetColor(Hot ? DARK.m_Fg : DARK.m_Muted);
+		Props.SetColor(Hot ? Pal().m_Fg : Pal().m_Muted);
 		Ui()->DoLabel(&Item, Link.m_pText, Font::Body, TEXTALIGN_MC, Props);
 		if(Ui()->DoButtonLogic(&s_aLinkButtons[Link.m_Id], 0, &Item, BUTTONFLAG_LEFT))
 		{
@@ -284,15 +286,15 @@ void CMenusStart::RenderKogStartMenu(CUIRect MainView, int &NewPage)
 		Chip.HSplitTop(Size::Row, &Chip, nullptr);
 		Chip.VMargin(Space::L, &Chip);
 		Chip.VSplitLeft(std::min(Chip.w, TextRender()->TextWidth(Font::Body, aText) + 2.0f * Space::L + Space::S), &Chip, nullptr);
-		DrawCard(Chip, DARK.m_Panel, Radius::Control);
+		DrawCard(Chip, Pal().m_Panel, Radius::Control);
 		CUIRect Dot;
 		Chip.VMargin(Space::M, &Chip);
 		Chip.VSplitLeft(Space::S, &Dot, &Chip);
 		Dot.HMargin((Dot.h - Space::S) / 2.0f, &Dot);
-		Dot.Draw(LoggedIn ? DARK.m_Ok : DARK.m_Muted, IGraphics::CORNER_ALL, Space::XS);
+		Dot.Draw(LoggedIn ? Pal().m_Ok : Pal().m_Muted, IGraphics::CORNER_ALL, Space::XS);
 		Chip.VSplitLeft(Space::S, nullptr, &Chip);
 		SLabelProperties Props;
-		Props.SetColor(DARK.m_Fg);
+		Props.SetColor(Pal().m_Fg);
 		Props.m_MaxWidth = Chip.w;
 		Props.m_EllipsisAtEnd = true;
 		Ui()->DoLabel(&Chip, aText, Font::Body, TEXTALIGN_ML, Props);
