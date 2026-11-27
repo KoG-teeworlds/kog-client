@@ -214,6 +214,10 @@ public:
 	virtual void Init() = 0;
 	void Shutdown() override = 0;
 	virtual int Update() = 0;
+	// Blocks until an event is waiting for Update() or the timeout is over, whichever comes first.
+	virtual void WaitForEvent(std::chrono::nanoseconds Timeout) = 0;
+	// The window is minimised or hidden, as the events of the window system told.
+	virtual bool WindowHidden() const = 0;
 };
 
 extern IEngineInput *CreateEngineInput();
