@@ -48,6 +48,9 @@ public:
 	bool Busy() const { return m_Step != EStep::IDLE && m_Step != EStep::DONE && m_Step != EStep::FAILED; }
 	bool HasDeviceKey() const { return m_KeyState != EKeyState::NONE && m_KeyState != EKeyState::DAMAGED; }
 	// A locked key cannot sign until Unlock succeeded
+	bool KeyUsable() const { return m_KeyState == EKeyState::PLAIN || m_KeyState == EKeyState::UNLOCKED; }
+	// The seed (private key) of the device key, for the attestation. False: missing, locked or damaged. The caller wipes it.
+	bool LoadSeed(uint8_t (&aSeed)[KogLogin::SEED_SIZE]);
 	bool KeyLocked() const { return m_KeyState == EKeyState::LOCKED; }
 	bool KeyDamaged() const { return m_KeyState == EKeyState::DAMAGED; }
 	bool KeyHasPassphrase() const { return m_KeyState == EKeyState::LOCKED || m_KeyState == EKeyState::UNLOCKED; }
@@ -75,7 +78,7 @@ public:
 	void OnLoginResult(class CUnpacker *pUnpacker);
 
 	// The challenge of the server, already read. True if it was answered.
-	bool OnChallenge(const char *pServerAddress, const uint8_t *pNonce, size_t NonceSize, const uint8_t (&aSessionId)[KogLogin::UUID_SIZE]);
+	bool OnChallenge(const char *pServerAddress, const uint8_t *pNonce, size_t NonceSize, const uint8_t (&aSessionId)[KogLogin::UUID_SIZE], bool CertVerified, bool CertBad);
 	void NoteManualLogin() { m_ManualLogin = true; }
 	static bool ServerIsKog(class IServerBrowser *pBrowser, const NETADDR &Address);
 

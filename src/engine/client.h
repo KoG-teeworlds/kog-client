@@ -297,6 +297,7 @@ public:
 	virtual int SendMsg(int Conn, CMsgPacker *pMsg, int Flags) = 0;
 	// Answers a login challenge of the server of the main connection, see docs/LOGIN.md
 	virtual void KogSendLoginProof(const uint8_t (&aDeviceId)[16], const uint8_t (&aSignature)[64]) = 0;
+	virtual void KogSendAttestResponse(const uint8_t (&aKeyId)[16], const uint8_t (&aMeasurement)[32], const uint8_t (&aSignature)[64]) = 0;
 	virtual int SendMsgActive(CMsgPacker *pMsg, int Flags) = 0;
 
 	template<class T>
@@ -446,6 +447,7 @@ public:
 	// The login with the device key: the challenge and the result of the server (main connection only)
 	virtual void KogLoginChallenge(CUnpacker *pUnpacker) = 0;
 	virtual void KogLoginResult(CUnpacker *pUnpacker) = 0;
+	virtual void KogAttestChallenge(CUnpacker *pUnpacker) = 0;
 
 	virtual void OnDummyDisconnect() = 0;
 	virtual void DummyResetInput() = 0;

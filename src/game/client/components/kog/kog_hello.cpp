@@ -1,5 +1,6 @@
 #include "kog_hello.h"
 
+#include <base/mem.h>
 #include <base/str.h>
 
 #include <engine/client.h>
@@ -44,6 +45,7 @@ void CKogHello::OnStateChange(int NewState, int OldState)
 		m_Negotiated = 0;
 		m_Sent = false;
 		m_Answered = false;
+		mem_zero(m_aHelloHash, sizeof(m_aHelloHash));
 	}
 }
 
@@ -51,7 +53,10 @@ uint32_t CKogHello::Offer() const
 {
 	uint32_t Offer = 0;
 	if(g_Config.m_ClKogLogin && g_Config.m_ClKogAutoLogin && GameClient()->m_KogLogin.HasDeviceKey())
+	{
 		Offer |= KogHello::Bit(EKogCap::CLIENT_LOGIN);
+		Offer |= KogHello::Bit(EKogCap::CLIENT_ATTEST);
+	}
 	return Offer;
 }
 
@@ -74,6 +79,15 @@ bool CKogHello::MakeHello(CAbstractPacker *pPacker)
 	KogHello::PackClientHello(pPacker, Decision.m_Offer, KOG_CLIENT_VERSION, KOG_CLIENT_CHANNEL);
 	m_Offered = Decision.m_Offer;
 	m_Sent = true;
+	KogAttest::HelloHash(pPacker->Data(), pPacker->Size(), m_aHelloHash);
+	return true;
+}
+
+bool CKogHello::HelloHash(uint8_t (&aHash)[KogAttest::HASH_SIZE]) const
+{
+	if(!m_Sent)
+		return false;
+	mem_copy(aHash, m_aHelloHash, sizeof(aHash));
 	return true;
 }
 

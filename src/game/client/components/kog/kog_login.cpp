@@ -1,5 +1,6 @@
 #include "kog_login.h"
 
+#include <base/mem.h>
 #include <base/str.h>
 
 #include <engine/client.h>
@@ -126,6 +127,16 @@ bool CKogLogin::LoadKey(KogLogin::SDeviceKey *pKey)
 	char aBlob[KogKeyFile::MAX_BLOB];
 	const bool Ok = KogKeyStore::Load(Storage(), nullptr, aBlob, sizeof(aBlob)) == KogKeyFile::ELoad::OK && KogLogin::DecodeKey(aBlob, pKey);
 	KogLogin::Wipe(aBlob, sizeof(aBlob));
+	return Ok;
+}
+
+bool CKogLogin::LoadSeed(uint8_t (&aSeed)[KogLogin::SEED_SIZE])
+{
+	KogLogin::SDeviceKey Key;
+	const bool Ok = LoadKey(&Key);
+	if(Ok)
+		mem_copy(aSeed, Key.m_aSeed, sizeof(aSeed));
+	KogLogin::Wipe(&Key, sizeof(Key));
 	return Ok;
 }
 
@@ -664,7 +675,10 @@ void CKogLogin::OnLoginChallenge(CUnpacker *pUnpacker)
 	char aAddress[64];
 	if(!KogLogin::CanonicalAddress(Client()->ServerAddress(), aAddress, sizeof(aAddress)))
 		return;
-	if(OnChallenge(aAddress, Challenge.m_aNonce, sizeof(Challenge.m_aNonce), Challenge.m_aSessionId))
+	const CKogTrust::EVerdict Verdict = GameClient()->m_KogTrust.Check(aAddress, Challenge);
+	const bool CertVerified = Verdict == CKogTrust::EVerdict::OK;
+	const bool CertBad = Verdict == CKogTrust::EVerdict::INVALID || Verdict == CKogTrust::EVerdict::REVOKED;
+	if(OnChallenge(aAddress, Challenge.m_aNonce, sizeof(Challenge.m_aNonce), Challenge.m_aSessionId, CertVerified, CertBad))
 		m_JoinState = EJoinState::WAITING;
 }
 
@@ -698,7 +712,7 @@ bool CKogLogin::ServerIsKog(IServerBrowser *pBrowser, const NETADDR &Address)
 	return pEntry != nullptr && str_comp(pEntry->m_Info.m_aCommunityId, KogCommunity::ID) == 0;
 }
 
-bool CKogLogin::OnChallenge(const char *pServerAddress, const uint8_t *pNonce, size_t NonceSize, const uint8_t (&aSessionId)[KogLogin::UUID_SIZE])
+bool CKogLogin::OnChallenge(const char *pServerAddress, const uint8_t *pNonce, size_t NonceSize, const uint8_t (&aSessionId)[KogLogin::UUID_SIZE], bool CertVerified, bool CertBad)
 {
 	KogLogin::SJoinDecision Decision;
 	Decision.m_SwitchOn = g_Config.m_ClKogLogin != 0;
@@ -708,6 +722,9 @@ bool CKogLogin::OnChallenge(const char *pServerAddress, const uint8_t *pNonce, s
 	Decision.m_AlreadyLoggedIn = m_ManualLogin;
 	Decision.m_AlreadyAnsweredThisJoin = m_AnsweredThisJoin;
 	Decision.m_CapabilityNegotiated = GameClient()->m_KogHello.Has(EKogCap::CLIENT_LOGIN);
+	Decision.m_CertVerified = CertVerified;
+	Decision.m_CertBad = CertBad;
+	Decision.m_CertRequired = g_Config.m_ClKogRequireServerCert != 0 && g_Config.m_ClKogServerCert != 0;
 	if(!KogLogin::MayAnswerChallenge(Decision))
 		return false;
 
