@@ -10,6 +10,8 @@
 #include <engine/graphics.h>
 #include <engine/shared/config.h>
 
+#include <game/client/kog_draw.h>
+#include <game/client/kog_theme.h>
 #include <game/localization.h>
 
 void CUi::DoPopupMenu(const SPopupMenuId *pId, float X, float Y, float Width, float Height, void *pContext, FPopupMenuFunction pfnFunc, const SPopupMenuProperties &Props)
@@ -73,9 +75,18 @@ void CUi::RenderPopupMenus()
 		}
 
 		CUIRect PopupRect = PopupMenu.m_Rect;
-		PopupRect.Draw(PopupMenu.m_Props.m_BorderColor, PopupMenu.m_Props.m_Corners, 3.0f);
-		PopupRect.Margin(SPopupMenu::POPUP_BORDER, &PopupRect);
-		PopupRect.Draw(PopupMenu.m_Props.m_BackgroundColor, PopupMenu.m_Props.m_Corners, 3.0f);
+		if(KogTheme::On())
+		{
+			// one popup look: an opaque-enough glass panel with a shadow, whatever colours the caller asked for
+			KogDraw::Panel(PopupRect, {KogTheme::Palette().m_Panel2.WithAlpha(0.96f), &KogStyle::Elevation::FLOATING, KogStyle::Radius::Control, PopupMenu.m_Props.m_Corners, KogStyle::Elevation::GLASS_TOP_LIGHTEN});
+			PopupRect.Margin(SPopupMenu::POPUP_BORDER, &PopupRect);
+		}
+		else
+		{
+			PopupRect.Draw(PopupMenu.m_Props.m_BorderColor, PopupMenu.m_Props.m_Corners, 3.0f);
+			PopupRect.Margin(SPopupMenu::POPUP_BORDER, &PopupRect);
+			PopupRect.Draw(PopupMenu.m_Props.m_BackgroundColor, PopupMenu.m_Props.m_Corners, 3.0f);
+		}
 		PopupRect.Margin(SPopupMenu::POPUP_MARGIN, &PopupRect);
 
 		// The popup render function can open/close popups, which may resize the vector and thus

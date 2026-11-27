@@ -1112,7 +1112,7 @@ int CUi::DoButton_Menu(CUIElement &UIElement, const CButtonContainer *pId, const
 
 			for(int i = 0; i < 3; ++i)
 			{
-				ColorRGBA Color = Props.m_Color;
+				ColorRGBA Color = KogTheme::Control(Props.m_Color);
 				if(i == 0)
 					Color.a *= ButtonColorMulActive();
 				else if(i == 1)
@@ -1318,7 +1318,7 @@ SEditResult<int64_t> CUi::DoValueSelectorWithState(const void *pId, const CUIRec
 			else
 				str_format(aBuf, sizeof(aBuf), "%" PRId64, Current);
 		}
-		pRect->Draw(Props.m_Color, IGraphics::CORNER_ALL, 3.0f);
+		pRect->Draw(KogTheme::Control(Props.m_Color), IGraphics::CORNER_ALL, 3.0f);
 		DoLabel(pRect, aBuf, 10.0f, TEXTALIGN_MC);
 	}
 
