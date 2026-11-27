@@ -11,6 +11,7 @@
 
 #include <game/client/animstate.h>
 #include <game/client/gameclient.h>
+#include <game/client/kog_hud.h>
 #include <game/client/ui.h>
 
 CEmoticon::CEmoticon()
@@ -223,7 +224,7 @@ void CEmoticon::OnRender()
 
 	Graphics()->TextureClear();
 	Graphics()->QuadsBegin();
-	Graphics()->SetColor(0.0f, 0.0f, 0.0f, 0.3f * aAnimationPhase[0]);
+	Graphics()->SetColor(KogHud::Wheel(ColorRGBA(0.0f, 0.0f, 0.0f, 0.3f * aAnimationPhase[0])));
 	Graphics()->DrawCircle(ScreenCenter.x, ScreenCenter.y, s_OuterCircleRadius * aAnimationPhase[0], 64);
 	Graphics()->QuadsEnd();
 
@@ -250,7 +251,7 @@ void CEmoticon::OnRender()
 	{
 		Graphics()->TextureClear();
 		Graphics()->QuadsBegin();
-		Graphics()->SetColor(1.0f, 1.0f, 1.0f, 0.3f * aAnimationPhase[2]);
+		Graphics()->SetColor(KogHud::WheelLight(ColorRGBA(1.0f, 1.0f, 1.0f, 0.3f * aAnimationPhase[2])));
 		Graphics()->DrawCircle(ScreenCenter.x, ScreenCenter.y, s_InnerCircleRadius * aAnimationPhase[2], 64);
 		Graphics()->QuadsEnd();
 
@@ -270,7 +271,7 @@ void CEmoticon::OnRender()
 
 		Graphics()->TextureClear();
 		Graphics()->QuadsBegin();
-		Graphics()->SetColor(0.0f, 0.0f, 0.0f, 0.3f * aAnimationPhase[4]);
+		Graphics()->SetColor(KogHud::Wheel(ColorRGBA(0.0f, 0.0f, 0.0f, 0.3f * aAnimationPhase[4])));
 		Graphics()->DrawCircle(ScreenCenter.x, ScreenCenter.y, 30.0f * aAnimationPhase[4], 64);
 		Graphics()->QuadsEnd();
 	}
