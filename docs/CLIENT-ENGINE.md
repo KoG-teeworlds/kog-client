@@ -96,8 +96,12 @@ server to test; it is the next step with the largest gain on laptops (a full cor
   bitwise operators in `kog_update.cpp`), which is why tidy gates only new files.
 * `.github/workflows/kog-engine-checks.yml` runs that on pull requests that touch the engine. Verified locally with Apple
   clang and clang-tidy 23; the Linux job is only verified by running it.
-* Not done: TSan run of the render thread hand-off, RAII for the graphics handles (texture, buffer and quad container
-  indices are plain ints owned by the callers), `std::span` for the bounds of the command buffer.
+* Handles of the graphics code (textures, buffer objects, buffer containers, quad containers) are plain indices from free lists in
+  vectors. At shutdown `CGraphics_Threaded::LogHandlesInUse` logs how many are still in use (`loglevel debug`, system `gfx`)
+  and reports a free list that loops or leaves its vector, which is what freeing an index twice leaves behind
+  (`engine/shared/kog_free_list.h`, with tests). The indices are not wrapped in an owning type: the handle types are used in
+  hundreds of places of upstream, so a wrapper is a merge conflict for every one of them.
+* Not done: TSan run of the render thread hand-off, `std::span` for the bounds of the command buffer (upstream code).
 
 ## The game loop while online: design, and why it is not changed
 

@@ -890,6 +890,7 @@ class CGraphics_Threaded : public IEngineGraphics
 	}
 
 	void KickCommandBuffer();
+	void LogHandlesInUse() const;
 
 	void AddBackEndWarningIfExists();
 
