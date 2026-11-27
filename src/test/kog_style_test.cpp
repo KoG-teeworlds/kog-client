@@ -182,3 +182,23 @@ TEST(KogStyle, ElevationLevelsGrow)
 	EXPECT_LT(Elevation::RAISED.m_Blur, Elevation::FLOATING.m_Blur);
 	EXPECT_EQ(Elevation::FLAT.m_ShadowAlpha, 0.0f);
 }
+
+TEST(KogStyle, UpstreamColoursKeepTheirMeaning)
+{
+	EXPECT_EQ(Classify(ColorRGBA(1.0f, 1.0f, 1.0f, 0.5f)), ESemantic::NEUTRAL);
+	EXPECT_EQ(Classify(ColorRGBA(0.6f, 0.6f, 0.6f, 0.5f)), ESemantic::NEUTRAL);
+	EXPECT_EQ(Classify(ColorRGBA(0.0f, 0.0f, 0.0f, 0.4f)), ESemantic::NEUTRAL);
+	EXPECT_EQ(Classify(ColorRGBA(0.5f, 1.0f, 0.5f, 0.5f)), ESemantic::GOOD); // connect button
+	EXPECT_EQ(Classify(ColorRGBA(0.2f, 0.9f, 0.2f, 0.85f)), ESemantic::GOOD);
+	EXPECT_EQ(Classify(ColorRGBA(0.9f, 0.2f, 0.2f, 0.85f)), ESemantic::BAD);
+	EXPECT_EQ(Classify(ColorRGBA(1.0f, 0.98f, 0.5f, 0.55f)), ESemantic::WARN); // sorted header
+	EXPECT_EQ(Classify(ColorRGBA(0.4f, 0.4f, 1.0f, 1.0f)), ESemantic::OTHER);
+}
+
+TEST(KogStyle, ClassifyNeverFailsOnOddValues)
+{
+	const float Nan = std::nanf("");
+	for(const float V : {0.0f, 1.0f, -1.0f, 7.0f, Nan})
+		for(const float W : {0.0f, 0.5f, 1.0f, Nan})
+			(void)Classify(ColorRGBA(V, W, V, 1.0f));
+}
