@@ -28,15 +28,47 @@ Client                           Browser                     kog.tw
   | POST token (code + code_verifier) ------------------------>|
   |<--------------------------------------------- access token |
   | GET userinfo (account name, for the settings) ------------>|
-  | make Ed25519 key pair; private key into the keychain       |
+  | make Ed25519 key pair; private key into the key file       |
   | POST /api/client/device {device_name, public_key} -------->|
   |<--------------------------------------- 201 {id, name}    |
   | discard the access token                                   |
 ```
 
-Log out on this device wipes the private key at once. The account server only accepts the removal of the device with a
+Log out on this device deletes the key file at once. The account server only accepts the removal of the device with a
 token, so the client runs the browser step again and sends `DELETE /api/client/device/{id}`. If that is cancelled or fails,
 the key is gone anyway and the device stays listed on kog.tw until you remove it there.
+
+## Where the key is kept
+
+One file, `kog_device.key`, in the save folder of this client. There is no use of the macOS Keychain, the Windows Credential
+Manager or libsecret: the default is a plain file that only you can read, and the few people who want more can lock it with a
+passphrase. The file holds only the device id and the 32 byte private key, nothing else.
+
+| | Default | With a passphrase |
+| --- | --- | --- |
+| File | `v1`, the device id and the key as text | `KOGK` header, then the key encrypted |
+| Protects against | Other users of the computer (mode 0600, your profile) | The same, and a stolen copy of the file |
+| Does not protect against | Malware that runs as you | The same, once you unlocked the key in this session (it can read the client's memory) |
+| Needed at start | Nothing | The passphrase, typed in the settings |
+
+The passphrase is off by default and is not a setting: it is typed only in the settings box (Settings, DDNet, KoG account:
+Lock the key, Unlock, Change passphrase, Remove passphrase), in a hidden field. It is never in a config file, a console command
+or its history, or a log; `kog_key_passphrase` without an argument only says whether the key is locked. 8 to 128 characters.
+
+A locked file is Argon2id (64 MiB, 3 passes, one lane, 16 byte random salt) into a 32 byte key for XChaCha20-Poly1305 with a
+random 24 byte nonce, all from the Monocypher in the tree. The header (version, cost, salt, nonce) is authenticated. A file may
+ask for at most 256 MiB and 8 passes, so a changed file cannot stall the start. Unlocking takes about a quarter of a second.
+
+* Locked and not unlocked: you are not logged in, the settings say so, and no proof is answered. The client does not crash and
+  does not make a new key.
+* Wrong passphrase, or a file that was changed (the two cannot be told apart): the same message, and the file is not touched.
+  A locked or unreadable file is never replaced by a login or by setting a passphrase. To start over, log out on this device
+  (this deletes the file) and remove the device on kog.tw, because the id inside the locked key cannot be read.
+* There is no way to recover a lost passphrase. Log out, remove the device on kog.tw and log in again.
+
+Keys that an earlier canary or dev build put into the macOS Keychain or the Windows Credential Manager are moved into the file
+at the first start (the old item is removed once the file reads back), and not again. This read-only step is meant to be deleted one
+release after the first one that has it; after that, such a device has to be registered again and the old one removed on kog.tw.
 
 ## Which hosts the login talks to
 
@@ -88,10 +120,11 @@ The wire format of the challenge and the proof is designed in a separate change.
 | --- | --- |
 | Someone captures game traffic | Sees at most a signature that is valid for one server and one nonce. No password, key or token travels in chat |
 | Another local process on the loopback port | The port is random, chosen per login, and open for at most 3 minutes, on loopback only (and exclusive on Windows). Up to 4 connections are served at once and each has 5 seconds to send its request line, so a browser preconnect or a connection that only sits there cannot use up the single chance. It accepts the first request that has the exact path `/callback` and the right `state`; every other request is answered with an error and ignored. Even a process that wins the race only learns an authorization code that is useless without the PKCE verifier, which never leaves the client's memory. A process that sends a forged callback cannot match the 192-bit random state |
-| Another local process reads the key | The private key is in the macOS Keychain or Windows Credential Manager. On other systems it is a file with mode 0600 in the save directory, written as a new `kog_device.key.tmp` (`O_EXCL`, `O_NOFOLLOW`), synced and renamed over the old file, so a link planted at either name is never followed (libsecret is not used: it is a heavy dependency). The macOS item is `WhenUnlockedThisDeviceOnly`: it is not in backups and not synced. The Windows credential is `CRED_PERSIST_LOCAL_MACHINE`: it survives log-off and stays on this PC (`ENTERPRISE` would roam with a domain profile, `SESSION` would end the login at every log-off); it is readable by this Windows user only A process running as the same user can still ask the keychain or read the file; this is the same protection as an SSH key. It is never in the config, logs, screenshots or crash reports. Memory buffers are wiped after use |
+| Another local process reads the key | The private key is the file `kog_device.key` in the client's own save folder (the KoG Client folder, not the one of DDNet), on every system. It is written as a new `kog_device.key.tmp` (`O_EXCL`, `O_NOFOLLOW` where there is such a flag), synced and renamed over the old file, so a link planted at either name is never followed. On macOS and Linux its mode is 0600. On Windows no list is set: the file takes over that of the folder in your user profile, which normally allows you, the system and administrators only. **A process that runs as you can read the default file; this is the same protection as an SSH key without a passphrase.** With a passphrase it only gets the encrypted file, until you unlock the key in the session, and then the key is in the client's memory It is never in the config, logs, screenshots or crash reports. Memory buffers are wiped after use |
+| Someone gets a copy of the key file (backup, shared disk, lost laptop) | With a passphrase (see below) the copy is useless without it, and every guess costs 64 MiB and a fraction of a second. Without one the thief can sign as this device until you remove it on kog.tw |
 | The access token leaks | It is used for the user info, the device registration and the removal, held only in memory and wiped, together with the code, the verifier and the copies in the request. It is never written to disk. Requests are not logged (`HTTPLOG::NONE`), and the browser link is logged by host only, never with its query |
 | A malicious server asks for a proof | The client answers only servers listed for the `kog` community, once per join, and only with a signature bound to that server's address |
-| A stolen device | Remove the device on kog.tw. The server then refuses its signature |
+| A stolen device or key file | Remove the device on kog.tw. The server then refuses its signature. The key never held an OAuth token: the access token of the login is dropped after the device is registered and is never written down, so a stolen key cannot open the account, only prove this one device |
 | Fake account server | TLS is verified; the discovery document is only accepted from the configured https base URL and its endpoints must be https and on an allowed origin (see above). There is no certificate pinning |
 | Removal answered 404 | Only 200 and 204 mean removed. A 404 means the browser was signed in to a different account than the one that owns the device; the client says so and points to kog.tw instead of claiming success |
 
@@ -105,4 +138,5 @@ and the public key are sent to register the device. The default name has no host
 
 `src/test/kog_login_test.cpp`: the RFC 7636 PKCE vector, the RFC 8032 Ed25519 vectors, parsing of the callback (wrong path,
 wrong state, duplicate parameters, other methods), the listener (first matching request only, idle connections, refusal and timeout, close, a code of the maximum length), the allowed endpoint origins, the challenge bytes and signature (layout, the old ambiguity, a vector made outside this code base, binding to server, nonce, device and session), the neutral device name, the wiping of request bodies, a 307 that the token POST must not follow (against a loopback server and real libcurl), and the decision not to answer non-KoG servers or servers that did not agree to `client_login`.
-The HTTP steps of the flow, the keychain, the key file and the settings box need a running account server or a desktop session and have no automated test.
+`src/test/kog_keyfile_test.cpp`: the plain and the locked file round trip, mode 0600, a link at the temporary name, wrong and too long passphrases, a changed or truncated file (every byte region), limits on the cost in the header, that a locked or damaged file is never replaced, and the migration (moves once, leaves an existing file alone, refuses garbage).
+The HTTP steps of the flow, the macOS and Windows migration source, the file access list on Windows and the settings box need a running account server or a desktop session and have no automated test.
