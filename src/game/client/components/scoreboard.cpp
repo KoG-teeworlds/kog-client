@@ -588,6 +588,27 @@ void CScoreboard::RenderScoreboard(CUIRect Scoreboard, int Team, int CountStart,
 	m_HeadlineClan.Render(TextRender(), vec2(ClanOffset + (ClanLength - m_HeadlineClan.Width()) / 2.0f, HeadlineY), HeadlineColor);
 	m_HeadlinePing.Render(TextRender(), vec2(PingOffset + PingLength - m_HeadlinePing.Width(), HeadlineY), HeadlineColor);
 
+	// the zebra rows of the KoG look, behind everything else of the rows and in one draw call
+	if(KogHud::On())
+	{
+		const int Rows = std::clamp(CountEnd - CountStart, 0, (int)MAX_CLIENTS);
+		IGraphics::CQuadItem aZebra[MAX_CLIENTS / 2 + 1];
+		int NumZebra = 0;
+		for(int Row = 0; Row < Rows; ++Row)
+		{
+			if(((CountStart + Row) & 1) != 0)
+				aZebra[NumZebra++] = IGraphics::CQuadItem(Scoreboard.x, Scoreboard.y + Row * (LineHeight + Spacing), Scoreboard.w, LineHeight);
+		}
+		if(NumZebra > 0)
+		{
+			Graphics()->TextureClear();
+			Graphics()->QuadsBegin();
+			Graphics()->SetColor(KogHud::Zebra());
+			Graphics()->QuadsDrawTL(aZebra, NumZebra);
+			Graphics()->QuadsEnd();
+		}
+	}
+
 	// render player entries
 	int CountRendered = 0;
 	int PrevDDTeam = -1;
@@ -699,10 +720,6 @@ void CScoreboard::RenderScoreboard(CUIRect Scoreboard, int Team, int CountStart,
 				(GameClient()->m_Snap.m_SpecInfo.m_Active && pInfo->m_ClientId == GameClient()->m_Snap.m_SpecInfo.m_SpectatorId))
 			{
 				Row.Draw(KogHud::Self(ColorRGBA(1.0f, 1.0f, 1.0f, 0.25f)), IGraphics::CORNER_ALL, RoundRadius);
-			}
-			else if(KogHud::On() && (CountRendered & 1) == 0)
-			{
-				Row.Draw(KogHud::Zebra(), IGraphics::CORNER_NONE, 0.0f);
 			}
 
 			const CGameClient::CClientData &ClientData = GameClient()->m_aClients[pInfo->m_ClientId];

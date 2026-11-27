@@ -193,9 +193,9 @@ inline SScoreboardPlan PlanScoreboard(float Width, float Height, int NumPlayers)
 	Plan.m_ChatHidden = !Wide;
 
 	const float FixedHeight = TITLE_BAR + 2.0f * TEXT_HEADER + 10.0f + ROW; // title, headline, padding, the row for the count of hidden players
-	const int MaxRows = std::max(1, (int)((Height - 2.0f * SCREEN_MARGIN - FixedHeight) / ROW));
+	const int MaxRows = std::max(1, (int)std::min(std::max(Height - 2.0f * SCREEN_MARGIN - FixedHeight, 0.0f) / ROW, 100000.0f));
 	const float Available = Width - Plan.m_ChatReserve - 2.0f * Space::L;
-	const int MaxColumns = std::max(1, (int)(Available / MIN_COLUMN_WIDTH));
+	const int MaxColumns = std::max(1, (int)std::min(std::max(Available, 0.0f) / MIN_COLUMN_WIDTH, 100000.0f));
 
 	Plan.m_Columns = std::clamp((NumPlayers + MaxRows - 1) / MaxRows, 1, MaxColumns);
 	Plan.m_Shown = std::min(NumPlayers, Plan.m_Columns * MaxRows);
@@ -228,7 +228,10 @@ inline int PlanKillFeedRows(bool ScoreboardOpen, float TopOfScoreboard, int MaxR
 	if(!ScoreboardOpen)
 		return MaxRows;
 	const float Room = TopOfScoreboard - SCREEN_MARGIN - SCREEN_MARGIN;
-	return std::clamp((int)(Room / ROW_KILL_FEED), 0, MaxRows);
+	// not a number, or no room: no rows; and never a conversion of a value that does not fit an int
+	if(!(Room > 0.0f))
+		return 0;
+	return (int)std::min(Room / ROW_KILL_FEED, (float)MaxRows);
 }
 }
 

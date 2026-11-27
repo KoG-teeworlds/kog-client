@@ -167,6 +167,11 @@ TEST(KogHud, TheKillFeedKeepsAboveTheScoreboard)
 		EXPECT_LE(Hud::SCREEN_MARGIN + Rows * Hud::ROW_KILL_FEED, std::max(Top, Hud::SCREEN_MARGIN + 0.0f) + 0.01f);
 	}
 	EXPECT_EQ(Hud::PlanKillFeedRows(true, 100.0f, -5), 0);
+	// values that are not rows of anything
+	EXPECT_EQ(Hud::PlanKillFeedRows(true, std::nanf(""), 10), 0);
+	EXPECT_EQ(Hud::PlanKillFeedRows(true, -INFINITY, 10), 0);
+	EXPECT_EQ(Hud::PlanKillFeedRows(true, INFINITY, 10), 10);
+	EXPECT_EQ(Hud::PlanKillFeedRows(true, 3.4e38f, 10), 10);
 }
 
 TEST(KogHud, ThePlanIsMonotonicAndDeterministic)
