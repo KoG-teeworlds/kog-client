@@ -225,9 +225,21 @@ void CMenus::RenderSettingsGraphics(CUIRect MainView)
 	Ui()->DoScrollbarOption(&g_Config.m_GfxRefreshRate, &g_Config.m_GfxRefreshRate, &Button, Localize("Refresh Rate"), 10, 1000, &CUi::ms_LinearScrollbarScale, CUi::SCROLLBAR_OPTION_INFINITE | CUi::SCROLLBAR_OPTION_NOCLAMPVALUE | CUi::SCROLLBAR_OPTION_DELAYUPDATE, aBuf);
 
 	MainView.HSplitTop(20.0f, &Button, &MainView);
-	if(DoButton_CheckBox(&g_Config.m_ClKogTheme, Localize("KoG dark theme"), g_Config.m_ClKogTheme, &Button))
-		g_Config.m_ClKogTheme ^= 1;
-	GameClient()->m_Tooltips.DoToolTip(&g_Config.m_ClKogTheme, &Button, Localize("Dark panels with the KoG accent colour. Off: the classic look, with the UI colour below"));
+	{
+		CUIRect Label;
+		Button.VSplitLeft(Button.w / 3.0f, &Label, &Button);
+		Ui()->DoLabel(&Label, Localize("Theme"), 14.0f, TEXTALIGN_ML);
+		static CButtonContainer s_aThemeButtons[3];
+		const char *apNames[3] = {Localize("Classic"), Localize("KoG dark"), Localize("KoG light")};
+		for(int Theme = 0; Theme < 3; Theme++)
+		{
+			CUIRect Option;
+			Button.VSplitLeft(Button.w / (3 - Theme), &Option, &Button);
+			if(DoButton_Menu(&s_aThemeButtons[Theme], apNames[Theme], g_Config.m_ClKogTheme == Theme, &Option))
+				g_Config.m_ClKogTheme = Theme;
+		}
+	}
+	GameClient()->m_Tooltips.DoToolTip(&g_Config.m_ClKogTheme, &Button, Localize("Classic is the look of upstream and uses the UI colour below; the KoG themes use their own colours"));
 
 	MainView.HSplitTop(2.0f, nullptr, &MainView);
 	static CButtonContainer s_UiColorResetId;

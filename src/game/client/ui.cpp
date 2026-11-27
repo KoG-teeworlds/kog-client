@@ -1031,7 +1031,7 @@ bool CUi::DoClearableEditBox(CLineInput *pLineInput, const CUIRect *pRect, float
 
 	bool ReturnValue = DoEditBox(pLineInput, &EditBox, FontSize, Corners & ~IGraphics::CORNER_R, vColorSplits);
 
-	ClearButton.Draw(ColorRGBA(1.0f, 1.0f, 1.0f, 0.33f * ButtonColorMul(pLineInput->GetClearButtonId())), Corners & ~IGraphics::CORNER_L, 3.0f);
+	ClearButton.Draw(KogTheme::Neutral(0.33f * ButtonColorMul(pLineInput->GetClearButtonId())), Corners & ~IGraphics::CORNER_L, 3.0f);
 	TextRender()->SetRenderFlags(ETextRenderFlags::TEXT_RENDER_FLAG_ONLY_ADVANCE_WIDTH | ETextRenderFlags::TEXT_RENDER_FLAG_NO_X_BEARING | ETextRenderFlags::TEXT_RENDER_FLAG_NO_Y_BEARING | ETextRenderFlags::TEXT_RENDER_FLAG_NO_OVERSIZE);
 	DoLabel(&ClearButton, "×", ClearButton.h * CUi::ms_FontmodHeight * 0.8f, TEXTALIGN_MC);
 	TextRender()->SetRenderFlags(0);
@@ -1406,7 +1406,7 @@ float CUi::DoScrollbarV(const void *pId, const CUIRect *pRect, float Current)
 	}
 
 	// render
-	Rail.Draw(ColorRGBA(1.0f, 1.0f, 1.0f, 0.25f), IGraphics::CORNER_ALL, Rail.w / 2.0f);
+	Rail.Draw(KogTheme::Neutral(0.25f), IGraphics::CORNER_ALL, Rail.w / 2.0f);
 	Handle.Draw(KogTheme::Handle(ms_ScrollBarColorFunction.GetColor(CheckActiveItem(pId), HotItem() == pId)), IGraphics::CORNER_ALL, Handle.w / 2.0f);
 
 	return ReturnValue;
@@ -1508,7 +1508,7 @@ float CUi::DoScrollbarH(const void *pId, const CUIRect *pRect, float Current, co
 	}
 	else
 	{
-		Rail.Draw(ColorRGBA(1.0f, 1.0f, 1.0f, 0.25f), IGraphics::CORNER_ALL, Rail.h / 2.0f);
+		Rail.Draw(KogTheme::Neutral(0.25f), IGraphics::CORNER_ALL, Rail.h / 2.0f);
 		Handle.Draw(HandleColor, IGraphics::CORNER_ALL, Rail.h / 2.0f);
 	}
 
@@ -1593,7 +1593,7 @@ bool CUi::DoScrollbarOption(const void *pId, int *pOption, const CUIRect *pRect,
 void CUi::RenderProgressBar(CUIRect ProgressBar, float Progress)
 {
 	const float Rounding = std::min(5.0f, ProgressBar.h / 2.0f);
-	ProgressBar.Draw(ColorRGBA(1.0f, 1.0f, 1.0f, 0.25f), IGraphics::CORNER_ALL, Rounding);
+	ProgressBar.Draw(KogTheme::Neutral(0.25f), IGraphics::CORNER_ALL, Rounding);
 	ProgressBar.w = std::max(ProgressBar.w * Progress, 2 * Rounding);
 	ProgressBar.Draw(KogTheme::Fill(0.5f, 0.9f), IGraphics::CORNER_ALL, Rounding);
 }

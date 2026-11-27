@@ -968,6 +968,7 @@ void CMenus::Render()
 {
 	Ui()->MapScreen();
 	Ui()->SetMouseSlow(false);
+	const KogTheme::CMenuTextScope TextScope(TextRender());
 
 	if(m_AppliedKogTheme != g_Config.m_ClKogTheme)
 		UpdateColors();
@@ -2471,12 +2472,12 @@ void CMenus::UpdateColors()
 	{
 		const KogStyle::SPalette &Palette = KogTheme::Palette();
 		ms_GuiColor = Palette.m_Backdrop;
-		ms_ColorTabbarInactiveOutgame = ColorRGBA(1.0f, 1.0f, 1.0f, 0.05f);
+		ms_ColorTabbarInactiveOutgame = KogTheme::Layer(0.05f);
 		ms_ColorTabbarActiveOutgame = Palette.m_Panel;
-		ms_ColorTabbarHoverOutgame = ColorRGBA(1.0f, 1.0f, 1.0f, 0.12f);
-		ms_ColorTabbarInactiveIngame = ColorRGBA(1.0f, 1.0f, 1.0f, 0.05f);
+		ms_ColorTabbarHoverOutgame = KogTheme::Layer(0.12f);
+		ms_ColorTabbarInactiveIngame = KogTheme::Layer(0.05f);
 		ms_ColorTabbarActiveIngame = Palette.m_Panel;
-		ms_ColorTabbarHoverIngame = ColorRGBA(1.0f, 1.0f, 1.0f, 0.16f);
+		ms_ColorTabbarHoverIngame = KogTheme::Layer(0.16f);
 	}
 	m_AppliedKogTheme = g_Config.m_ClKogTheme;
 }
