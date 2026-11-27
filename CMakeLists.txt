@@ -2139,6 +2139,7 @@ set(EXPECTED_DATA
   tclient/fonts/Rubik-Regular.ttf
   tclient/fonts/minecraft_font.ttf
   tclient/gui_logo.png
+  tclient/gui_logo_light.png
   tclient/languages/arabic.txt
   tclient/languages/azerbaijani.txt
   tclient/languages/belarusian.txt

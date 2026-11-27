@@ -131,7 +131,7 @@ void CMenusStart::RenderKogStartMenu(CUIRect MainView, int &NewPage)
 	const float Scale = std::min(1.0f, MainView.h / 560.0f);
 	const float LogoHeight = 96.0f * Scale;
 	const float LogoWidth = LogoHeight * 603.3f / 351.9f;
-	Graphics()->TextureSet(g_pData->m_aImages[IMAGE_BANNER].m_Id);
+	Graphics()->TextureSet(g_pData->m_aImages[KogTheme::IsLight() ? IMAGE_BANNER_LIGHT : IMAGE_BANNER].m_Id);
 	Graphics()->QuadsBegin();
 	Graphics()->SetColor(1, 1, 1, 1);
 	const IGraphics::CQuadItem Logo(MainView.x + MainView.w / 2.0f - LogoWidth / 2.0f, MainView.y + Space::XXL * Scale, LogoWidth, LogoHeight);
