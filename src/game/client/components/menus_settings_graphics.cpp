@@ -224,6 +224,11 @@ void CMenus::RenderSettingsGraphics(CUIRect MainView)
 	str_append(aBuf, Localize("Hz", "Hertz"));
 	Ui()->DoScrollbarOption(&g_Config.m_GfxRefreshRate, &g_Config.m_GfxRefreshRate, &Button, Localize("Refresh Rate"), 10, 1000, &CUi::ms_LinearScrollbarScale, CUi::SCROLLBAR_OPTION_INFINITE | CUi::SCROLLBAR_OPTION_NOCLAMPVALUE | CUi::SCROLLBAR_OPTION_DELAYUPDATE, aBuf);
 
+	MainView.HSplitTop(20.0f, &Button, &MainView);
+	if(DoButton_CheckBox(&g_Config.m_ClKogTheme, Localize("KoG dark theme"), g_Config.m_ClKogTheme, &Button))
+		g_Config.m_ClKogTheme ^= 1;
+	GameClient()->m_Tooltips.DoToolTip(&g_Config.m_ClKogTheme, &Button, Localize("Dark panels with the KoG accent colour. Off: the classic look, with the UI colour below"));
+
 	MainView.HSplitTop(2.0f, nullptr, &MainView);
 	static CButtonContainer s_UiColorResetId;
 	DoLine_ColorPicker(&s_UiColorResetId, 25.0f, 13.0f, 2.0f, &MainView, Localize("UI Color"), &g_Config.m_UiColor, color_cast<ColorRGBA>(ColorHSLA(0xE4A046AFU, true)), false, nullptr, true);

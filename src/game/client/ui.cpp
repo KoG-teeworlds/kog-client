@@ -16,6 +16,7 @@
 #include <engine/keys.h>
 #include <engine/shared/config.h>
 
+#include <game/client/kog_theme.h>
 #include <game/localization.h>
 
 #include <limits>
@@ -999,7 +1000,7 @@ bool CUi::DoEditBox(CLineInput *pLineInput, const CUIRect *pRect, float FontSize
 	}
 
 	// Render
-	pRect->Draw(ms_LightButtonColorFunction.GetColor(Active, HotItem() == pLineInput), Corners, 3.0f);
+	pRect->Draw(KogTheme::Control(ms_LightButtonColorFunction.GetColor(Active, HotItem() == pLineInput)), Corners, 3.0f);
 	ClipEnable(pRect);
 	Textbox.x -= ScrollOffset;
 	const STextBoundingBox BoundingBox = pLineInput->Render(&Textbox, FontSize, TEXTALIGN_ML, Changed || CursorChanged, -1.0f, 0.0f, vColorSplits);
@@ -1193,14 +1194,14 @@ void CUi::DrawButton_FontIcon(const char *pText, const CUIRect *pRect, ColorRGBA
 
 int CUi::DoButton_FontIcon(CButtonContainer *pButtonContainer, const char *pText, int Checked, const CUIRect *pRect, const unsigned Flags, int Corners, bool Enabled, const std::optional<ColorRGBA> ButtonColor)
 {
-	DrawButton_FontIcon(pText, pRect, ButtonColor.value_or(ColorRGBA(1.0f, 1.0f, 1.0f, (Checked ? 0.1f : 0.5f) * ButtonColorMul(pButtonContainer))), Corners, Enabled);
+	DrawButton_FontIcon(pText, pRect, ButtonColor.value_or(KogTheme::Control(ColorRGBA(1.0f, 1.0f, 1.0f, (Checked ? 0.1f : 0.5f) * ButtonColorMul(pButtonContainer)))), Corners, Enabled);
 	return DoButtonLogic(pButtonContainer, Checked, pRect, Flags);
 }
 
 int CUi::DoButton_PopupMenu(CButtonContainer *pButtonContainer, const char *pText, const CUIRect *pRect, float Size, int Align, float Padding, bool TransparentInactive, bool Enabled, const std::optional<ColorRGBA> ButtonColor)
 {
 	if(!TransparentInactive || CheckActiveItem(pButtonContainer) || HotItem() == pButtonContainer)
-		pRect->Draw(ButtonColor.value_or(Enabled ? ColorRGBA(1.0f, 1.0f, 1.0f, 0.5f * ButtonColorMul(pButtonContainer)) : ColorRGBA(0.0f, 0.0f, 0.0f, 0.4f)), IGraphics::CORNER_ALL, 3.0f);
+		pRect->Draw(ButtonColor.value_or(Enabled ? KogTheme::Control(ColorRGBA(1.0f, 1.0f, 1.0f, 0.5f * ButtonColorMul(pButtonContainer))) : ColorRGBA(0.0f, 0.0f, 0.0f, 0.4f)), IGraphics::CORNER_ALL, 3.0f);
 
 	CUIRect Label;
 	pRect->Margin(Padding, &Label);
@@ -1406,7 +1407,7 @@ float CUi::DoScrollbarV(const void *pId, const CUIRect *pRect, float Current)
 
 	// render
 	Rail.Draw(ColorRGBA(1.0f, 1.0f, 1.0f, 0.25f), IGraphics::CORNER_ALL, Rail.w / 2.0f);
-	Handle.Draw(ms_ScrollBarColorFunction.GetColor(CheckActiveItem(pId), HotItem() == pId), IGraphics::CORNER_ALL, Handle.w / 2.0f);
+	Handle.Draw(KogTheme::Handle(ms_ScrollBarColorFunction.GetColor(CheckActiveItem(pId), HotItem() == pId)), IGraphics::CORNER_ALL, Handle.w / 2.0f);
 
 	return ReturnValue;
 }
@@ -1495,7 +1496,7 @@ float CUi::DoScrollbarH(const void *pId, const CUIRect *pRect, float Current, co
 	}
 
 	// render
-	const ColorRGBA HandleColor = ms_ScrollBarColorFunction.GetColor(CheckActiveItem(pId), HotItem() == pId);
+	const ColorRGBA HandleColor = KogTheme::Handle(ms_ScrollBarColorFunction.GetColor(CheckActiveItem(pId), HotItem() == pId));
 	if(pColorInner)
 	{
 		CUIRect Slider;
@@ -1594,7 +1595,7 @@ void CUi::RenderProgressBar(CUIRect ProgressBar, float Progress)
 	const float Rounding = std::min(5.0f, ProgressBar.h / 2.0f);
 	ProgressBar.Draw(ColorRGBA(1.0f, 1.0f, 1.0f, 0.25f), IGraphics::CORNER_ALL, Rounding);
 	ProgressBar.w = std::max(ProgressBar.w * Progress, 2 * Rounding);
-	ProgressBar.Draw(ColorRGBA(1.0f, 1.0f, 1.0f, 0.5f), IGraphics::CORNER_ALL, Rounding);
+	ProgressBar.Draw(KogTheme::Fill(0.5f, 0.9f), IGraphics::CORNER_ALL, Rounding);
 }
 
 void CCachedText::Update(ITextRender *pTextRender, const char *pText, float FontSize, float LineWidth, int CursorFlags)

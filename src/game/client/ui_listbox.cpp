@@ -7,6 +7,7 @@
 #include <engine/config.h>
 #include <engine/shared/config.h>
 
+#include <game/client/kog_theme.h>
 #include <game/localization.h>
 
 CListBox::CListBox()
@@ -166,7 +167,7 @@ CListboxItem CListBox::DoNextItem(const void *pId, bool Selected, float CornerRa
 			}
 		}
 
-		Item.m_Rect.Draw(ColorRGBA(1.0f, 1.0f, 1.0f, m_Active ? 0.5f : 0.33f), IGraphics::CORNER_ALL, CornerRadius);
+		Item.m_Rect.Draw(m_Active ? KogTheme::Fill(0.5f, 0.45f) : KogTheme::Fill(0.33f, 0.28f), IGraphics::CORNER_ALL, CornerRadius);
 	}
 	if(Ui()->HotItem() == pId && !m_ScrollRegion.Animating())
 	{
