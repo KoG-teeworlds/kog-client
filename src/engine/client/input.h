@@ -77,6 +77,7 @@ private:
 	bool m_InputGrabbed;
 
 	bool m_MouseFocus;
+	bool m_WindowHidden = false;
 
 	// IME support
 	std::string m_CompositionString;
@@ -118,6 +119,8 @@ public:
 
 	void Init() override;
 	int Update() override;
+	void WaitForEvent(std::chrono::nanoseconds Timeout) override;
+	bool WindowHidden() const override { return m_WindowHidden; }
 	void Shutdown() override;
 
 	void ConsumeEvents(std::function<void(const CEvent &Event)> Consumer) const override;

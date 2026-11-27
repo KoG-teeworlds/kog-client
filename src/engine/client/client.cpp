@@ -46,6 +46,7 @@
 #include <engine/shared/demo.h>
 #include <engine/shared/fifo.h>
 #include <engine/shared/kog_login_wire.h>
+#include <engine/shared/kog_pacing.h>
 #include <engine/shared/filecollection.h>
 #include <engine/shared/masterserver.h>
 #include <engine/shared/network.h>
@@ -3392,6 +3393,7 @@ void CClient::Run()
 
 	int64_t NextUpdateTime = time_get();
 	int64_t NextRenderTime = time_get();
+	KogPacing::CPacing Pacing;
 
 	while(true)
 	{
@@ -3466,6 +3468,7 @@ void CClient::Run()
 		}
 
 		bool Inactive = false;
+		bool Paced = false;
 		int64_t WakeTime = std::numeric_limits<int64_t>::max();
 
 		// render
@@ -3520,7 +3523,22 @@ void CClient::Run()
 			}
 #endif
 
-			const bool RenderDue = GfxRefreshRate ? Now >= NextRenderTime : UpdateDue;
+			bool RenderDue = GfxRefreshRate ? Now >= NextRenderTime : UpdateDue;
+
+			// Without a game running, draw at the pace of KogPacing and wait for events in between instead of spinning.
+			// Benchmarks, the editor and video recording need every frame.
+			Paced = State() == IClient::STATE_OFFLINE && !m_EditorActive && !m_BenchmarkFile && IsRenderActive;
+#if defined(CONF_VIDEORECORDER)
+			Paced = Paced && !IVideo::Current();
+#endif
+			const KogPacing::EWindow PaceWindow = Input()->WindowHidden() ? KogPacing::EWindow::HIDDEN : (m_pGraphics->WindowActive() ? KogPacing::EWindow::FOCUSED : KogPacing::EWindow::UNFOCUSED);
+			const int PaceMaxRate = RefreshRate && GfxRefreshRate ? std::min(RefreshRate, GfxRefreshRate) : std::max(RefreshRate, GfxRefreshRate);
+			if(Paced)
+			{
+				RenderDue = Pacing.RenderDue(Now, PaceWindow);
+				AsyncRenderOld = false;
+			}
+
 			if(IsRenderActive &&
 				(!AsyncRenderOld || m_pGraphics->IsIdle()) &&
 				RenderDue)
@@ -3550,7 +3568,11 @@ void CClient::Run()
 
 				Render();
 				m_pGraphics->Swap();
+				if(Paced)
+					Pacing.Rendered(Now, time_freq(), PaceWindow, PaceMaxRate);
 			}
+			if(Paced)
+				WakeTime = Pacing.WakeTime(time_get(), time_freq(), PaceWindow);
 
 			// Wake up for the next update or frame, whichever comes first. While playing, also wake up for
 			// the next prediction tick to send its input without delay, unless the window is inactive or
@@ -3573,7 +3595,12 @@ void CClient::Run()
 			break;
 
 		// beNice
-		if(WakeTime != std::numeric_limits<int64_t>::max())
+		if(Paced)
+		{
+			// Input wakes the wait at once, packets and jobs are served at the latest when it ends.
+			Input()->WaitForEvent(std::chrono::nanoseconds(WakeTime) - time_get_nanoseconds());
+		}
+		else if(WakeTime != std::numeric_limits<int64_t>::max())
 		{
 			const std::chrono::nanoseconds Deadline(WakeTime);
 			std::chrono::nanoseconds WaitTime = Deadline - time_get_nanoseconds();

@@ -50,6 +50,47 @@ drawn like a visible one (SDL reports a minimised window as shown): not measured
 Start page: median 388 to 399 us per frame, p95 1.7 to 1.9 ms (no change by this work: the benchmark runs the loop as before).
 HUD scenes: see `scripts/kog/bench_engine_limits.json` for the values of the build at the time the limits were set.
 
+## What changed
+
+### Pacing of the offline client (`src/engine/shared/kog_pacing.h`)
+
+When no game is running (state offline: menus, server browser, settings), the loop
+
+* draws at 60 frames per second with a focused window and 30 with an unfocused one, or lower when the player set
+  `cl_refresh_rate` or `gfx_refresh_rate` lower (they can only lower it);
+* draws nothing while the window is minimised or hidden, and wakes every 250 ms to serve the network, jobs and downloads;
+* waits for events between frames (`IEngineInput::WaitForEvent`, `SDL_WaitEventTimeout`) instead of spinning, so a key or
+  mouse event ends the wait at once and is handled in the same iteration;
+* draws at once when the window becomes visible or the focus state changes (`CPacing` compares the state of the last frame),
+  and on `RequestRedraw()`.
+
+It does **not** apply, and the old loop runs unchanged, when a game is connected, connecting, loading or a demo plays (state
+not offline), in the editor, when video is recorded, under `benchmark_quit`, or when `gfx_backgroundrender 0` and the window
+is closed. Screenshots in a visible window work as before (a frame is drawn at least every 33 ms); the screenshot
+of a minimised window waits until it is visible again.
+
+The "dirty / animating" contract: the menu has a live background map, so an offline visible window is always animating and
+its pace is the rate above. A page without background would be static; deciding that needs every animation of the UI to
+announce itself, and a missed one is a stale frame. The contract is therefore only the small part that is needed: whoever
+changes what is on screen outside of an input event calls `CPacing::RequestRedraw()`, and a frame is drawn at the next
+iteration. Moving the pace to zero for static pages is possible on top of this when the UI code reports its animations
+(a follow-up for whoever owns the UI).
+
+Not event-driven yet, because it could not be verified here: the game view. While online the main loop still runs without a
+wait when `cl_refresh_rate` is 0. Waiting there needs one wait that ends on a packet, on an input event and on the end of
+the render thread's frame; today there are three separate primitives (socket, SDL, condition variable). The design is a
+wake-up through `SDL_PushEvent` from a socket thread and from the render thread, which touches the network code and needs a
+server to test; it is the next step with the largest gain on laptops (a full core while playing).
+
+## Merge points (upstream-shared files)
+
+| file | change | size |
+| --- | --- | --- |
+| `src/engine/client/client.cpp` | include, `KogPacing::CPacing Pacing`, `Paced` flag in the render block, `WaitForEvent` in the wait | about 30 lines in `CClient::Run` |
+| `src/engine/client/input.cpp`, `input.h` | `WaitForEvent`, `m_WindowHidden` kept from the window events | about 25 lines |
+| `src/engine/input.h` | two virtual functions on `IEngineInput` | 4 lines |
+| `CMakeLists.txt` | the header and the test in the lists | 2 lines |
+
 ## Measuring
 
 All macOS only; the client under test must not be started through `/usr/bin/timeout` (SIP drops the interposer).

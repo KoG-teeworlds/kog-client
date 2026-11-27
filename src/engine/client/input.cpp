@@ -19,6 +19,9 @@
 #include <SDL.h>
 
 #include <algorithm>
+#include <chrono>
+#include <limits>
+#include <thread>
 
 // support older SDL version (pre 2.0.6)
 #ifndef SDL_JOYSTICK_AXIS_MIN
@@ -719,6 +722,19 @@ void EmscriptenCallbackQuit()
 }
 #endif
 
+void CInput::WaitForEvent(std::chrono::nanoseconds Timeout)
+{
+	const int64_t Milliseconds = std::chrono::ceil<std::chrono::milliseconds>(Timeout).count();
+	if(Milliseconds <= 0)
+		return;
+#if defined(CONF_PLATFORM_EMSCRIPTEN)
+	std::this_thread::sleep_for(std::chrono::milliseconds(Milliseconds));
+#else
+	// Without an event pointer the event stays in the queue for Update().
+	SDL_WaitEventTimeout(nullptr, (int)std::min<int64_t>(Milliseconds, std::numeric_limits<int>::max()));
+#endif
+}
+
 int CInput::Update()
 {
 	const int64_t Now = time_get();
@@ -847,6 +863,13 @@ int CInput::Update()
 			case SDL_WINDOWEVENT_SIZE_CHANGED:
 				Graphics()->GotResized(Event.window.data1, Event.window.data2, -1);
 				break;
+			case SDL_WINDOWEVENT_HIDDEN:
+				m_WindowHidden = true;
+				break;
+			case SDL_WINDOWEVENT_SHOWN:
+			case SDL_WINDOWEVENT_EXPOSED:
+				m_WindowHidden = false;
+				break;
 			case SDL_WINDOWEVENT_FOCUS_GAINED:
 				if(m_InputGrabbed)
 				{
@@ -872,6 +895,7 @@ int CInput::Update()
 				}
 				break;
 			case SDL_WINDOWEVENT_MINIMIZED:
+				m_WindowHidden = true;
 #if defined(CONF_PLATFORM_ANDROID) // Save the config when minimized on Android.
 				m_pConfigManager->Save();
 #endif
@@ -879,12 +903,14 @@ int CInput::Update()
 				break;
 
 			case SDL_WINDOWEVENT_MAXIMIZED:
+				m_WindowHidden = false;
 #if defined(CONF_PLATFORM_MACOS) // Todo: remove this when fixed in SDL: https://github.com/libsdl-org/SDL/issues/13920
 				MouseModeAbsolute();
 				MouseModeRelative();
 #endif
 				[[fallthrough]];
 			case SDL_WINDOWEVENT_RESTORED:
+				m_WindowHidden = false;
 				Graphics()->WindowCreateNtf(Event.window.windowID);
 				break;
 			}
