@@ -174,7 +174,84 @@ other GPUs, with vsync, or on a low-end machine.
   of the engine (list navigation), which is unchanged.
 - **Not done**: Android touch (targets are 36 high, the 40 minimum is not met for the secondary buttons: open), right-to-left layouts.
 
-## 9. What is not done
+## 9. The HUD: design C, built into the real components
+
+The owner chose design C (compact, tabular) from three directions. A and B were never built into the components; the preview
+scene that compared them is a local screenshot aid and is not in the repository.
+
+**What it is.** Opaque panels (92%), radius 2, a brand header strip, zebra rows, your own row tinted with the brand colour,
+12 unit text and 18 unit rows. All of it is named in `kog_style.h` (`Hud::`), applied through `kog_hud.h`, and a theme of
+Classic returns every classic value, so the HUD is exactly upstream's.
+
+**The minimum is enforced, not remembered.** `Hud::MIN_TEXT` is `Font::Caption` (12) and `Hud::MIN_ROW` is 18. Every text size and
+row height of the HUD is listed in `Hud::TEXT_SIZES` and `Hud::ROW_HEIGHTS`; `kog_hud_test.cpp` fails on anything below the
+minimum, on a minimum that drifts from the style's smallest text, and on a kill feed row that is below the minimum after the
+conversion to its larger space (`KILL_FEED_SCALE` 3). Components pass their old literals through `KogHud::Text()` and
+`KogHud::Row()`, which raise them to the minimum in the KoG look, so a literal that sneaks in below 12 is raised at run time too.
+
+**The scoreboard no longer shrinks text to fit.** Upstream scales the font from 12 down to 5 units as players join (the
+vanilla picture below shows 64 players at 5 units). In the KoG look `Hud::PlanScoreboard` picks the number of columns for the
+screen instead, and what does not fit is counted ("+50 players not shown"), never drawn smaller:
+
+| Players | 4:3 (800x600) | 16:9 (1067x600) | Test |
+| --- | --- | --- | --- |
+| 16 | 1 column | 1 column | `ScoreboardNeverShrinksTheTextToFit` |
+| 64 | 3 columns, all shown | 3 columns, all shown | `SixtyFourPlayersFitOnEveryCommonScreen` |
+| 128 | 3 columns, 78 shown, "+50 not shown" | 4 columns, 104 shown | `A128PlayerServerOnA43ScreenIsCountedNotShrunk` |
+
+The tests run the plan on six screens (4:3, 16:9, 16:10, ultrawide, a narrow and a tall window), and check that the rows fit the
+height, that a column keeps its minimum width, and that the plan never shows fewer players when there are more. Team games
+(red and blue) keep the classic measurement for now: their layout has two scoreboards side by side and needs its own plan.
+
+**Parts.** Scoreboard (panel, header, zebra, own row, headline and goals text raised to 12), kill feed (a pill per message sized
+from the same widths the row is drawn with, row height 54 in its 3x space = 18 units, kept on screen), chat (line background and
+text colour from the theme, font never below 12), tooltips (frame colour and radius), notice toasts (`CKogNotices`). All HUD
+text uses `KogTheme::CMenuTextScope`, so the light theme has dark text and the game itself keeps white.
+
+**Colour-blind safety.** Colour is never the only carrier: your row has a tint and a position (and the name), team rows keep the
+team number as a label, ping is a number next to its colour, the kill feed shows weapon icons between names, server and quest lines
+in the chat start with `***`. In the light theme the engine's ping and team colours are multiplied by the dark text colour and
+become dark, so only the numbers remain: readable, not colourful (a known limit of drawing coloured text through the shared
+text renderer; the numbers and labels carry the meaning).
+
+**Measured** (the client's `benchmark_quit`, Release, macOS, Apple M2 Pro, 1280x720, no frame limit, 20 s, first 20% dropped; the
+real components with a local fixture of fake players, chat lines and kills; the fixture and the screenshot hooks are not
+in the repository):
+
+| Scene | Classic median / p95 | Design C median / p95 |
+| --- | --- | --- |
+| Scoreboard, 64 players | 1764 / 4049 us | 2407 / 7228 us (dark), 2211 / 7733 us (light) |
+| Scoreboard, 16 players | 765 / 2496 us | 822 / 4812 us |
+| Chat and kill feed only | 1046 / 7967 us | 889 / 3873 us |
+| One-player background (no real HUD) | 479 / 2665 us | |
+
+The 64-player scoreboard costs about 0.6 ms more per frame at the median (3.6% of a 60 Hz frame): rows are the same count but the
+text is 12 units instead of 5, so more pixels are drawn. The p95 is higher too. Labels are cached as before (the scoreboard
+and the kill feed keep their text containers; the only new per-frame work is quads for the zebra and panels); I did not
+profile where the 0.6 ms goes. A batching of the zebra quads is the first thing to try if it matters.
+
+Screenshots of the real components (fixtures, vanilla look first):
+
+| Classic, 16 players | Classic, 64 players |
+| --- | --- |
+| ![](screenshots/hud-real-16-classic-16x9.png) | ![](screenshots/hud-real-64-classic-16x9.png) |
+| Design C dark, 16 players, 16:9 | Design C light, 16 players, 16:9 |
+| ![](screenshots/hud-real-16-t1-16x9.png) | ![](screenshots/hud-real-16-t2-16x9.png) |
+| Design C dark, 64 players, 16:9 | Design C light, 64 players, 4:3 |
+| ![](screenshots/hud-real-64-t1-16x9.png) | ![](screenshots/hud-real-64-t2-4x3.png) |
+
+128 players on 4:3, never smaller than 12 units, with the count of the players that are not shown:
+
+![](screenshots/hud-real-128-t1-4x3.png)
+
+The tooltip frame and the notice toast were not captured from the real components in this series (the tooltip needs a hovered
+control; the toast was shown with a test hook earlier).
+
+**Long text.** Names and clans are cut with an ellipsis by the existing code ("AVeryLon..." in the pictures).
+`scripts/kog/check_hud_label_lengths.py` reads `data/languages` and lists headline labels wider than their column at 12 units: 5
+of them (Bosnian, Hungarian and Serbian "Score", Kyrgyz "Ping"), all right-aligned so they grow into the margin.
+
+## 10. What is not done
 
 Built since the first version of this page: the settings, popup and list colours follow the tokens through the shared helpers
 (screenshots below), the toast for notices (`CKogNotices`, tokens only), the window and exe icons.
