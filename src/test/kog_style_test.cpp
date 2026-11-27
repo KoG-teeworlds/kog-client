@@ -116,3 +116,69 @@ TEST(KogStyle, LightSelectedRowKeepsTextReadable)
 	const ColorRGBA Row = Over(LIGHT.m_Brand.WithAlpha(0.45f), Over(LIGHT.m_Panel, DARK_BACKING));
 	EXPECT_GE(ContrastRatio(LIGHT.m_Fg, Row), 4.5f);
 }
+
+TEST(KogStyle, GlassTextIsReadableOverAnyMap)
+{
+	const ColorRGBA Panel = Over(GLASS.m_Panel, WORST_BACKING);
+	const ColorRGBA Raised = Over(GLASS.m_Panel2, WORST_BACKING);
+	EXPECT_GE(ContrastRatio(GLASS.m_Fg, Panel), 7.0f);
+	EXPECT_GE(ContrastRatio(GLASS.m_Muted, Panel), 4.5f);
+	EXPECT_GE(ContrastRatio(GLASS.m_Fg, Raised), 7.0f);
+	EXPECT_GE(ContrastRatio(GLASS.m_Muted, Raised), 4.5f);
+	EXPECT_GE(ContrastRatio(GLASS.m_OnBrand, GLASS.m_Brand), 4.5f);
+	EXPECT_GE(ContrastRatio(GLASS.m_Brand, Over(GLASS.m_Panel, GLASS.m_Bg)), 3.0f);
+	for(const ColorRGBA &Status : {GLASS.m_Ok, GLASS.m_Warn, GLASS.m_Err})
+		EXPECT_GE(ContrastRatio(Status, Panel), 4.5f);
+}
+
+TEST(KogStyle, GlassStatusDiffersInLightness)
+{
+	EXPECT_GT(std::abs(RelativeLuminance(GLASS.m_Ok) - RelativeLuminance(GLASS.m_Err)), 0.1f);
+	EXPECT_GT(std::abs(RelativeLuminance(GLASS.m_Warn) - RelativeLuminance(GLASS.m_Ok)), 0.04f);
+}
+
+TEST(KogStyle, GlassSelfRowAndTopOfThePanelKeepTextReadable)
+{
+	const ColorRGBA Row = Over(GLASS.m_Brand.WithAlpha(Hud::SELF_ALPHA), Over(GLASS.m_Panel, WORST_BACKING));
+	EXPECT_GE(ContrastRatio(GLASS.m_Fg, Row), 4.5f);
+	// the lighter top of a glass panel is the worst place for the text on it
+	ColorRGBA Lighter = GLASS.m_Panel;
+	Lighter.r += (1.0f - Lighter.r) * Elevation::GLASS_TOP_LIGHTEN;
+	Lighter.g += (1.0f - Lighter.g) * Elevation::GLASS_TOP_LIGHTEN;
+	Lighter.b += (1.0f - Lighter.b) * Elevation::GLASS_TOP_LIGHTEN;
+	EXPECT_GE(ContrastRatio(GLASS.m_Fg, Over(Lighter, WORST_BACKING)), 7.0f);
+}
+
+TEST(KogStyle, EveryThemeSettingIsValid)
+{
+	EXPECT_EQ(ThemeFromSetting(3), ETheme::GLASS);
+	EXPECT_EQ(ThemeFromSetting(4), ETheme::CLASSIC);
+	EXPECT_EQ(ThemeFromSetting(-1), ETheme::CLASSIC);
+}
+
+TEST(KogStyle, EasingIsMonotonicBoundedAndJumpsWithReducedMotion)
+{
+	float Previous = 0.0f;
+	for(int i = 0; i <= 100; ++i)
+	{
+		const float V = EaseOutCubic(i / 100.0f);
+		EXPECT_GE(V, Previous);
+		EXPECT_LE(V, 1.0f);
+		Previous = V;
+	}
+	EXPECT_FLOAT_EQ(EaseOutCubic(-3.0f), 0.0f);
+	EXPECT_FLOAT_EQ(EaseOutCubic(7.0f), 1.0f);
+	EXPECT_FLOAT_EQ(EaseOutCubic(std::nanf("")), 1.0f);
+	EXPECT_FLOAT_EQ(Progress(0.0f, Motion::Toast, true), 1.0f);
+	EXPECT_FLOAT_EQ(Progress(0.0f, 0.0f, false), 1.0f);
+	EXPECT_LT(Progress(0.01f, Motion::Toast, false), 1.0f);
+	EXPECT_LE(Motion::Toast, 0.2f);
+	EXPECT_GE(Motion::Hover, 0.1f);
+}
+
+TEST(KogStyle, ElevationLevelsGrow)
+{
+	EXPECT_LT(Elevation::SMALL.m_Blur, Elevation::RAISED.m_Blur);
+	EXPECT_LT(Elevation::RAISED.m_Blur, Elevation::FLOATING.m_Blur);
+	EXPECT_EQ(Elevation::FLAT.m_ShadowAlpha, 0.0f);
+}

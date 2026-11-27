@@ -5,6 +5,9 @@
 
 #include <base/color.h>
 
+#include <algorithm>
+#include <cmath>
+
 class IGraphics;
 class CUIRect;
 
@@ -27,7 +30,37 @@ namespace KogDraw
 	};
 	// A panel of Width x Height at (X, Y), shadow reaching Blur units beyond it and moved down by OffsetY. Every edge is finite,
 	// non-decreasing, and the corner slices never exceed half of the shadow's size.
-	SNineSlice PlanShadow(float X, float Y, float Width, float Height, float Blur, float OffsetY);
+	inline SNineSlice PlanShadow(float X, float Y, float Width, float Height, float Blur, float OffsetY)
+	{
+		const auto Finite = [](float V) { return std::isfinite(V) ? V : 0.0f; };
+		X = Finite(X);
+		Y = Finite(Y);
+		Width = std::max(Finite(Width), 0.0f);
+		Height = std::max(Finite(Height), 0.0f);
+		Blur = std::max(Finite(Blur), 0.0f);
+		OffsetY = Finite(OffsetY);
+	
+		const float Left = X - Blur;
+		const float Top = Y + OffsetY - Blur;
+		const float OuterWidth = Width + 2.0f * Blur;
+		const float OuterHeight = Height + 2.0f * Blur;
+		const float Scale = Blur / (float)EDGE;
+		const float CornerX = std::min(SLICE * Scale, OuterWidth / 2.0f);
+		const float CornerY = std::min(SLICE * Scale, OuterHeight / 2.0f);
+	
+		SNineSlice Plan;
+		Plan.m_aX[0] = Left;
+		Plan.m_aX[1] = Left + CornerX;
+		Plan.m_aX[2] = Left + OuterWidth - CornerX;
+		Plan.m_aX[3] = Left + OuterWidth;
+		Plan.m_aY[0] = Top;
+		Plan.m_aY[1] = Top + CornerY;
+		Plan.m_aY[2] = Top + OuterHeight - CornerY;
+		Plan.m_aY[3] = Top + OuterHeight;
+		return Plan;
+	}
+	
+
 
 	// Make the shadow texture. Called once with the graphics of the client; every draw function does nothing before that.
 	void Init(IGraphics *pGraphics);
