@@ -1,0 +1,5 @@
+{
+  "menu": {"frame_median_us": 520, "frame_p95_us": 2500, "allocations_per_frame": 1600},
+  "hud64": {"frame_median_us": 2400, "frame_p95_us": 7000, "allocations_per_frame": 8000},
+  "hud128": {"frame_median_us": 2700, "frame_p95_us": 6500, "allocations_per_frame": 10000}
+}
