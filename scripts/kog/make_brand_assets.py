@@ -1,46 +1,56 @@
 #!/usr/bin/env python3
-"""Generate the placeholder KoG icons and menu banner (original work, replace with the final brand)."""
-import re
-import sys
-from PIL import Image, ImageDraw, ImageFont
+"""Scale the official KoG logos in other/brand/ to the icon and banner files the client needs.
 
+Needs rsvg-convert (librsvg 2.63.4 was used) and Pillow. The artwork itself is never edited, only scaled.
+Icons: logo_short_black.svg (the fox carries its own outline, so it reads on light and dark).
+Menu banner: logo_long_white.svg (the menu background is dark).
+"""
+import io
+import os
+import re
+import shutil
+import subprocess
+import sys
+import tempfile
+from PIL import Image
+
+LOGO = "other/brand/logo"
 OUT_ICONS = "other/icons"
-SIZES = (16, 32, 48, 256)
+SIZES = (16, 32, 48, 64, 128, 256, 512)
+ICO_SIZES = (16, 32, 48, 256)
+ICNS_SIZES = (16, 32, 64, 128, 256, 512, 1024)
+BANNER_WIDTH = 768
 NAME = re.search(r'#define KOG_CLIENT_NAME "([^"]+)"', open("src/game/kog_version.h").read()).group(1)
 ID = re.search(r'#define KOG_CLIENT_EXECUTABLE "([^"]+)"', open("src/game/kog_version.h").read()).group(1)
 
 
-def icon(size):
-    image = Image.new("RGBA", (size, size), (0, 0, 0, 0))
-    draw = ImageDraw.Draw(image)
-    radius = max(2, size // 5)
-    for y in range(size):
-        shade = int(30 + 40 * y / size)
-        draw.line([(0, y), (size, y)], fill=(shade, shade + 20, 90 + shade // 2, 255))
-    mask = Image.new("L", (size, size), 0)
-    ImageDraw.Draw(mask).rounded_rectangle([0, 0, size - 1, size - 1], radius=radius, fill=255)
-    image.putalpha(mask)
-    font = ImageFont.load_default(size=int(size * 0.46))
-    draw.text((size / 2, size / 2), "KoG", font=font, fill=(255, 255, 255, 255), anchor="mm")
-    return image
+def render(svg, width):
+    png = subprocess.run(["rsvg-convert", "-w", str(width), f"{LOGO}/{svg}"], check=True, capture_output=True).stdout
+    return Image.open(io.BytesIO(png)).convert("RGBA")
 
 
-def banner():
-    image = Image.new("RGBA", (1024, 293), (0, 0, 0, 0))
-    draw = ImageDraw.Draw(image)
-    font = ImageFont.load_default(size=190)
-    draw.text((514, 150), NAME, font=font, fill=(0, 0, 0, 110), anchor="mm")
-    draw.text((510, 146), NAME, font=font, fill=(255, 255, 255, 255), anchor="mm")
-    return image
+def write_icns(path):
+    """Full standard iconset through iconutil on macOS, Pillow's reduced set elsewhere."""
+    if shutil.which("iconutil"):
+        with tempfile.TemporaryDirectory() as tmp:
+            iconset = os.path.join(tmp, "KoG.iconset")
+            os.mkdir(iconset)
+            for base in (16, 32, 128, 256, 512):
+                render("logo_short_black.svg", base).save(f"{iconset}/icon_{base}x{base}.png")
+                render("logo_short_black.svg", base * 2).save(f"{iconset}/icon_{base}x{base}@2x.png")
+            subprocess.run(["iconutil", "-c", "icns", iconset, "-o", path], check=True)
+        return
+    images = [render("logo_short_black.svg", s) for s in ICNS_SIZES]
+    images[-1].save(path, append_images=images[:-1])
 
 
 def main():
     for size in SIZES:
-        icon(size).save(f"{OUT_ICONS}/{ID}_{size}x{size}x32.png")
-    big = icon(256)
-    big.save(f"{OUT_ICONS}/{ID}.ico", sizes=[(s, s) for s in SIZES])
-    big.save(f"{OUT_ICONS}/{ID}.icns")
-    banner().save("data/tclient/gui_logo.png")
+        render("logo_short_black.svg", size).save(f"{OUT_ICONS}/{ID}_{size}x{size}x32.png")
+    ico = [render("logo_short_black.svg", s) for s in ICO_SIZES]
+    ico[-1].save(f"{OUT_ICONS}/{ID}.ico", sizes=[(s, s) for s in ICO_SIZES], append_images=ico[:-1])
+    write_icns(f"{OUT_ICONS}/{ID}.icns")
+    render("logo_long_white.svg", BANNER_WIDTH).save("data/tclient/gui_logo.png", optimize=True)
     open(f"{OUT_ICONS}/{ID}.rc", "w").write(f'ID ICON "{ID}.ico"\n')
     open(f"other/{ID.lower()}.desktop", "w").write(
         f"[Desktop Entry]\nType=Application\nName={NAME}\nGenericName=Platform Game\nExec={ID} %u\n"
