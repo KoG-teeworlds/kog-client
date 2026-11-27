@@ -46,11 +46,11 @@ void CMenus::RenderKogQuests(CUIRect View)
 
 		// the scope is always a word, never only a colour
 		SLabelProperties ScopeProps;
-		ScopeProps.SetColor(Accent);
+		const KogTheme::CTextColor ScopePropsColor(TextRender(), Accent);
 		Ui()->DoLabel(&Scope, Quest.m_Team ? Localize("Team", "Quest") : Localize("Solo", "Quest"), Font::Caption, TEXTALIGN_MR, ScopeProps);
 
 		SLabelProperties DescriptionProps;
-		DescriptionProps.SetColor(Muted);
+		const KogTheme::CTextColor DescriptionPropsColor(TextRender(), Muted);
 		DescriptionProps.m_MaxWidth = Description.w;
 		DescriptionProps.m_EllipsisAtEnd = true;
 		Ui()->DoLabel(&Description, Quest.m_Description.c_str(), Font::Caption, TEXTALIGN_ML, DescriptionProps);
