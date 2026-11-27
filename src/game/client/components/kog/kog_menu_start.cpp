@@ -99,7 +99,7 @@ bool CMenusStart::DoKogButton(const void *pId, float *pHover, const CUIRect &Rec
 		TextRender()->SetFontPreset(EFontPreset::ICON_FONT);
 		TextRender()->SetRenderFlags(ETextRenderFlags::TEXT_RENDER_FLAG_ONLY_ADVANCE_WIDTH | ETextRenderFlags::TEXT_RENDER_FLAG_NO_X_BEARING | ETextRenderFlags::TEXT_RENDER_FLAG_NO_Y_BEARING | ETextRenderFlags::TEXT_RENDER_FLAG_NO_PIXEL_ALIGNMENT | ETextRenderFlags::TEXT_RENDER_FLAG_NO_OVERSIZE);
 		SLabelProperties IconProps;
-		IconProps.SetColor(Primary ? Pal().m_OnBrand : Pal().m_BrandSoft);
+		const KogTheme::CTextColor IconPropsColor(TextRender(), Primary ? Pal().m_OnBrand : Pal().m_BrandSoft);
 		Ui()->DoLabel(&Icon, pIcon, FontSize * 0.9f, TEXTALIGN_MC, IconProps);
 		TextRender()->SetRenderFlags(0);
 		TextRender()->SetFontPreset(EFontPreset::DEFAULT_FONT);
@@ -115,7 +115,7 @@ bool CMenusStart::DoKogButton(const void *pId, float *pHover, const CUIRect &Rec
 	}
 
 	SLabelProperties Props;
-	Props.SetColor(TextColor);
+	const KogTheme::CTextColor PropsColor(TextRender(), TextColor);
 	Props.m_MaxWidth = Content.w;
 	Props.m_EllipsisAtEnd = true;
 	Ui()->DoLabel(&Content, pText, FontSize, pIcon != nullptr ? TEXTALIGN_ML : TEXTALIGN_MC, Props);
@@ -258,7 +258,7 @@ void CMenusStart::RenderKogStartMenu(CUIRect MainView, int &NewPage)
 		Row.VSplitLeft(Space::XS, nullptr, &Row);
 		const bool Hot = Ui()->HotItem() == &s_aLinkButtons[Link.m_Id];
 		SLabelProperties Props;
-		Props.SetColor(Hot ? Pal().m_Fg : Pal().m_Muted);
+		const KogTheme::CTextColor PropsColor(TextRender(), Hot ? Pal().m_Fg : Pal().m_Muted);
 		Ui()->DoLabel(&Item, Link.m_pText, Font::Body, TEXTALIGN_MC, Props);
 		if(Ui()->DoButtonLogic(&s_aLinkButtons[Link.m_Id], 0, &Item, BUTTONFLAG_LEFT))
 		{
@@ -294,7 +294,7 @@ void CMenusStart::RenderKogStartMenu(CUIRect MainView, int &NewPage)
 		Dot.Draw(LoggedIn ? Pal().m_Ok : Pal().m_Muted, IGraphics::CORNER_ALL, Space::XS);
 		Chip.VSplitLeft(Space::S, nullptr, &Chip);
 		SLabelProperties Props;
-		Props.SetColor(Pal().m_Fg);
+		const KogTheme::CTextColor PropsColor(TextRender(), Pal().m_Fg);
 		Props.m_MaxWidth = Chip.w;
 		Props.m_EllipsisAtEnd = true;
 		Ui()->DoLabel(&Chip, aText, Font::Body, TEXTALIGN_ML, Props);
