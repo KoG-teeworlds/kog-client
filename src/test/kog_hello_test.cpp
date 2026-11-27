@@ -187,3 +187,43 @@ TEST(KogHello, FormatsAMask)
 	KogHello::FormatMask(LOGIN, aBuf, sizeof(aBuf));
 	EXPECT_STREQ(aBuf, "client_login");
 }
+
+static const uint32_t ATTEST = 1u << (int)EKogCap::CLIENT_ATTEST;
+
+TEST(KogHello, ClientAttestIsOfferedAsId4)
+{
+	CPacker Packer;
+	Packer.Reset();
+	KogHello::PackClientHello(&Packer, LOGIN | ATTEST, "1.3.0", "stable");
+	// revision 1, two ids: client_login (1) and client_attest (4)
+	static const unsigned char s_aExpected[] = {0x01, 0x02, 0x01, 0x04, '1', '.', '3', '.', '0', 0, 's', 't', 'a', 'b', 'l', 'e', 0};
+	ASSERT_EQ(Packer.Size(), (int)sizeof(s_aExpected));
+	EXPECT_EQ(0, memcmp(Packer.Data(), s_aExpected, sizeof(s_aExpected)));
+}
+
+TEST(KogHello, ClientAttestNeedsTheServerToListIt)
+{
+	// a server that lists only client_login (a vanilla DDNet server lists nothing, and is never asked) gets no attestation
+	CPacker Packer;
+	Start(Packer, 1, {1});
+	KogHello::SServerHello Hello;
+	ASSERT_TRUE(Unpack(Packer, &Hello));
+	const uint32_t Agreed = KogHello::Agreed(LOGIN | ATTEST, Hello.m_Mask);
+	EXPECT_TRUE(KogHello::Has(Agreed, EKogCap::CLIENT_LOGIN));
+	EXPECT_FALSE(KogHello::Has(Agreed, EKogCap::CLIENT_ATTEST));
+
+	Start(Packer, 1, {1, 4});
+	ASSERT_TRUE(Unpack(Packer, &Hello));
+	EXPECT_TRUE(KogHello::Has(KogHello::Agreed(LOGIN | ATTEST, Hello.m_Mask), EKogCap::CLIENT_ATTEST));
+
+	// a server cannot switch it on when the client did not offer it (not logged in, no key)
+	EXPECT_FALSE(KogHello::Has(KogHello::Agreed(0, Hello.m_Mask), EKogCap::CLIENT_ATTEST));
+	EXPECT_FALSE(KogHello::Has(KogHello::Agreed(LOGIN, Hello.m_Mask), EKogCap::CLIENT_ATTEST));
+}
+
+TEST(KogHello, ClientAttestIsInTheFormattedMask)
+{
+	char aBuf[128];
+	KogHello::FormatMask(LOGIN | ATTEST, aBuf, sizeof(aBuf));
+	EXPECT_STREQ(aBuf, "client_login,client_attest");
+}
