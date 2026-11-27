@@ -115,6 +115,22 @@ namespace KogTheme
 		}
 	}
 
+	// The ring of the item that has the keyboard focus (a text field being edited): two units in the brand colour, inside the rectangle
+	inline void DrawFocusRing(const CUIRect &Rect)
+	{
+		if(!On())
+			return;
+		const float W = KogStyle::Size::Focus;
+		const ColorRGBA Ring = Palette().m_Brand;
+		const CUIRect aEdges[4] = {
+			{Rect.x, Rect.y, Rect.w, W},
+			{Rect.x, Rect.y + Rect.h - W, Rect.w, W},
+			{Rect.x, Rect.y + W, W, Rect.h - 2.0f * W},
+			{Rect.x + Rect.w - W, Rect.y + W, W, Rect.h - 2.0f * W}};
+		for(const CUIRect &Edge : aEdges)
+			Edge.Draw(Ring, IGraphics::CORNER_NONE, 0.0f);
+	}
+
 	// Header cells of lists (column titles): a quiet layer, the sorted column in the brand colour
 	inline ColorRGBA GridHeader(const ColorRGBA &Classic, int Checked)
 	{

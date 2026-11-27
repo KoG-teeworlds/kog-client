@@ -1013,6 +1013,8 @@ bool CUi::DoEditBox(CLineInput *pLineInput, const CUIRect *pRect, float FontSize
 
 	// Render
 	KogTheme::DrawControl(*pRect, ms_LightButtonColorFunction.GetColor(Active, HotItem() == pLineInput), Corners, 3.0f);
+	if(Active)
+		KogTheme::DrawFocusRing(*pRect);
 	ClipEnable(pRect);
 	Textbox.x -= ScrollOffset;
 	const STextBoundingBox BoundingBox = pLineInput->Render(&Textbox, FontSize, TEXTALIGN_ML, Changed || CursorChanged, -1.0f, 0.0f, vColorSplits);
