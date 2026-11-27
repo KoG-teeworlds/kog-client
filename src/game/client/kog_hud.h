@@ -64,13 +64,16 @@ namespace KogHud
 			Rect.Draw(Classic, Corners, ClassicRadius);
 			return;
 		}
-		KogDraw::Panel(Rect, {Panel(Classic), &LEVEL, KogStyle::Hud::PANEL_RADIUS / 2.0f, Corners, KogStyle::Elevation::GLASS_TOP_LIGHTEN});
+		// these boxes carry the white text of the game HUD, so they stay dark in the light theme too
+		const ColorRGBA Base = KogTheme::IsLight() ? KogStyle::GLASS.m_Panel : Panel(Classic);
+		KogDraw::Panel(Rect, {Base, &LEVEL, KogStyle::Hud::PANEL_RADIUS / 2.0f, Corners, KogStyle::Elevation::GLASS_TOP_LIGHTEN});
 	}
 	inline ColorRGBA ScoreBox(const ColorRGBA &Classic, bool Local)
 	{
 		if(!On())
 			return Classic;
-		return Local ? KogTheme::Palette().m_Brand.WithAlpha(0.45f) : KogTheme::Palette().m_Panel.WithAlpha(0.7f);
+		const ColorRGBA Dark = KogTheme::IsLight() ? KogStyle::GLASS.m_Panel : KogTheme::Palette().m_Panel;
+		return Local ? KogTheme::Palette().m_Brand.WithAlpha(0.45f) : Dark.WithAlpha(0.7f);
 	}
 	inline ColorRGBA Accent() { return KogTheme::Palette().m_Brand; }
 	inline ColorRGBA Zebra() { return KogTheme::Layer(KogStyle::Hud::ZEBRA_ALPHA); }
