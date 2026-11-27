@@ -21,37 +21,37 @@ static const SPalette &Pal() { return KogTheme::Palette(); }
 
 namespace
 {
-enum class EButtonKind
-{
-	PRIMARY, // the brand colour, one per page
-	SECONDARY,
-	QUIET,
-};
+	enum class EButtonKind
+	{
+		PRIMARY, // the brand colour, one per page
+		SECONDARY,
+		QUIET,
+	};
 
-struct SKogButton
-{
-	const char *m_pIcon;
-	const char *m_pText;
-	EButtonKind m_Kind;
-	ColorRGBA m_Dot = ColorRGBA(0.0f, 0.0f, 0.0f, 0.0f); // a state mark (running server); the text says the same
-};
+	struct SKogButton
+	{
+		const char *m_pIcon;
+		const char *m_pText;
+		EButtonKind m_Kind;
+		ColorRGBA m_Dot = ColorRGBA(0.0f, 0.0f, 0.0f, 0.0f); // a state mark (running server); the text says the same
+	};
 
-// Fades towards the target in Motion::Hover seconds, a frame time of zero or a disabled smooth scroll jumps
-float Approach(float Value, float Target, float FrameTime)
-{
-	if(g_Config.m_UiSmoothScrollTime <= 0)
-		return Target;
-	const float Step = FrameTime / Motion::Hover;
-	return Value < Target ? std::min(Value + Step, Target) : std::max(Value - Step, Target);
-}
+	// Fades towards the target in Motion::Hover seconds, a frame time of zero or a disabled smooth scroll jumps
+	float Approach(float Value, float Target, float FrameTime)
+	{
+		if(g_Config.m_UiSmoothScrollTime <= 0)
+			return Target;
+		const float Step = FrameTime / Motion::Hover;
+		return Value < Target ? std::min(Value + Step, Target) : std::max(Value - Step, Target);
+	}
 
-void DrawCard(const CUIRect &Rect, const ColorRGBA &Fill, float Radius)
-{
-	CUIRect Inner;
-	Rect.Draw(Pal().m_Line, IGraphics::CORNER_ALL, Radius);
-	Rect.Margin(1.0f, &Inner);
-	Inner.Draw(Fill, IGraphics::CORNER_ALL, Radius - 1.0f);
-}
+	void DrawCard(const CUIRect &Rect, const ColorRGBA &Fill, float Radius)
+	{
+		CUIRect Inner;
+		Rect.Draw(Pal().m_Line, IGraphics::CORNER_ALL, Radius);
+		Rect.Margin(1.0f, &Inner);
+		Inner.Draw(Fill, IGraphics::CORNER_ALL, Radius - 1.0f);
+	}
 }
 
 void CMenusStart::DrawKogScrim(const CUIRect &Screen)
