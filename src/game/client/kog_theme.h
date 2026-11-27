@@ -87,6 +87,25 @@ public:
 	}
 	~CMenuTextScope() { Set(ColorRGBA(1, 1, 1, 1), ColorRGBA(0, 0, 0, 0.3f)); }
 };
+// Text with a colour of its own in the menus. A colour in SLabelProperties is multiplied with the default text colour, which
+// is dark in the light theme, so a bright colour cannot be reached that way. This sets the default for its lifetime instead.
+class CTextColor
+{
+	ITextRender *m_pTextRender;
+	ColorRGBA m_Color;
+	ColorRGBA m_Outline;
+
+public:
+	CTextColor(ITextRender *pTextRender, ColorRGBA Color) :
+		m_pTextRender(pTextRender),
+		m_Color(pTextRender->DefaultTextColor()),
+		m_Outline(pTextRender->DefaultTextOutlineColor())
+	{
+		const float Luminance = 0.2126f * Color.r + 0.7152f * Color.g + 0.0722f * Color.b;
+		pTextRender->SetDefaultTextColors(Color, Luminance > 0.5f ? ColorRGBA(0.0f, 0.0f, 0.0f, 0.3f * Color.a) : ColorRGBA(1.0f, 1.0f, 1.0f, 0.35f * Color.a));
+	}
+	~CTextColor() { m_pTextRender->SetDefaultTextColors(m_Color, m_Outline); }
+};
 }
 
 #endif
