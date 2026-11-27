@@ -295,6 +295,8 @@ public:
 	virtual void SnapSetStaticsize7(int ItemType, int Size) = 0;
 
 	virtual int SendMsg(int Conn, CMsgPacker *pMsg, int Flags) = 0;
+	// Answers a login challenge of the server of the main connection, see docs/LOGIN.md
+	virtual void KogSendLoginProof(const uint8_t (&aDeviceId)[16], const uint8_t (&aSignature)[64]) = 0;
 	virtual int SendMsgActive(CMsgPacker *pMsg, int Flags) = 0;
 
 	template<class T>
@@ -441,6 +443,9 @@ public:
 	// KoG hello, see docs/KOG-HELLO.md. MakeHello fills the message and returns whether to send it.
 	virtual bool KogMakeHello(class CAbstractPacker *pPacker) = 0;
 	virtual void KogServerHello(CUnpacker *pUnpacker) = 0;
+	// The login with the device key: the challenge and the result of the server (main connection only)
+	virtual void KogLoginChallenge(CUnpacker *pUnpacker) = 0;
+	virtual void KogLoginResult(CUnpacker *pUnpacker) = 0;
 
 	virtual void OnDummyDisconnect() = 0;
 	virtual void DummyResetInput() = 0;

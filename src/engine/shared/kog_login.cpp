@@ -561,6 +561,36 @@ bool MayAnswerChallenge(const SJoinDecision &Decision)
 	return Decision.m_SwitchOn && Decision.m_AutoLoginOn && Decision.m_HasDeviceKey && Decision.m_ServerIsKog && Decision.m_CapabilityNegotiated && !Decision.m_AlreadyLoggedIn && !Decision.m_AlreadyAnsweredThisJoin;
 }
 
+bool CanonicalAddress(const NETADDR &Address, char *pBuf, size_t Size)
+{
+	pBuf[0] = '\0';
+	NETADDR Copy = Address;
+	if((Copy.type & (NETTYPE_IPV6 | NETTYPE_WEBSOCKET_IPV6)) != 0)
+	{
+		static const uint8_t s_aMappedPrefix[12] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0xff, 0xff};
+		if(mem_comp(Copy.ip, s_aMappedPrefix, sizeof(s_aMappedPrefix)) == 0)
+		{
+			uint8_t aV4[4];
+			mem_copy(aV4, Copy.ip + 12, sizeof(aV4));
+			mem_zero(Copy.ip, sizeof(Copy.ip));
+			mem_copy(Copy.ip, aV4, sizeof(aV4));
+			Copy.type = NETTYPE_IPV4;
+		}
+	}
+	else if((Copy.type & (NETTYPE_IPV4 | NETTYPE_WEBSOCKET_IPV4)) == 0)
+	{
+		return false;
+	}
+	if(Copy.port == 0)
+		return false;
+	char aBuf[NETADDR_MAXSTRSIZE];
+	net_addr_str(&Copy, aBuf, sizeof(aBuf), true);
+	if(str_length(aBuf) >= (int)Size)
+		return false;
+	str_copy(pBuf, aBuf, (int)Size);
+	return true;
+}
+
 static const char PAGE_OK[] = "<!doctype html><html><head><meta charset=\"utf-8\"><title>KoG Client</title></head><body style=\"font-family:sans-serif;text-align:center;margin-top:20vh\"><h1>You can close this tab</h1><p>Go back to the game to finish.</p></body></html>";
 static const char PAGE_NO[] = "<!doctype html><html><head><meta charset=\"utf-8\"><title>KoG Client</title></head><body style=\"font-family:sans-serif\"><p>Not found.</p></body></html>";
 

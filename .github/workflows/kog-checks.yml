@@ -18,6 +18,7 @@ jobs:
       - run: bash scripts/kog/test_release_chain.sh
       - run: bash scripts/kog/check_brand.sh
       - run: bash scripts/kog/test_native_changes.sh
+      - run: bash scripts/kog/check_brand_assets.sh
 
   hosted-runners:
     runs-on: ubuntu-latest

@@ -45,6 +45,7 @@
 #include <engine/shared/config.h>
 #include <engine/shared/demo.h>
 #include <engine/shared/fifo.h>
+#include <engine/shared/kog_login_wire.h>
 #include <engine/shared/filecollection.h>
 #include <engine/shared/masterserver.h>
 #include <engine/shared/network.h>
@@ -189,6 +190,13 @@ static inline bool RepackMsg(const CMsgPacker *pMsg, CPacker &Packer, bool Sixup
 	Packer.AddRaw(pMsg->Data(), pMsg->Size());
 
 	return true;
+}
+
+void CClient::KogSendLoginProof(const uint8_t (&aDeviceId)[16], const uint8_t (&aSignature)[64])
+{
+	CMsgPacker Msg(NETMSG_KOG_LOGIN_PROOF, true);
+	KogLoginWire::PackProof(&Msg, aDeviceId, aSignature);
+	SendMsg(CONN_MAIN, &Msg, MSGFLAG_VITAL);
 }
 
 int CClient::SendMsg(int Conn, CMsgPacker *pMsg, int Flags)
@@ -1744,6 +1752,14 @@ void CClient::ProcessServerPacket(CNetChunk *pPacket, int Conn, bool Dummy)
 		else if(Conn == CONN_MAIN && (pPacket->m_Flags & NET_CHUNKFLAG_VITAL) != 0 && Msg == NETMSG_KOG_SERVER_HELLO)
 		{
 			GameClient()->KogServerHello(&Unpacker);
+		}
+		else if(Conn == CONN_MAIN && (pPacket->m_Flags & NET_CHUNKFLAG_VITAL) != 0 && Msg == NETMSG_KOG_LOGIN_CHALLENGE)
+		{
+			GameClient()->KogLoginChallenge(&Unpacker);
+		}
+		else if(Conn == CONN_MAIN && (pPacket->m_Flags & NET_CHUNKFLAG_VITAL) != 0 && Msg == NETMSG_KOG_LOGIN_RESULT)
+		{
+			GameClient()->KogLoginResult(&Unpacker);
 		}
 		else if(Conn == CONN_MAIN && (pPacket->m_Flags & NET_CHUNKFLAG_VITAL) != 0 && Msg == NETMSG_MAP_CHANGE)
 		{

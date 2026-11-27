@@ -105,6 +105,11 @@ struct SJoinDecision
 // Whether this client may answer a login challenge of the server it is on. Vanilla and other servers: never.
 bool MayAnswerChallenge(const SJoinDecision &Decision);
 
+// The address of the server as the proof signs it: ip:port of the peer of the game connection, IPv4 as a.b.c.d:port,
+// an IPv4-mapped IPv6 address as IPv4, other IPv6 compressed and in brackets. It is taken from the socket and never
+// from a message of the server. False for a type that has no such form or for port 0.
+bool CanonicalAddress(const NETADDR &Address, char *pBuf, size_t Size);
+
 // Wait on 127.0.0.1 (or ::1 if that does not work) for the request GET /callback with the right state, then close.
 // Up to MAX_CONNECTIONS connections are open at once, so a connection that only sits there (a browser preconnect, a
 // foreign process) does not use up the single chance. Every connection has 5 seconds to send its request line.
