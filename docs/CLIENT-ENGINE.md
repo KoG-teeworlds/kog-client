@@ -103,6 +103,22 @@ server to test; it is the next step with the largest gain on laptops (a full cor
   hundreds of places of upstream, so a wrapper is a merge conflict for every one of them.
 * Not done: TSan run of the render thread hand-off, `std::span` for the bounds of the command buffer (upstream code).
 
+### Draw calls
+
+`scripts/kog/dev/draw_calls.c` (an interposer on `glDrawElements`, `glDrawArrays`, `glDrawElementsInstanced`, `glBindTexture`)
+counts per frame: the start page is 40 draw calls and 41 texture binds per frame (1831 frames, 72810 draws in 10 s). The 64 player
+scoreboard was not counted with it (the build with the HUD fixture was deleted for disk space); the estimate of about 1000 comes
+from the 4 allocations per draw call of Apple's layer against the 4000 of the scoreboard frame.
+
+Not done, and why: batching the tees (skin parts into an atlas or a texture array, one instanced draw per page) and the
+UI rectangles. It changes the skin loader, the quad containers and the shaders of upstream, and the UI builder is rewriting
+the visuals that would be batched, with no screenshots-diff fixture on the branch this work is based on. A batch has to be
+checked pixel by pixel against the fixtures of the HUD branch; doing it before that branch settles would be done twice.
+
+Not measured here: a minimised window (the script that minimises it through System Events was killed by the environment), the
+server browser, settings and in-game scenes (the page hook and the fixtures belong to the HUD branch and a game needs a server).
+The code path for a minimised window is the `HIDDEN` case of `CPacing`, which is unit tested.
+
 ## The game loop while online: design, and why it is not changed
 
 While online with `cl_refresh_rate 0` the main loop still spins (a full core, and the AppKit event pump allocating about 90
