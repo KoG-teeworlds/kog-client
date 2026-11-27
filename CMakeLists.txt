@@ -2514,10 +2514,13 @@ set_src(ENGINE_SHARED GLOB_RECURSE src/engine/shared
   jsonwriter.cpp
   jsonwriter.h
   kernel.cpp
+  kog_community.h
   kog_failsafe.cpp
   kog_failsafe.h
   kog_hello.cpp
   kog_hello.h
+  kog_keyfile.cpp
+  kog_keyfile.h
   kog_login.cpp
   kog_login.h
   kog_login_wire.cpp
@@ -3675,12 +3678,15 @@ if(GTEST_FOUND OR DOWNLOAD_GTEST)
     jobs_test.cpp
     json_test.cpp
     jsonwriter_test.cpp
+    kog_community_test.cpp
     kog_failsafe_test.cpp
     kog_hello_test.cpp
+    kog_keyfile_test.cpp
     kog_login_test.cpp
     kog_login_wire_test.cpp
     kog_trust_test.cpp
     kog_update_test.cpp
+    kog_user_agent_test.cpp
     linereader_test.cpp
     localization_test.cpp
     mapbugs_test.cpp
@@ -4055,6 +4061,11 @@ if(NOT DEV)
       install(FILES other/icons/DDNet-Server_${SIZE}x${SIZE}x32.png DESTINATION ${CMAKE_INSTALL_DATAROOTDIR}/icons/hicolor/${SIZE}x${SIZE}/apps RENAME ddnet-server.png COMPONENT server)
     endif()
   endforeach()
+  if(TARGET game-client)
+    foreach(SIZE 64 128 512)
+      install(FILES other/icons/${CLIENT_EXECUTABLE}_${SIZE}x${SIZE}x32.png DESTINATION ${CMAKE_INSTALL_DATAROOTDIR}/icons/hicolor/${SIZE}x${SIZE}/apps RENAME ${KOG_CLIENT_ID_LOWER}.png COMPONENT client)
+    endforeach()
+  endif()
   foreach(file ${VULKAN_SHADER_OUTPUT_PATHS})
     install(FILES ${file} DESTINATION ${CMAKE_INSTALL_DATAROOTDIR}/ddnet/data/shader/vulkan COMPONENT client)
   endforeach()

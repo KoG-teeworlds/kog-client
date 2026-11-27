@@ -2,3 +2,5 @@ README.md merge=ours
 
 other/*/include/* linguist-vendored
 src/engine/external/* linguist-vendored
+
+/other/brand/** -text

@@ -10,6 +10,8 @@ Our workflows are the `kog-*.yml` files. The upstream T-Client/DDNet workflows s
 | `kog-checks.yml` | pull request, push to `main` | Release chain checks: manifest, signing, verifier |
 | `kog-release.yml` | push of a `v*` tag by a repository admin | Builds release files and a draft manifest. It never signs: signing runs in the protected `release-signing` environment of `kog-client-updates` |
 
+How the release workflows are used, and what is not in place yet: [docs/RELEASING.md](../docs/RELEASING.md).
+
 The server is not built here. Use upstream DDNet or the KoG server repository for servers.
 
 Rules for every workflow here: `permissions: {}` at the top and minimal grants per job, `persist-credentials: false` on checkout, a `timeout-minutes` on every job, `cancel-in-progress` for pull requests, no `pull_request_target`, and every `uses:` pinned to a full commit SHA with the version in a comment.

@@ -7,6 +7,7 @@
 #include <engine/serverbrowser.h>
 #include <engine/shared/config.h>
 #include <engine/shared/json.h>
+#include <engine/shared/kog_community.h>
 #include <engine/shared/kog_login_wire.h>
 #include <engine/shared/packer.h>
 #include <engine/storage.h>
@@ -17,7 +18,6 @@
 namespace {
 
 constexpr int64_t BROWSER_TIMEOUT_MS = 3 * 60 * 1000;
-constexpr const char *KOG_COMMUNITY_ID = "kog";
 
 class CClientTransport : public IKogLoginTransport
 {
@@ -39,27 +39,169 @@ public:
 
 } // namespace
 
+void CKogLogin::OnConsoleInit()
+{
+	// No argument: whatever is typed into the console stays in its history, so the passphrase is entered in the settings
+	Console()->Register("kog_key_passphrase", "", CFGFLAG_CLIENT, ConKogKeyPassphrase, this, "Show whether the device key is locked with a passphrase (set, change or remove it in the settings, never here)");
+}
+
+void CKogLogin::ConKogKeyPassphrase(IConsole::IResult *pResult, void *pUserData)
+{
+	CKogLogin *pThis = static_cast<CKogLogin *>(pUserData);
+	const char *pText = Localize("There is no device key.");
+	switch(pThis->m_KeyState)
+	{
+	case EKeyState::PLAIN:
+		pText = Localize("The device key is not locked. Set a passphrase in Settings, DDNet, KoG account.");
+		break;
+	case EKeyState::LOCKED:
+		pText = Localize("The device key is locked. Enter the passphrase in Settings, DDNet, KoG account.");
+		break;
+	case EKeyState::UNLOCKED:
+		pText = Localize("The device key is locked with a passphrase and is unlocked for this session.");
+		break;
+	case EKeyState::DAMAGED:
+		pText = Localize("The device key file cannot be read. Log out on this device to remove it.");
+		break;
+	case EKeyState::NONE:
+		break;
+	}
+	pThis->Console()->Print(IConsole::OUTPUT_LEVEL_STANDARD, "kog", pText);
+}
+
 void CKogLogin::OnInit()
 {
 	m_pTransport = std::make_unique<CClientTransport>(Client());
-	KogLogin::SDeviceKey Key;
-	m_HasKey = LoadKey(&Key);
-	KogLogin::Wipe(&Key, sizeof(Key));
-	if(!m_HasKey)
+	KogKeyStore::MigrateLegacy(Storage());
+	RefreshKeyState();
+	if(m_KeyState == EKeyState::NONE)
 		g_Config.m_ClKogAccountName[0] = '\0';
 }
 
 void CKogLogin::OnShutdown()
 {
 	Reset();
+	WipeUnlocked();
+}
+
+void CKogLogin::WipeUnlocked()
+{
+	KogLogin::Wipe(&m_UnlockedKey, sizeof(m_UnlockedKey));
+}
+
+void CKogLogin::RefreshKeyState()
+{
+	char aBlob[KogKeyFile::MAX_BLOB];
+	KogLogin::SDeviceKey Key;
+	switch(KogKeyStore::Load(Storage(), nullptr, aBlob, sizeof(aBlob)))
+	{
+	case KogKeyFile::ELoad::OK:
+		m_KeyState = KogLogin::DecodeKey(aBlob, &Key) ? EKeyState::PLAIN : EKeyState::DAMAGED;
+		break;
+	case KogKeyFile::ELoad::LOCKED:
+		m_KeyState = m_KeyState == EKeyState::UNLOCKED ? EKeyState::UNLOCKED : EKeyState::LOCKED;
+		break;
+	case KogKeyFile::ELoad::MISSING:
+		m_KeyState = EKeyState::NONE;
+		break;
+	default:
+		m_KeyState = EKeyState::DAMAGED;
+		break;
+	}
+	if(m_KeyState != EKeyState::UNLOCKED)
+		WipeUnlocked();
+	KogLogin::Wipe(aBlob, sizeof(aBlob));
+	KogLogin::Wipe(&Key, sizeof(Key));
 }
 
 bool CKogLogin::LoadKey(KogLogin::SDeviceKey *pKey)
 {
-	char aBlob[256];
-	const bool Ok = KogKeyStore::Load(Storage(), aBlob, sizeof(aBlob)) && KogLogin::DecodeKey(aBlob, pKey);
+	if(m_KeyState == EKeyState::UNLOCKED)
+	{
+		*pKey = m_UnlockedKey;
+		return true;
+	}
+	if(m_KeyState != EKeyState::PLAIN)
+		return false;
+	char aBlob[KogKeyFile::MAX_BLOB];
+	const bool Ok = KogKeyStore::Load(Storage(), nullptr, aBlob, sizeof(aBlob)) == KogKeyFile::ELoad::OK && KogLogin::DecodeKey(aBlob, pKey);
 	KogLogin::Wipe(aBlob, sizeof(aBlob));
 	return Ok;
+}
+
+void CKogLogin::Unlock(const char *pPassphrase)
+{
+	if(m_KeyState != EKeyState::LOCKED)
+		return;
+	char aBlob[KogKeyFile::MAX_BLOB];
+	const KogKeyFile::ELoad Result = KogKeyStore::Load(Storage(), pPassphrase, aBlob, sizeof(aBlob));
+	if(Result == KogKeyFile::ELoad::OK && KogLogin::DecodeKey(aBlob, &m_UnlockedKey))
+	{
+		m_KeyState = EKeyState::UNLOCKED;
+		Succeed(Localize("Device key unlocked."));
+	}
+	else if(Result == KogKeyFile::ELoad::WRONG_PASSPHRASE)
+		Fail(Localize("Wrong passphrase, or the key file was changed. The key file is left as it is; you are not logged in."));
+	else
+		Fail(Localize("The key file cannot be read. The key file is left as it is; you are not logged in."));
+	KogLogin::Wipe(aBlob, sizeof(aBlob));
+}
+
+void CKogLogin::SaveWithPassphrase(const char *pNew, const char *pCurrent)
+{
+	KogLogin::SDeviceKey Key;
+	char aBlob[KogKeyFile::MAX_BLOB];
+	if(!LoadKey(&Key) || !KogLogin::EncodeKey(Key, aBlob, sizeof(aBlob)))
+	{
+		Fail(Localize("There is no device key to protect."));
+		KogLogin::Wipe(&Key, sizeof(Key));
+		return;
+	}
+	const KogKeyFile::ESave Result = KogKeyStore::Save(Storage(), aBlob, pNew, pCurrent);
+	KogLogin::Wipe(aBlob, sizeof(aBlob));
+	switch(Result)
+	{
+	case KogKeyFile::ESave::OK:
+		if(pNew && pNew[0] != '\0')
+		{
+			// The key in memory is the one in the file; the passphrase itself is not kept
+			m_UnlockedKey = Key;
+			m_KeyState = EKeyState::UNLOCKED;
+			Succeed(Localize("The device key is now locked with your passphrase. You need it after each start of the client."));
+		}
+		else
+		{
+			m_KeyState = EKeyState::PLAIN;
+			WipeUnlocked();
+			Succeed(Localize("The passphrase is removed. The device key is stored without one."));
+		}
+		break;
+	case KogKeyFile::ESave::LOCKED:
+	case KogKeyFile::ESave::WRONG_PASSPHRASE:
+		Fail(Localize("Wrong current passphrase. The key file is left as it is."));
+		break;
+	case KogKeyFile::ESave::PASSPHRASE_INVALID:
+		Fail(Localize("The passphrase must be 8 to 128 characters."));
+		break;
+	case KogKeyFile::ESave::FAILED:
+		Fail(Localize("Could not write the key file. It is left as it is."));
+		break;
+	}
+	KogLogin::Wipe(&Key, sizeof(Key));
+}
+
+void CKogLogin::SetPassphrase(const char *pNew, const char *pCurrent)
+{
+	if(Busy() || (m_KeyState != EKeyState::PLAIN && m_KeyState != EKeyState::UNLOCKED))
+		return;
+	SaveWithPassphrase(pNew, pCurrent);
+}
+
+void CKogLogin::RemovePassphrase(const char *pCurrent)
+{
+	if(Busy() || m_KeyState != EKeyState::UNLOCKED)
+		return;
+	SaveWithPassphrase(nullptr, pCurrent);
 }
 
 void CKogLogin::Reset()
@@ -120,6 +262,7 @@ void CKogLogin::Request(std::shared_ptr<IHttpRequest> pRequest, bool Secret)
 		pRequest->FollowRedirects(false);
 		pRequest->Sensitive(true);
 	}
+	pRequest->KogUserAgent();
 	pRequest->LogProgress(HTTPLOG::NONE);
 	pRequest->FailOnErrorStatus(false);
 	pRequest->MaxResponseSize(256 * 1024);
@@ -156,6 +299,11 @@ void CKogLogin::StartLogin()
 		Fail(Localize("The account address must start with https://."));
 		return;
 	}
+	if(KeyHasPassphrase() || KeyDamaged())
+	{
+		Fail(Localize("This device already has a key file that is locked or cannot be read. Log out on this device first; such a file is never replaced."));
+		return;
+	}
 	Reset();
 	m_Purpose = EPurpose::LOGIN;
 	if(g_Config.m_ClKogDeviceName[0] != '\0')
@@ -176,12 +324,20 @@ void CKogLogin::StartLogout()
 		return;
 	KogLogin::SDeviceKey Key;
 	const bool Had = LoadKey(&Key);
+	const bool WasLocked = m_KeyState == EKeyState::LOCKED;
 	str_copy(m_aRevokeId, Key.m_aId);
 	KogLogin::Wipe(&Key, sizeof(Key));
 	KogKeyStore::Remove(Storage());
-	m_HasKey = false;
+	m_KeyState = EKeyState::NONE;
+	WipeUnlocked();
 	g_Config.m_ClKogAccountName[0] = '\0';
 	Reset();
+	if(WasLocked)
+	{
+		// The device id is inside the locked key, so the account server cannot be told from here
+		Succeed(Localize("Logged out on this device. The key was locked, so remove this device on kog.tw."));
+		return;
+	}
 	if(!Had || !g_Config.m_ClKogLogin)
 	{
 		Succeed(Localize("Logged out on this device."));
@@ -443,14 +599,14 @@ void CKogLogin::StepDevice()
 		return;
 	}
 	char aBlob[256];
-	const bool Stored = KogLogin::EncodeKey(m_PendingKey, aBlob, sizeof(aBlob)) && KogKeyStore::Save(Storage(), aBlob);
+	const bool Stored = KogLogin::EncodeKey(m_PendingKey, aBlob, sizeof(aBlob)) && KogKeyStore::Save(Storage(), aBlob, nullptr, nullptr) == KogKeyFile::ESave::OK;
 	KogLogin::Wipe(aBlob, sizeof(aBlob));
 	if(!Stored)
 	{
-		Fail(Localize("Could not store the device key in the system keychain."));
+		Fail(Localize("Could not write the device key file."));
 		return;
 	}
-	m_HasKey = true;
+	m_KeyState = EKeyState::PLAIN;
 	str_copy(g_Config.m_ClKogAccountName, m_aAccountName);
 	char aMessage[256];
 	if(m_aAccountName[0] != '\0')
@@ -542,7 +698,7 @@ void CKogLogin::OnLoginResult(CUnpacker *pUnpacker)
 bool CKogLogin::ServerIsKog(IServerBrowser *pBrowser, const NETADDR &Address)
 {
 	const IServerBrowser::CServerEntry *pEntry = pBrowser->Find(Address);
-	return pEntry != nullptr && str_comp(pEntry->m_Info.m_aCommunityId, KOG_COMMUNITY_ID) == 0;
+	return pEntry != nullptr && str_comp(pEntry->m_Info.m_aCommunityId, KogCommunity::ID) == 0;
 }
 
 bool CKogLogin::OnChallenge(const char *pServerAddress, const uint8_t *pNonce, size_t NonceSize, const uint8_t (&aSessionId)[KogLogin::UUID_SIZE], bool CertVerified, bool CertBad)
@@ -550,7 +706,7 @@ bool CKogLogin::OnChallenge(const char *pServerAddress, const uint8_t *pNonce, s
 	KogLogin::SJoinDecision Decision;
 	Decision.m_SwitchOn = g_Config.m_ClKogLogin != 0;
 	Decision.m_AutoLoginOn = g_Config.m_ClKogAutoLogin != 0;
-	Decision.m_HasDeviceKey = m_HasKey;
+	Decision.m_HasDeviceKey = m_KeyState == EKeyState::PLAIN || m_KeyState == EKeyState::UNLOCKED;
 	Decision.m_ServerIsKog = ServerIsKog(ServerBrowser(), Client()->ServerAddress());
 	Decision.m_AlreadyLoggedIn = m_ManualLogin;
 	Decision.m_AlreadyAnsweredThisJoin = m_AnsweredThisJoin;

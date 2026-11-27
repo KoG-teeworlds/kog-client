@@ -9,7 +9,6 @@
 #include <base/str.h>
 
 #include <engine/console.h>
-#include <engine/shared/config.h>
 #include <engine/shared/linereader.h>
 #include <engine/storage.h>
 
@@ -352,7 +351,7 @@ bool CLocalizationDatabase::Load(const char *pFilename, IStorage *pStorage, ICon
 
 		pReplacement += 3;
 		const char *pReason;
-		if(g_Config.m_ClLocalizationValidate && !IsValidTranslation(aOrigin, pReplacement, &pReason))
+		if(!IsValidTranslation(aOrigin, pReplacement, &pReason))
 		{
 			log_error("localization", "ignoring translation in '%s' for '%s' on line %d: %s", pFilename, aOrigin, Line, pReason);
 			continue;

@@ -22,6 +22,7 @@
 #include <engine/keys.h>
 #include <engine/serverbrowser.h>
 #include <engine/shared/config.h>
+#include <engine/shared/kog_community.h>
 #include <engine/storage.h>
 #include <engine/textrender.h>
 
@@ -983,18 +984,28 @@ void CMenus::Render()
 		m_CommunityIcons.Update();
 	}
 
-	// Initially add DDNet as favorite community and select its tab.
+	// Initially add KoG (or DDNet) as favorite community and select its tab.
 	// This must be delayed until the DDNet info is available.
-	if(m_CreateDefaultFavoriteCommunities &&
-		ServerBrowser()->DDNetInfoAvailable())
+	if(m_CreateDefaultFavoriteCommunities)
 	{
-		m_CreateDefaultFavoriteCommunities = false;
-		if(ServerBrowser()->Community(IServerBrowser::COMMUNITY_DDNET) != nullptr)
+		KogCommunity::SState State;
+		State.m_FirstStart = true;
+		State.m_SwitchOn = g_Config.m_ClKogDefaultCommunity != 0;
+		State.m_InfoAvailable = ServerBrowser()->DDNetInfoAvailable();
+		State.m_HasKog = ServerBrowser()->Community(KogCommunity::ID) != nullptr;
+		State.m_HasDDNet = ServerBrowser()->Community(IServerBrowser::COMMUNITY_DDNET) != nullptr;
+		State.m_Touched = !ServerBrowser()->FavoriteCommunitiesFilter().Empty();
+		const KogCommunity::EDefault Pick = KogCommunity::PickDefault(State);
+		if(Pick != KogCommunity::EDefault::WAIT)
 		{
-			ServerBrowser()->FavoriteCommunitiesFilter().Clear();
-			ServerBrowser()->FavoriteCommunitiesFilter().Add(IServerBrowser::COMMUNITY_DDNET);
-			SetMenuPage(PAGE_FAVORITE_COMMUNITY_1);
-			ServerBrowser()->Refresh(IServerBrowser::TYPE_FAVORITE_COMMUNITY_1);
+			m_CreateDefaultFavoriteCommunities = false;
+			if(Pick == KogCommunity::EDefault::KOG || Pick == KogCommunity::EDefault::DDNET)
+			{
+				ServerBrowser()->FavoriteCommunitiesFilter().Clear();
+				ServerBrowser()->FavoriteCommunitiesFilter().Add(Pick == KogCommunity::EDefault::KOG ? KogCommunity::ID : IServerBrowser::COMMUNITY_DDNET);
+				SetMenuPage(PAGE_FAVORITE_COMMUNITY_1);
+				ServerBrowser()->Refresh(IServerBrowser::TYPE_FAVORITE_COMMUNITY_1);
+			}
 		}
 	}
 	if(m_JoinTutorial.m_Queued && m_Popup == POPUP_NONE)

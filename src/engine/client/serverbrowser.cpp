@@ -20,6 +20,7 @@
 #include <engine/http.h>
 #include <engine/shared/config.h>
 #include <engine/shared/json.h>
+#include <engine/shared/kog_community.h>
 #include <engine/shared/masterserver.h>
 #include <engine/shared/network.h>
 #include <engine/shared/packer.h>
@@ -1594,7 +1595,7 @@ void CServerBrowser::LoadDDNetServers()
 			{
 				pServers = &(*m_pDDNetInfo)["servers"];
 			}
-			else if(str_comp(Id, "kog") == 0)
+			else if(str_comp(Id, KogCommunity::ID) == 0)
 			{
 				pServers = &(*m_pDDNetInfo)["servers-kog"];
 			}

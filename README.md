@@ -35,12 +35,16 @@ Done:
 Planned, not built yet:
 
 - stable releases (the stable keys are placeholders)
+- a Homebrew tap for macOS: the design is in [docs/HOMEBREW.md](docs/HOMEBREW.md)
 - opt-in client-side network statistics
+- a page that shows a returning player what changed and lets them decide each change, see [docs/WHATS-CHANGED.md](docs/WHATS-CHANGED.md)
 
 ## Build
 
 Same as DDNet, see [docs/BUILDING.md](docs/BUILDING.md). The updater needs `-DAUTOUPDATE=ON` (default OFF; the release workflows turn it on). Run the tests with
 `cmake --build . --target run_tests`.
+
+How a release is made and signed (owner guide): [docs/RELEASING.md](docs/RELEASING.md).
 
 ## Contributing
 
