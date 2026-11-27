@@ -57,11 +57,15 @@ def main():
     parser.add_argument("--seconds", type=int, default=12)
     parser.add_argument("--scenes", default="menu")
     parser.add_argument("--markdown", action="store_true")
+    parser.add_argument("--only", default="", help="run only the scenes whose name contains this text")
     args = parser.parse_args()
+    args.client = os.path.abspath(args.client)
 
     rows = []
     for group in args.scenes.split(","):
         for name, env, _ in SCENES[group]:
+            if args.only not in name:
+                continue
             cells = []
             for theme, _label in THEMES:
                 runs = [run_once(args.client, theme, env, args.seconds) for _ in range(args.runs)]

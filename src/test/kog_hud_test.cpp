@@ -39,43 +39,43 @@ TEST(KogHud, ASettingThatIsNotATheme)
 
 namespace
 {
-struct SScreen
-{
-	const char *m_pName;
-	float m_Width; // UI units: 600 high, so the width is 600 times the aspect ratio
-	float m_Height;
-};
-const SScreen SCREENS[] = {
-	{"4:3", 800.0f, 600.0f},
-	{"16:9", 1066.7f, 600.0f},
-	{"16:10", 960.0f, 600.0f},
-	{"ultrawide", 1400.0f, 600.0f},
-	{"narrow window", 600.0f, 600.0f},
-	{"tall window", 450.0f, 600.0f},
-};
+	struct SScreen
+	{
+		const char *m_pName;
+		float m_Width; // UI units: 600 high, so the width is 600 times the aspect ratio
+		float m_Height;
+	};
+	const SScreen SCREENS[] = {
+		{"4:3", 800.0f, 600.0f},
+		{"16:9", 1066.7f, 600.0f},
+		{"16:10", 960.0f, 600.0f},
+		{"ultrawide", 1400.0f, 600.0f},
+		{"narrow window", 600.0f, 600.0f},
+		{"tall window", 450.0f, 600.0f},
+	};
 
-// The invariants of every plan, for any input at all
-void ExpectSafe(const Hud::SScoreboardPlan &Plan, float Width, float Height, int Players, const std::string &Where)
-{
-	SCOPED_TRACE(Where);
-	for(float Value : {Plan.m_ColumnWidth, Plan.m_X, Plan.m_Y, Plan.m_Width, Plan.m_Height, Plan.m_ChatReserve})
-		ASSERT_TRUE(std::isfinite(Value));
-	ASSERT_GE(Plan.m_Columns, 1);
-	ASSERT_GE(Plan.m_RowsPerColumn, 1);
-	ASSERT_GE(Plan.m_Shown, 0);
-	ASSERT_LE(Plan.m_Shown, std::max(Players, 0));
-	ASSERT_EQ(Plan.m_Truncated, Plan.m_Shown < std::max(Players, 0));
-	ASSERT_GT(Plan.m_Width, 0.0f);
-	ASSERT_GT(Plan.m_Height, 0.0f);
-	// inside the screen (a screen of one unit gets a plan that is one unit off at most)
-	const float W = std::max(Width, 1.0f);
-	const float H = std::max(Height, 1.0f);
-	ASSERT_GE(Plan.m_X, 0.0f);
-	ASSERT_GE(Plan.m_Y, 0.0f);
-	ASSERT_LE(Plan.m_X + Plan.m_Width, W + 1.0f);
-	ASSERT_LE(Plan.m_Y + Plan.m_Height, H + 0.01f);
-	ASSERT_LE(Plan.m_Columns, 100000);
-}
+	// The invariants of every plan, for any input at all
+	void ExpectSafe(const Hud::SScoreboardPlan &Plan, float Width, float Height, int Players, const std::string &Where)
+	{
+		SCOPED_TRACE(Where);
+		for(float Value : {Plan.m_ColumnWidth, Plan.m_X, Plan.m_Y, Plan.m_Width, Plan.m_Height, Plan.m_ChatReserve})
+			ASSERT_TRUE(std::isfinite(Value));
+		ASSERT_GE(Plan.m_Columns, 1);
+		ASSERT_GE(Plan.m_RowsPerColumn, 1);
+		ASSERT_GE(Plan.m_Shown, 0);
+		ASSERT_LE(Plan.m_Shown, std::max(Players, 0));
+		ASSERT_EQ(Plan.m_Truncated, Plan.m_Shown < std::max(Players, 0));
+		ASSERT_GT(Plan.m_Width, 0.0f);
+		ASSERT_GT(Plan.m_Height, 0.0f);
+		// inside the screen (a screen of one unit gets a plan that is one unit off at most)
+		const float W = std::max(Width, 1.0f);
+		const float H = std::max(Height, 1.0f);
+		ASSERT_GE(Plan.m_X, 0.0f);
+		ASSERT_GE(Plan.m_Y, 0.0f);
+		ASSERT_LE(Plan.m_X + Plan.m_Width, W + 1.0f);
+		ASSERT_LE(Plan.m_Y + Plan.m_Height, H + 0.01f);
+		ASSERT_LE(Plan.m_Columns, 100000);
+	}
 }
 
 TEST(KogHud, ScoreboardNeverShrinksTheTextToFit)
