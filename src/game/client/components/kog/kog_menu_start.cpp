@@ -126,7 +126,9 @@ bool CMenusStart::DoKogButton(const void *pId, float *pHover, const CUIRect &Rec
 
 void CMenusStart::RenderKogStartMenu(CUIRect MainView, int &NewPage)
 {
-	DrawKogScrim(*Ui()->Screen());
+	// the rails run to the edges of the window, not of the inset the menu gives its pages
+	MainView = *Ui()->Screen();
+	DrawKogScrim(MainView);
 	const Start::SPlan Plan = Start::PlanStart(MainView.w, MainView.h);
 	const float Top = MainView.y;
 	const float Bottom = MainView.y + MainView.h;
