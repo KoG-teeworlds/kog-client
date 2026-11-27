@@ -197,7 +197,7 @@ screen instead, and what does not fit is counted ("+50 players not shown"), neve
 | --- | --- | --- | --- |
 | 16 | 1 column | 1 column | `ScoreboardNeverShrinksTheTextToFit` |
 | 64 | 3 columns, all shown | 3 columns, all shown | `SixtyFourPlayersFitOnEveryCommonScreen` |
-| 128 | 3 columns, 78 shown, "+50 not shown" | 4 columns, 104 shown | `A128PlayerServerOnA43ScreenIsCountedNotShrunk` |
+| 128 | 3 columns, 81 shown, "+47 not shown" | 3 columns, 81 shown (the chat strip takes the room of the fourth) | `A128PlayerServerOnA43ScreenIsCountedNotShrunk` |
 
 The tests run the plan on six screens (4:3, 16:9, 16:10, ultrawide, a narrow and a tall window), and check that the rows fit the
 height, that a column keeps its minimum width, and that the plan never shows fewer players when there are more. Team games
@@ -240,9 +240,14 @@ Screenshots of the real components (fixtures, vanilla look first):
 | Design C dark, 64 players, 16:9 | Design C light, 64 players, 4:3 |
 | ![](screenshots/hud-real-64-t1-16x9.png) | ![](screenshots/hud-real-64-t2-4x3.png) |
 
-128 players on 4:3, never smaller than 12 units, with the count of the players that are not shown:
+128 players on 16:9, never smaller than 12 units, with the count of the players that are not shown:
 
-![](screenshots/hud-real-128-t1-4x3.png)
+![](screenshots/hud-real-128-t1-16x9.png)
+
+The chat keeps its strip on the left while the scoreboard is open on a wide screen (the scoreboard moves right of it), the
+kill feed shows the newest rows that fit above the scoreboard, and the spectators panel is left out where there is no room
+for it (see the plan functions in section 11). On a 4:3 screen there is no room beside the scoreboard: the chat waits until it
+closes.
 
 The tooltip frame and the notice toast were not captured from the real components in this series (the tooltip needs a hovered
 control; the toast was shown with a test hook earlier).
@@ -251,7 +256,100 @@ control; the toast was shown with a test hook earlier).
 `scripts/kog/check_hud_label_lengths.py` reads `data/languages` and lists headline labels wider than their column at 12 units: 5
 of them (Bosnian, Hungarian and Serbian "Score", Kyrgyz "Ping"), all right-aligned so they grow into the margin.
 
-## 10. What is not done
+## 11. Performance and robustness
+
+### What was measured, and what it led to
+
+The first version of the HUD cost about 0.6 ms more per frame than the classic scoreboard with 64 players (median 2407 against
+1764 us). I measured where it goes before changing anything:
+
+| Measurement (64 players, one scoreboard) | Classic | Design C |
+| --- | --- | --- |
+| CPU time inside `CScoreboard::OnRender` (a timer, 600 frames) | 41 to 45 us | 47 to 48 us |
+| Median frame, zebra rows drawn one by one | 1891 us | 2056 us |
+| Median frame, zebra rows switched off | | 1694 us |
+| Median frame, tees switched off | 1106 us | 1123 us |
+
+So the scoreboard code itself is cheap (the rows were already cached text containers; the new work is a few comparisons), the
+tees are 800 us of both looks, and the extra cost was **32 draw calls for the zebra rows**, about 11 us each in the graphics
+backend. The zebra rows are now collected into one array and drawn with one call (`QuadsDrawTL` of the whole column, before the
+rows so they stay behind): 32 draw calls became 1 per column. Per-player work is unchanged; caching of text containers was
+already in place (`CCachedText`, the kill feed's containers) and the layout is not recomputed per row.
+
+`scripts/kog/bench_hud.py` repeats the measurement (the client's `benchmark_quit`, 1280x720, vsync off, no frame limit, median of
+several runs of the median, p95 and p99 in microseconds). Results on macOS, Apple M2 Pro, Release; dark and light are the
+KoG themes:
+
+| Scene | Classic median / p95 / p99 | Dark | Light |
+| --- | --- | --- | --- |
+| Start page (5 runs) | 399 / 1911 / 2916 | 406 / 1859 / 3002 | 409 / 1962 / 2547 |
+| Scoreboard, 16 players (3 runs) | 903 / 3360 / 4086 | 878 / 2961 / 3734 | 878 / 4410 / 11655 |
+| Scoreboard, 64 players (5 runs) | 1808 / 3901 / 4446 | 1657 / 3944 / 5532 | 1963 / 4628 / 7248 |
+| Scoreboard, 128 players (3 runs) | 3901 / 14484 / 31338 | 2242 / 4362 / 5267 | 2101 / 4808 / 6931 |
+| Chat and kill feed, 64 players (5 runs) | 1842 / 3555 / 5313 | 1815 / 3313 / 5414 | 1846 / 3873 / 4677 |
+
+The KoG look is at the classic frame time in every scene, within the noise of the runs (5 to 10 percent), and far below it
+with 128 players, where the classic scoreboard draws 128 rows at 5 units. The 64 player light scoreboard is 9 percent above
+classic in this run and I did not find out why; the dark one is 8 percent below. The p99 numbers are spikes of single frames
+and move a lot from run to run.
+
+**Allocations.** A counting interposer (`scripts/kog/dev/allocs_per_frame.py`) gives, in steady state, 1079 allocations per
+frame for the empty scene, 6352 with the classic 64 player scoreboard and 6406 with design C. The 5300 allocations per frame of
+the scoreboard are the engine's (the tee renderer and the graphics command buffer allocate a function object per command) and
+are the same in both looks; what the HUD code adds is within the noise (+54 in 6400). Zero allocations per frame in steady
+state is not reachable without changing the engine; the HUD code does not allocate per frame (its zebra array is on the stack,
+the plans are plain structs).
+
+**Layout caching.** The plan of the scoreboard is a pure function of three numbers and costs a few integer operations; it is
+computed once per frame (not per row) and I did not cache it across frames, because a cache would need an invalidation
+rule that costs more than the computation.
+
+### Reliability
+
+- **No work for hidden things.** The scoreboard code runs only while it is open; the kill feed counts and skips rows it will
+  not draw; the HUD functions return their classic value at once when the theme is Classic.
+- **Pure, bounded layout.** `PlanScoreboard`, `PlanSpectatorsHeight` and `PlanKillFeedRows` take numbers and return numbers.
+  Inputs are clamped before any conversion to an integer (a screen of no size, one that is not a number, infinite or
+  gigantic; a player count below 0 or above 100000), so there is no undefined behaviour in a float-to-int conversion.
+- **Tests over invariants** (`src/test/kog_hud_test.cpp`): a property test of 20000 random screens (from 1 unit to 8K, every
+  aspect ratio from 0.2 to 8, UI scale 50 to 200 percent) with 0 to 512 players checks that every number is finite, the panel is
+  inside the screen, the shown count is at most the player count, `m_Truncated` is exactly "not all shown", the minimum text
+  size and row height hold wherever the screen is large enough to keep them, the chat strip is free on wide screens and the chat
+  waits on others, the spectators panel stays on the screen or is left out, the plan is monotonic and deterministic, and
+  inputs that are not screens give a valid plan. Also: the old settings (no value, a value that is not a theme) fall back to
+  Classic.
+- **Sanitizers.** The test runner built with `-fsanitize=address,undefined` (all 406 tests) and the client built the same way,
+  run in 37 scenes (start page in three themes, the server browser, every settings page in the dark and three in the light
+  theme, the HUD fixtures of 1, 16, 64 and 128 players in three themes, chat and kill feed alone, toasts, the quit popup) for
+  6 seconds each, report nothing.
+- **Names, text, glyphs.** Names and clans are cut by the engine's existing ellipsis handling at any length; scripts and
+  combining characters are laid out by the text renderer, which this code only asks for widths; a missing glyph is drawn by the
+  renderer's fallback.
+- **Fallbacks.** An old config has no `cl_kog_theme` (default dark) and a damaged value is Classic (`ThemeFromSetting`).
+  The text colour scopes restore what they replaced when they end.
+- **Static analysis.** `clang-format` (version 23 here, the CI uses 20) with the repo's file: the new files are formatted.
+  `cppcheck` on the new files: no finding that is a defect (it flagged one uninitialised member of the toast, fixed, and a
+  shadowed name, fixed). `clang-tidy` was not run (no compile database for this build).
+
+### Upstream merge points
+
+The HUD touches these shared files; each change is small and guarded by the theme, so an upstream merge conflicts in at most
+these places:
+
+| File | Lines | What |
+| --- | --- | --- |
+| `engine/textrender.h` | 14 | `DefaultTextColor()` returns a member |
+| `game/client/components/scoreboard.cpp` | about 90 | measure, panel colours, zebra, header, columns, spectators |
+| `game/client/components/infomessages.cpp` and `.h` | about 90 | row height, pill, width helpers, row limit |
+| `game/client/components/chat.cpp` and `.h` | 9 | background colour, font floor, scoreboard wait |
+| `game/client/components/tooltips.cpp` | 4 | frame colour |
+| `game/client/components/menus.cpp`, `.h`, `menus_settings_graphics.cpp` | about 40 | theme colours, scope, the theme buttons |
+| `game/client/ui.cpp`, `ui_listbox.cpp` | about 28 | neutral layers and handles |
+| `game/client/gameclient.cpp`, `.h` | 3 | the toast component |
+
+Everything else is in `kog_*` files and `components/kog/`.
+
+## 12. What is not done
 
 Built since the first version of this page: the settings, popup and list colours follow the tokens through the shared helpers
 (screenshots below), the toast for notices (`CKogNotices`, tokens only), the window and exe icons.
