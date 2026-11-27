@@ -92,12 +92,22 @@ only gained a function boundary).
 
 Screenshots (macOS, Apple M2 Pro, 1280x720 window unless noted):
 
-| Before | After |
+| Before (Classic) | After (KoG dark) |
 | --- | --- |
 | ![](screenshots/before-start-1280.png) | ![](screenshots/after-start-1280.png) |
-| ![](screenshots/before-browser-1280.png) | ![](screenshots/after2-browser-1280.png) |
+| ![](screenshots/browser-theme0-1280.png) | ![](screenshots/browser-theme1-1280.png) |
+| ![](screenshots/before-settings-general-1280.png) | ![](screenshots/after-settings-general-1280.png) |
 
-![800x600](screenshots/after-start-800.png)
+The server browser pair is like for like: same tab (Internet), empty filter, same machine, a minute apart (the lists differ
+because the live server list changed).
+
+Keyboard focus ring (Run server focused), 640x480, the quit popup and a notice toast (the toast was drawn by a local test hook over the
+start page, in game it sits at the top of the game view):
+
+| | |
+| --- | --- |
+| ![](screenshots/after-start-focus-1280.png) | ![](screenshots/after-start-640.png) |
+| ![](screenshots/after-popup-1280.png) | ![](screenshots/after-toast-1280.png) |
 
 ## 6. Fonts and icons
 
@@ -107,18 +117,42 @@ of the exact font binaries are not verified (`docs/MAIN-MENU.md`, question 5).
 
 ## 7. Performance
 
-Per frame the theme adds one integer compare and a handful of colour assignments; the start page draws about 60 quads and
-12 labels. **Not measured** (frame time of the menu with and without the theme): the session had no way to run a stable
-benchmark; the first thing to do with a release build is `cl_show_fps 1` on the start page for both settings.
+Measured with the client's own `benchmark_quit` (frame times written to a file), Release build, macOS, Apple M2 Pro,
+1280x720 window, vsync off and no frame limit, menu map "auto" running, first 20% of the frames dropped, 20 s each:
 
-## 8. Layouts
+| Page | Classic median / p95 | KoG dark median / p95 |
+| --- | --- | --- |
+| Start page | 337 / 1522 us (and 337 / 1567 in a second run) | 335 / 1568 us (and 349 / 1711 in a second run) |
+| Settings, General | 521 / 1738 us | 524 / 1722 us |
+| Server browser | 922 / 2225 us | 934 / 2264 us |
 
-Checked by screenshot at 1280x720 (16:9) and 800x600 (4:3). Not checked: below 640x480, other languages (the
-German and Russian strings are longer; labels shrink to the smallest size and then cut with an ellipsis), the Android
-touch build. UI scaling in this client is the window height, so a larger setting does not exist to test.
+The difference is inside the run-to-run noise (about 3% on the median, 10% on p95): no regression found. Not measured on
+other GPUs, with vsync, or on a low-end machine.
+
+## 8. Layouts, languages, keyboard
+
+- **Windows**: checked by screenshot at 1280x720 (16:9), 800x600 and 640x480 (4:3). The virtual screen is always 600 high, so
+  the layout is identical at every 4:3 size; a tall window (width below 412 units) narrows the column (16 unit margins). UI
+  scaling in this client is the window height; there is no separate scale setting to test.
+- **Label length**: the start page buttons are two columns (about 136 units for text). `scripts/kog/check_label_lengths.py` reads
+  `data/languages/*.txt` and reports labels that would shrink below 12 units. With the first design (three columns) it found 53
+  cases (German "Server starten" at 9.6, French "Demarrer le serveur" at 7); with two columns it finds none. The model is
+  rough (0.56 em per character); the real renderer measures with the font.
+- **Keyboard**: on the start page Up, Down, Left and Right move a 2 unit brand outline in reading order, Enter presses the focused
+  button (Enter without focus is still Play); the outline has 5.5:1 against the backdrop. Other pages keep the focus handling
+  of the engine (list navigation), which is unchanged.
+- **Not done**: Android touch (targets are 36 high, the 40 minimum is not met for the secondary buttons: open), right-to-left layouts.
 
 ## 9. What is not done
 
-HUD elements the fork owns (scoreboard, chat, kill feed, notices), the settings pages' own panels, the tooltip and popup
-frames, the rail and in-game frame of `MAIN-MENU.md`, a light theme, a heading font. Each is a separate pull request on the
+Built since the first version of this page: the settings, popup and list colours follow the tokens through the shared helpers
+(screenshots below), the toast for notices (`CKogNotices`, tokens only), the window and exe icons.
+
+Not done: the scoreboard, chat and kill feed (they draw on the game world and keep the stock look until a separate step), the tooltip
+frame, the rail and in-game frame of `MAIN-MENU.md`, a heading font (no font with a verified licence file is in the repository:
+Saira Condensed is OFL on the websites but its files are not here), and the **light theme**. The light theme is not a palette swap: the
+engine draws white text with a dark outline through `ITextRender::DefaultTextColor`, which is a constant used by the HUD as
+well, so a light panel needs a menu-only text colour switch in the text renderer and a review of every hard-coded white
+in the menus. The tokens and the contrast tests are ready for it (`Palette()` already returns by theme); it needs its own pull
+request after the owner decides it is wanted. Each is a separate pull request on the
 same tokens; none needs a new token except notices (a kind colour per notice, from `Ok`, `Warn`, `Err` and `Brand`).
