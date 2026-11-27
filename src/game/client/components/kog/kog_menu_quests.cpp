@@ -16,7 +16,7 @@ void CMenus::RenderKogQuests(CUIRect View)
 	const ColorRGBA Muted = KogTheme::On() ? KogTheme::Palette().m_Muted : ColorRGBA(1.0f, 1.0f, 1.0f, 0.75f);
 	const ColorRGBA Accent = KogTheme::On() ? KogTheme::Palette().m_BrandSoft : ColorRGBA(1.0f, 1.0f, 1.0f, 1.0f);
 
-	View.Draw(ColorRGBA(1.0f, 1.0f, 1.0f, 0.25f), IGraphics::CORNER_ALL, Radius::Card);
+	View.Draw(KogTheme::Neutral(0.25f), IGraphics::CORNER_ALL, Radius::Card);
 	View.Margin(Space::M, &View);
 
 	CUIRect Header;
