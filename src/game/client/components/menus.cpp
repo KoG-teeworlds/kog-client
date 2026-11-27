@@ -133,7 +133,7 @@ int CMenus::DoButton_Menu(CButtonContainer *pButtonContainer, const char *pText,
 	else // TClient, why was this not here? ig they never use "checked" anywhere important
 		Color.a *= Ui()->ButtonColorMul(pButtonContainer);
 
-	pRect->Draw(KogTheme::Control(Color), Corners, Rounding);
+	KogTheme::DrawControl(*pRect, Color, Corners, Rounding);
 
 	if(pImageName)
 	{
@@ -254,9 +254,9 @@ int CMenus::DoButton_MenuTab(CButtonContainer *pButtonContainer, const char *pTe
 int CMenus::DoButton_GridHeader(const void *pId, const char *pText, int Checked, const CUIRect *pRect, int Align)
 {
 	if(Checked == 2)
-		pRect->Draw(ColorRGBA(1, 0.98f, 0.5f, 0.55f), IGraphics::CORNER_T, 5.0f);
+		pRect->Draw(KogTheme::GridHeader(ColorRGBA(1, 0.98f, 0.5f, 0.55f), Checked), IGraphics::CORNER_T, 5.0f);
 	else if(Checked)
-		pRect->Draw(ColorRGBA(1, 1, 1, 0.5f), IGraphics::CORNER_T, 5.0f);
+		pRect->Draw(KogTheme::GridHeader(ColorRGBA(1, 1, 1, 0.5f), Checked), IGraphics::CORNER_T, 5.0f);
 
 	CUIRect Temp;
 	pRect->VMargin(5.0f, &Temp);

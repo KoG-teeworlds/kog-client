@@ -1002,7 +1002,7 @@ bool CUi::DoEditBox(CLineInput *pLineInput, const CUIRect *pRect, float FontSize
 	}
 
 	// Render
-	pRect->Draw(KogTheme::Control(ms_LightButtonColorFunction.GetColor(Active, HotItem() == pLineInput)), Corners, 3.0f);
+	KogTheme::DrawControl(*pRect, ms_LightButtonColorFunction.GetColor(Active, HotItem() == pLineInput), Corners, 3.0f);
 	ClipEnable(pRect);
 	Textbox.x -= ScrollOffset;
 	const STextBoundingBox BoundingBox = pLineInput->Render(&Textbox, FontSize, TEXTALIGN_ML, Changed || CursorChanged, -1.0f, 0.0f, vColorSplits);
@@ -1196,14 +1196,14 @@ void CUi::DrawButton_FontIcon(const char *pText, const CUIRect *pRect, ColorRGBA
 
 int CUi::DoButton_FontIcon(CButtonContainer *pButtonContainer, const char *pText, int Checked, const CUIRect *pRect, const unsigned Flags, int Corners, bool Enabled, const std::optional<ColorRGBA> ButtonColor)
 {
-	DrawButton_FontIcon(pText, pRect, ButtonColor.value_or(KogTheme::Control(ColorRGBA(1.0f, 1.0f, 1.0f, (Checked ? 0.1f : 0.5f) * ButtonColorMul(pButtonContainer)))), Corners, Enabled);
+	DrawButton_FontIcon(pText, pRect, KogTheme::Control(ButtonColor.value_or(ColorRGBA(1.0f, 1.0f, 1.0f, (Checked ? 0.1f : 0.5f) * ButtonColorMul(pButtonContainer)))), Corners, Enabled);
 	return DoButtonLogic(pButtonContainer, Checked, pRect, Flags);
 }
 
 int CUi::DoButton_PopupMenu(CButtonContainer *pButtonContainer, const char *pText, const CUIRect *pRect, float Size, int Align, float Padding, bool TransparentInactive, bool Enabled, const std::optional<ColorRGBA> ButtonColor)
 {
 	if(!TransparentInactive || CheckActiveItem(pButtonContainer) || HotItem() == pButtonContainer)
-		pRect->Draw(ButtonColor.value_or(Enabled ? KogTheme::Control(ColorRGBA(1.0f, 1.0f, 1.0f, 0.5f * ButtonColorMul(pButtonContainer))) : ColorRGBA(0.0f, 0.0f, 0.0f, 0.4f)), IGraphics::CORNER_ALL, 3.0f);
+		KogTheme::DrawControl(*pRect, ButtonColor.value_or(Enabled ? ColorRGBA(1.0f, 1.0f, 1.0f, 0.5f * ButtonColorMul(pButtonContainer)) : ColorRGBA(0.0f, 0.0f, 0.0f, 0.4f)), IGraphics::CORNER_ALL, 3.0f);
 
 	CUIRect Label;
 	pRect->Margin(Padding, &Label);

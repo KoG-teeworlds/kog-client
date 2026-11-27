@@ -592,12 +592,13 @@ void CScoreboard::RenderScoreboard(CUIRect Scoreboard, int Team, int CountStart,
 	if(KogHud::On())
 	{
 		const int Rows = std::clamp(CountEnd - CountStart, 0, (int)MAX_CLIENTS);
-		IGraphics::CQuadItem aZebra[MAX_CLIENTS / 2 + 1];
+		IGraphics::CQuadItem aZebra[MAX_CLIENTS + 1];
 		int NumZebra = 0;
 		for(int Row = 0; Row < Rows; ++Row)
 		{
-			if(((CountStart + Row) & 1) != 0)
-				aZebra[NumZebra++] = IGraphics::CQuadItem(Scoreboard.x, Scoreboard.y + Row * (LineHeight + Spacing), Scoreboard.w, LineHeight);
+			// hairlines between rows (a row of the panel's own colour with a line below), not alternating fills: calmer and more room
+			if(Row > 0)
+				aZebra[NumZebra++] = IGraphics::CQuadItem(Scoreboard.x + KogStyle::Space::S, Scoreboard.y + Row * (LineHeight + Spacing), Scoreboard.w - 2.0f * KogStyle::Space::S, 1.0f);
 		}
 		if(NumZebra > 0)
 		{
@@ -895,7 +896,9 @@ void CScoreboard::RenderScoreboard(CUIRect Scoreboard, int Team, int CountStart,
 
 			// ping
 			ColorRGBA PingColor = TextRender()->DefaultTextColor();
-			if(g_Config.m_ClEnablePingColor)
+			if(KogHud::On())
+				PingColor = KogHud::Ping(pInfo->m_Latency);
+			else if(g_Config.m_ClEnablePingColor)
 			{
 				PingColor = color_cast<ColorRGBA>(ColorHSLA((300.0f - std::clamp(pInfo->m_Latency, 0, 300)) / 1000.0f, 1.0f, 0.5f));
 			}
@@ -1116,6 +1119,11 @@ void CScoreboard::OnRender()
 			{
 				CUIRect ColumnRect;
 				Scoreboard.VSplitLeft(Scoreboard.w / (KogPlan.m_Columns - Column), &ColumnRect, &Scoreboard);
+				if(Column > 0)
+				{
+					const CUIRect Separator = {ColumnRect.x, ColumnRect.y + KogStyle::Space::XS, 1.0f, ColumnRect.h - 2.0f * KogStyle::Space::S};
+					Separator.Draw(KogTheme::Layer(0.12f), IGraphics::CORNER_NONE, 0.0f);
+				}
 				RenderScoreboard(ColumnRect, TEAM_GAME, Column * KogPlan.m_RowsPerColumn, std::min(KogPlan.m_Shown, (Column + 1) * KogPlan.m_RowsPerColumn), RenderState);
 			}
 			if(KogPlan.m_Truncated)

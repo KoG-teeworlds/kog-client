@@ -4,6 +4,7 @@
 #include "kog_draw.h"
 #include "kog_style.h"
 
+#include <engine/graphics.h>
 #include <engine/shared/config.h>
 #include <engine/textrender.h>
 
@@ -45,10 +46,52 @@ namespace KogTheme
 	// change of alpha), colours that carry a meaning (green, red) are kept.
 	inline ColorRGBA Control(const ColorRGBA &Classic)
 	{
-		const bool IsNeutral = Classic.r == 1.0f && Classic.g == 1.0f && Classic.b == 1.0f;
-		if(!On() || !IsNeutral)
+		if(!On())
 			return Classic;
-		return IsLight() ? Layer(Classic.a * 0.22f) : Classic.WithMultipliedAlpha(0.22f);
+		const KogStyle::SPalette &P = Palette();
+		// a meaningful colour keeps its meaning with the colour of the palette, dark enough that the text on it stays readable
+		const auto Tinted = [&](const ColorRGBA &Base) {
+			const float Mix = IsLight() ? 1.0f : 0.45f;
+			return ColorRGBA(Base.r * Mix, Base.g * Mix, Base.b * Mix, std::min(1.0f, Classic.a * 1.4f + 0.15f));
+		};
+		switch(KogStyle::Classify(Classic))
+		{
+		case KogStyle::ESemantic::GOOD: return Tinted(P.m_Ok);
+		case KogStyle::ESemantic::BAD: return Tinted(P.m_Err);
+		case KogStyle::ESemantic::WARN: return Tinted(P.m_Warn);
+		case KogStyle::ESemantic::OTHER: return Tinted(P.m_Brand);
+		case KogStyle::ESemantic::NEUTRAL: break;
+		}
+		if(Classic.r < 0.1f) // black layers (disabled, shadows) stay
+			return Classic;
+		return IsLight() ? Layer(Classic.a * 0.22f) : Classic.WithMultipliedAlpha(0.22f * Classic.r);
+	}
+
+	// A button, input or box: the control fill with the corners of the glass look, a lighter top and a rim light
+	inline void DrawControl(const CUIRect &Rect, const ColorRGBA &Classic, int Corners, float ClassicRounding)
+	{
+		if(!On())
+		{
+			Rect.Draw(Classic, Corners, ClassicRounding);
+			return;
+		}
+		const ColorRGBA Fill = Control(Classic);
+		const float Radius = std::min(std::max(ClassicRounding, KogStyle::Radius::Control), std::min(Rect.w, Rect.h) / 2.0f);
+		const ColorRGBA Top = KogDraw::Lightened(Fill, IsLight() ? 0.0f : 0.10f);
+		Rect.Draw4(Top, Top, Fill, Fill, Corners, Radius);
+		if((Corners & IGraphics::CORNER_T) == IGraphics::CORNER_T && Rect.w > 2.0f * Radius)
+		{
+			const CUIRect Rim = {Rect.x + Radius, Rect.y, Rect.w - 2.0f * Radius, 1.0f};
+			Rim.Draw(Layer(IsLight() ? 0.10f : 0.12f), IGraphics::CORNER_NONE, 0.0f);
+		}
+	}
+
+	// Header cells of lists (column titles): a quiet layer, the sorted column in the brand colour
+	inline ColorRGBA GridHeader(const ColorRGBA &Classic, int Checked)
+	{
+		if(!On())
+			return Classic;
+		return Checked == 2 ? Palette().m_Brand.WithAlpha(0.55f) : Layer(0.16f);
 	}
 
 	// Handle of a scrollbar or slider: the legacy grey 0.8 to 1.0 becomes the muted text colour so it stays visible
