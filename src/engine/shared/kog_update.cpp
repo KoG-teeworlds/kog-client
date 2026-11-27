@@ -48,7 +48,7 @@ int64_t SManifest::TotalSize() const
 static void SetError(char *pError, size_t ErrorSize, const char *pMessage, const char *pDetail = "")
 {
 	if(pError && ErrorSize > 0)
-		str_format(pError, ErrorSize, "%s%s", pMessage, pDetail);
+		str_format(pError, static_cast<int>(ErrorSize), "%s%s", pMessage, pDetail);
 }
 
 static bool IsZero(const unsigned char *pKey)
@@ -116,7 +116,7 @@ static bool Base64Decode(const char *pText, size_t Length, std::vector<unsigned 
 			return false;
 		if(Padding)
 			return false;
-		Value = (Value << 6) | Index;
+		Value = (Value << 6) | static_cast<unsigned>(Index);
 		Bits += 6;
 		if(Bits >= 8)
 		{
@@ -404,7 +404,7 @@ bool IsAllowedPath(const char *pPath)
 	int ComponentLength = 0;
 	for(const char *p = pPath; *p; p++)
 	{
-		const unsigned char c = *p;
+		const unsigned char c = static_cast<unsigned char>(*p);
 		if(c == '/')
 		{
 			if(ComponentLength == 0)
@@ -459,7 +459,7 @@ bool IsAllowedNotesUrl(const char *pUrl)
 
 bool IsPlainText(const char *pText, size_t MaxLength)
 {
-	const size_t Length = str_length(pText);
+	const size_t Length = static_cast<size_t>(str_length(pText));
 	if(Length == 0 || Length > MaxLength || !str_utf8_check(pText))
 		return false;
 	const unsigned char *p = reinterpret_cast<const unsigned char *>(pText);
@@ -739,7 +739,7 @@ bool ParseManifest(const char *pJson, size_t Length, const char *pPlatform, SMan
 
 int Bucket(const char *pInstallId)
 {
-	const SHA256_DIGEST Digest = sha256(pInstallId, str_length(pInstallId));
+	const SHA256_DIGEST Digest = sha256(pInstallId, static_cast<size_t>(str_length(pInstallId)));
 	const uint32_t Value = ((uint32_t)Digest.data[0] << 24) | ((uint32_t)Digest.data[1] << 16) | ((uint32_t)Digest.data[2] << 8) | Digest.data[3];
 	return (int)(Value % 100);
 }

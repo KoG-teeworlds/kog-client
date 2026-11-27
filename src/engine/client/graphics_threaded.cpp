@@ -17,6 +17,7 @@
 #include <engine/graphics.h>
 #include <engine/shared/config.h>
 #include <engine/shared/jobs.h>
+#include <engine/shared/kog_free_list.h>
 #include <engine/storage.h>
 
 #include <generated/data_types.h>
@@ -2505,8 +2506,27 @@ int CGraphics_Threaded::Init()
 	return 0;
 }
 
+void CGraphics_Threaded::LogHandlesInUse() const
+{
+	const auto Report = [](const char *pName, size_t Size, std::optional<size_t> Free) {
+		if(!Free)
+			log_error("gfx", "%s: the free list is broken (an index was freed twice)", pName);
+		else
+			log_debug("gfx", "%s in use at shutdown: %" PRIzu " of %" PRIzu, pName, Size - *Free, Size);
+	};
+	size_t UsedTextures = 0;
+	for(const int Next : m_vTextureIndices)
+		UsedTextures += Next == -1 ? 1 : 0;
+	log_debug("gfx", "textures in use at shutdown: %" PRIzu " of %" PRIzu, UsedTextures, m_vTextureIndices.size());
+	Report("buffer objects", m_vBufferObjectIndices.size(), KogFreeList::CountFree(m_vBufferObjectIndices, m_FirstFreeBufferObjectIndex));
+	Report("quad containers", m_vQuadContainers.size(), KogFreeList::CountFree(m_vQuadContainers.size(), m_FirstFreeQuadContainer, [this](size_t Index) { return static_cast<long long>(m_vQuadContainers[Index].m_FreeIndex); }));
+	Report("buffer containers", m_vVertexArrayInfo.size(), KogFreeList::CountFree(m_vVertexArrayInfo.size(), m_FirstFreeVertexArrayInfo, [this](size_t Index) { return static_cast<long long>(m_vVertexArrayInfo[Index].m_FreeIndex); }));
+}
+
 void CGraphics_Threaded::Shutdown()
 {
+	LogHandlesInUse();
+
 	// shutdown the backend
 	m_pBackend->Shutdown();
 	delete m_pBackend;

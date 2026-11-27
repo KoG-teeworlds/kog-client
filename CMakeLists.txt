@@ -2516,6 +2516,7 @@ set_src(ENGINE_SHARED GLOB_RECURSE src/engine/shared
   kog_community.h
   kog_failsafe.cpp
   kog_failsafe.h
+  kog_free_list.h
   kog_hello.cpp
   kog_hello.h
   kog_keyfile.cpp
@@ -3675,6 +3676,7 @@ if(GTEST_FOUND OR DOWNLOAD_GTEST)
     jsonwriter_test.cpp
     kog_community_test.cpp
     kog_failsafe_test.cpp
+    kog_free_list_test.cpp
     kog_hello_test.cpp
     kog_keyfile_test.cpp
     kog_login_test.cpp
@@ -4431,10 +4433,11 @@ set(KOG_STRICT_SOURCES
   src/engine/shared/kog_login.cpp
   src/engine/shared/kog_login_wire.cpp
   src/engine/shared/kog_update.cpp
+  src/test/kog_free_list_test.cpp
   src/test/kog_pacing_test.cpp
 )
 if(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
-  set(KOG_STRICT_FLAGS -Wall -Wextra -Wconversion -Wno-sign-conversion -Wno-shorten-64-to-32 -Wshadow -Wnon-virtual-dtor -Woverloaded-virtual -Wcast-qual)
+  set(KOG_STRICT_FLAGS -Wall -Wextra -Wconversion -Wshadow -Wnon-virtual-dtor -Woverloaded-virtual -Wcast-qual)
   if(KOG_WERROR)
     list(APPEND KOG_STRICT_FLAGS -Werror)
   endif()

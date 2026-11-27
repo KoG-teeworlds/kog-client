@@ -151,7 +151,7 @@ bool WriteNew(const char *pPath, const uint8_t *pData, size_t Size)
 		else
 		{
 			pData += Written;
-			Size -= Written;
+			Size -= static_cast<size_t>(Written);
 		}
 	}
 	Ok = Ok && fsync(Fd) == 0;
@@ -190,7 +190,7 @@ ESave Save(const char *pPath, const char *pBlob, const char *pNewPassphrase, con
 	const bool Lock = pNewPassphrase && pNewPassphrase[0] != '\0';
 	if(Lock && (str_length(pNewPassphrase) < MIN_PASSPHRASE || str_length(pNewPassphrase) > MAX_PASSPHRASE))
 		return ESave::PASSPHRASE_INVALID;
-	const size_t BlobSize = str_length(pBlob);
+	const size_t BlobSize = static_cast<size_t>(str_length(pBlob));
 	if(BlobSize == 0 || BlobSize >= MAX_BLOB)
 		return ESave::FAILED;
 

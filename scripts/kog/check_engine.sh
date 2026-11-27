@@ -94,7 +94,7 @@ for entry in json.load(open(sys.argv[1] + "/compile_commands.json")):
         break
 PY
 )"
-		if ! (cd "$build" && eval "$command -fsyntax-only -Wall -Wextra -Wconversion -Wno-sign-conversion -Wno-shorten-64-to-32 -Wshadow -Wnon-virtual-dtor -Woverloaded-virtual -Wcast-qual -Wno-#warnings -Werror"); then
+		if ! (cd "$build" && eval "$command -fsyntax-only -Wall -Wextra -Wconversion -Wshadow -Wnon-virtual-dtor -Woverloaded-virtual -Wcast-qual -Wno-#warnings -Werror"); then
 			status=1
 		fi
 	fi

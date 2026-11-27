@@ -85,9 +85,9 @@ server to test; it is the next step with the largest gain on laptops (a full cor
 ### Strictness
 
 * `KOG_STRICT_SOURCES` in `CMakeLists.txt`: the engine files that are ours compile with `-Wall -Wextra -Wconversion
-  -Wshadow -Wnon-virtual-dtor -Woverloaded-virtual -Wcast-qual` under clang (sign conversion and 64 to 32 bit narrowing are
-  switched off: 13 findings in `kog_login.cpp`, `kog_update.cpp` where upstream APIs take `int` for sizes are the backlog).
-  `-DKOG_WERROR=ON` makes them errors; CI sets it. The findings in `kog_update.cpp` that were real (byte pushes without a
+  -Wshadow -Wnon-virtual-dtor -Woverloaded-virtual -Wcast-qual` under clang (sign conversion and 64 to 32 bit narrowing
+  included: the 37 findings of `kog_login.cpp`, `kog_update.cpp` and `kog_keyfile.cpp` are fixed with explicit casts of values that
+  are non-negative or bounded by the buffer they describe). `-DKOG_WERROR=ON` makes them errors; CI sets it. The findings in `kog_update.cpp` that were real (byte pushes without a
   cast) are fixed.
 * `scripts/kog/check_engine.sh <build> --changed <base>`: the same warnings on the `kog_*.cpp` files a branch adds or changes,
   and clang-tidy (`scripts/kog/clang-tidy-engine.yaml`: bugprone, performance, nodiscard, member init, narrowing) on the ones
@@ -96,8 +96,55 @@ server to test; it is the next step with the largest gain on laptops (a full cor
   bitwise operators in `kog_update.cpp`), which is why tidy gates only new files.
 * `.github/workflows/kog-engine-checks.yml` runs that on pull requests that touch the engine. Verified locally with Apple
   clang and clang-tidy 23; the Linux job is only verified by running it.
-* Not done: TSan run of the render thread hand-off, RAII for the graphics handles (texture, buffer and quad container
-  indices are plain ints owned by the callers), `std::span` for the bounds of the command buffer.
+* Handles of the graphics code (textures, buffer objects, buffer containers, quad containers) are plain indices from free lists in
+  vectors. At shutdown `CGraphics_Threaded::LogHandlesInUse` logs how many are still in use (`loglevel debug`, system `gfx`)
+  and reports a free list that loops or leaves its vector, which is what freeing an index twice leaves behind
+  (`engine/shared/kog_free_list.h`, with tests). The indices are not wrapped in an owning type: the handle types are used in
+  hundreds of places of upstream, so a wrapper is a merge conflict for every one of them.
+* Not done: TSan run of the render thread hand-off, `std::span` for the bounds of the command buffer (upstream code).
+
+### Draw calls
+
+`scripts/kog/dev/draw_calls.c` (an interposer on `glDrawElements`, `glDrawArrays`, `glDrawElementsInstanced`, `glBindTexture`)
+counts per frame: the start page is 40 draw calls and 41 texture binds per frame (1831 frames, 72810 draws in 10 s). The 64 player
+scoreboard was not counted with it (the build with the HUD fixture was deleted for disk space); the estimate of about 1000 comes
+from the 4 allocations per draw call of Apple's layer against the 4000 of the scoreboard frame.
+
+Not done, and why: batching the tees (skin parts into an atlas or a texture array, one instanced draw per page) and the
+UI rectangles. It changes the skin loader, the quad containers and the shaders of upstream, and the UI builder is rewriting
+the visuals that would be batched, with no screenshots-diff fixture on the branch this work is based on. A batch has to be
+checked pixel by pixel against the fixtures of the HUD branch; doing it before that branch settles would be done twice.
+
+Not measured here: a minimised window (the script that minimises it through System Events was killed by the environment), the
+server browser, settings and in-game scenes (the page hook and the fixtures belong to the HUD branch and a game needs a server).
+The code path for a minimised window is the `HIDDEN` case of `CPacing`, which is unit tested.
+
+## The game loop while online: design, and why it is not changed
+
+While online with `cl_refresh_rate 0` the main loop still spins (a full core, and the AppKit event pump allocating about 90
+times per pass). The pacing of this document does not apply there. The change that would fix it, and what stopped it:
+
+**Design.** One wait with three wake-up sources and the frame limiter as the upper bound:
+
+1. input and window events: the wait is `SDL_WaitEventTimeout`, which is what the offline pacing already uses;
+2. a received packet: a small thread waits in `net_socket_read_wait` on the socket of the connection and posts one
+   `SDL_UserEvent` with `SDL_PushEvent` (thread safe), then waits for the loop to take the packet before it waits again, so a
+   readable socket does not post events in a loop; the thread ends when the connection does. `net_socket_read_wait` has a
+   timeout, so ending it takes at most that timeout (100 ms) unless the socket is closed first;
+3. the end of the frame of the render thread: `CGraphicsBackend_Threaded::ThreadFunc` posts the same kind of event after
+   `RunBuffer` (it already notifies a condition variable at that point).
+
+The deadline of the wait is the earliest of the next prediction tick (input has to be sent on time), the next frame of the
+frame limiter (`cl_refresh_rate`, `gfx_refresh_rate`, vsync stays with the render thread), and the housekeeping deadline.
+
+**Why it is not in this series.** It changes when packets are read, when input is sent and when frames start while a game
+runs, and that can only be judged against a running server: frame interval jitter (p99), ping as the server browser and the
+scoreboard show it, input sent late by a tick. This work had no server to play on. The server is not built on macOS, the
+container recipe needs protobuf and redis-plus-plus built from source and a KoG gateway stand-in, and joining a public server
+from a measuring script was not authorised. Shipping it untested is a risk to every player, the gain is battery life, so it
+waits for a test setup: a KoG-style server in the Linux container, the macOS client on a `connect 127.0.0.1:8303`, and
+`bench_engine.py` extended with the scene "online" (frame interval p50/p99 from `benchmark_quit`, CPU, wakeups) run before and
+after.
 
 ## Merge points (upstream-shared files)
 
