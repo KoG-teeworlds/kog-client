@@ -1,4 +1,5 @@
 #include <base/detect.h>
+#include <base/hash.h>
 #include <base/net.h>
 #include <base/secure.h>
 #include <base/str.h>
@@ -15,6 +16,7 @@
 #endif
 
 #include <atomic>
+#include <cstring>
 #include <chrono>
 #include <memory>
 #include <string>
@@ -720,4 +722,98 @@ TEST(KogLogin, TheCertificateOfTheServer)
 	SJoinDecision NotListed = Required;
 	NotListed.m_ServerIsKog = false;
 	EXPECT_FALSE(MayAnswerChallenge(NotListed)) << "the certificate adds to the list check, it does not replace it";
+}
+
+TEST(KogLogin, RegistrationProofOfPossession)
+{
+	// "KoG-register-v1" 0x00 and the name, as the account server checks it
+	uint8_t aMessage[128];
+	const size_t Length = KogLogin::BuildRegisterMessage(aMessage, sizeof(aMessage), "My laptop");
+	ASSERT_EQ(Length, 16u + 9u);
+	EXPECT_EQ(memcmp(aMessage, "KoG-register-v1\0My laptop", Length), 0);
+	EXPECT_EQ(KogLogin::BuildRegisterMessage(aMessage, sizeof(aMessage), ""), 0u);
+	EXPECT_EQ(KogLogin::BuildRegisterMessage(aMessage, 20, "My laptop"), 0u);
+
+	uint8_t aSeed[KogLogin::SEED_SIZE], aOtherSeed[KogLogin::SEED_SIZE];
+	KogLogin::GenerateSeed(aSeed);
+	KogLogin::GenerateSeed(aOtherSeed);
+	uint8_t aPublic[KogLogin::PUBLIC_KEY_SIZE], aOtherPublic[KogLogin::PUBLIC_KEY_SIZE];
+	KogLogin::PublicKeyFromSeed(aSeed, aPublic);
+	KogLogin::PublicKeyFromSeed(aOtherSeed, aOtherPublic);
+
+	char aProof[KogLogin::PROOF_LENGTH + 1];
+	ASSERT_TRUE(KogLogin::SignRegistration(aSeed, "My laptop", aProof));
+	EXPECT_EQ(strlen(aProof), (size_t)KogLogin::PROOF_LENGTH);
+	EXPECT_TRUE(KogLogin::VerifyRegistration(aPublic, "My laptop", aProof));
+	// bound to the key that signed, to the name, and to nothing else that this client signs
+	EXPECT_FALSE(KogLogin::VerifyRegistration(aOtherPublic, "My laptop", aProof));
+	EXPECT_FALSE(KogLogin::VerifyRegistration(aPublic, "My laptop2", aProof));
+	EXPECT_FALSE(KogLogin::VerifyRegistration(aPublic, "My laptop", "short"));
+	EXPECT_FALSE(KogLogin::SignRegistration(aSeed, "", aProof));
+	// no padding, only the base64url alphabet
+	EXPECT_EQ(strspn(aProof, "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_"), strlen(aProof));
+}
+
+TEST(KogLogin, RegistrationProofNeverUsableAsAJoinProof)
+{
+	// the join proof signs "KoG-login-v1" ...; a registration proof is over another domain, so it cannot be moved
+	uint8_t aSeed[KogLogin::SEED_SIZE];
+	KogLogin::GenerateSeed(aSeed);
+	uint8_t aPublic[KogLogin::PUBLIC_KEY_SIZE];
+	KogLogin::PublicKeyFromSeed(aSeed, aPublic);
+	char aProof[KogLogin::PROOF_LENGTH + 1];
+	ASSERT_TRUE(KogLogin::SignRegistration(aSeed, "KoG-login-v1", aProof));
+	uint8_t aSignature[KogLogin::SIGNATURE_SIZE];
+	ASSERT_EQ(KogLogin::Base64UrlDecode(aSignature, sizeof(aSignature), aProof), (int)KogLogin::SIGNATURE_SIZE);
+	const uint8_t aNonce[KogLogin::NONCE_SIZE] = {};
+	const uint8_t aSession[KogLogin::UUID_SIZE] = {};
+	EXPECT_FALSE(KogLogin::VerifyChallenge(aPublic, "203.0.113.7:8303", aNonce, sizeof(aNonce), "00000000-0000-4000-8000-000000000000", aSession, aSignature));
+}
+
+TEST(KogLogin, FingerprintIsTheFirstSixteenHexCharactersOfTheKeyHash)
+{
+	// the account page of the website shows the same: sha256 of the public key as hex, the first 16 characters
+	uint8_t aPublic[KogLogin::PUBLIC_KEY_SIZE];
+	for(int i = 0; i < KogLogin::PUBLIC_KEY_SIZE; i++)
+		aPublic[i] = (uint8_t)i;
+	char aFingerprint[KogLogin::FINGERPRINT_LENGTH + 1];
+	KogLogin::Fingerprint(aPublic, aFingerprint);
+	char aHex[SHA256_MAXSTRSIZE];
+	sha256_str(sha256(aPublic, sizeof(aPublic)), aHex, sizeof(aHex));
+	EXPECT_EQ(std::string(aFingerprint), std::string(aHex, KogLogin::FINGERPRINT_LENGTH));
+	EXPECT_EQ(strlen(aFingerprint), (size_t)KogLogin::FINGERPRINT_LENGTH);
+}
+
+TEST(KogLogin, RegistrationAnswers)
+{
+	using E = KogLogin::ERegisterError;
+	EXPECT_EQ(KogLogin::ClassifyRegisterAnswer(201, ""), E::NONE);
+	EXPECT_EQ(KogLogin::ClassifyRegisterAnswer(409, "device_limit"), E::DEVICE_LIMIT);
+	EXPECT_EQ(KogLogin::ClassifyRegisterAnswer(409, "key_registered"), E::KEY_REGISTERED);
+	EXPECT_EQ(KogLogin::ClassifyRegisterAnswer(400, "invalid_proof"), E::INVALID_PROOF);
+	EXPECT_EQ(KogLogin::ClassifyRegisterAnswer(429, ""), E::RATE_LIMITED);
+	EXPECT_EQ(KogLogin::ClassifyRegisterAnswer(401, ""), E::UNAUTHORIZED);
+	EXPECT_EQ(KogLogin::ClassifyRegisterAnswer(403, "forbidden"), E::UNAUTHORIZED);
+	// the word and the status must agree; anything else is another error
+	EXPECT_EQ(KogLogin::ClassifyRegisterAnswer(400, "device_limit"), E::OTHER);
+	EXPECT_EQ(KogLogin::ClassifyRegisterAnswer(409, "invalid_proof"), E::OTHER);
+	EXPECT_EQ(KogLogin::ClassifyRegisterAnswer(500, ""), E::OTHER);
+	EXPECT_EQ(KogLogin::ClassifyRegisterAnswer(200, ""), E::OTHER);
+}
+
+TEST(KogLogin, RetryDelayGrowsAndIsCapped)
+{
+	using E = KogLogin::ERegisterError;
+	EXPECT_EQ(KogLogin::RetryDelayMs(0, E::OTHER), 0);
+	EXPECT_EQ(KogLogin::RetryDelayMs(-1, E::OTHER), 0);
+	EXPECT_EQ(KogLogin::RetryDelayMs(1, E::OTHER), 5000);
+	EXPECT_EQ(KogLogin::RetryDelayMs(2, E::OTHER), 10000);
+	EXPECT_EQ(KogLogin::RetryDelayMs(3, E::OTHER), 20000);
+	EXPECT_EQ(KogLogin::RetryDelayMs(7, E::OTHER), KogLogin::MAX_RETRY_MS);
+	EXPECT_EQ(KogLogin::RetryDelayMs(1000000, E::OTHER), KogLogin::MAX_RETRY_MS);
+	// a rate limit waits at least a minute
+	EXPECT_EQ(KogLogin::RetryDelayMs(1, E::RATE_LIMITED), 60000);
+	EXPECT_EQ(KogLogin::RetryDelayMs(7, E::RATE_LIMITED), KogLogin::MAX_RETRY_MS);
+	for(int Failures = 1; Failures < 20; Failures++)
+		EXPECT_GE(KogLogin::RetryDelayMs(Failures + 1, E::OTHER), KogLogin::RetryDelayMs(Failures, E::OTHER));
 }

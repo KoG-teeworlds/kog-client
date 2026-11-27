@@ -2,6 +2,7 @@
 
 #include <base/mem.h>
 #include <base/str.h>
+#include <base/time.h>
 
 #include <engine/client.h>
 #include <engine/client/kog_keystore.h>
@@ -92,6 +93,7 @@ void CKogLogin::WipeUnlocked()
 
 void CKogLogin::RefreshKeyState()
 {
+	m_aFingerprint[0] = '\0';
 	char aBlob[KogKeyFile::MAX_BLOB];
 	KogLogin::SDeviceKey Key;
 	switch(KogKeyStore::Load(Storage(), nullptr, aBlob, sizeof(aBlob)))
@@ -290,8 +292,48 @@ void CKogLogin::SetBearer(IHttpRequest *pRequest)
 	KogLogin::Wipe(aHeader, sizeof(aHeader));
 }
 
+void CKogLogin::CountFailure(KogLogin::ERegisterError Error)
+{
+	if(m_Purpose != EPurpose::LOGIN)
+		return;
+	m_Failures++;
+	m_RetryAtMs = time_get() * 1000 / time_freq() + KogLogin::RetryDelayMs(m_Failures, Error);
+}
+
+int CKogLogin::RetryInSeconds() const
+{
+	const int64_t Left = m_RetryAtMs - time_get() * 1000 / time_freq();
+	return Left > 0 ? (int)((Left + 999) / 1000) : 0;
+}
+
+const char *CKogLogin::Fingerprint()
+{
+	if(m_aFingerprint[0] == '\0' && KeyUsable())
+	{
+		uint8_t aSeed[KogLogin::SEED_SIZE];
+		uint8_t aPublic[KogLogin::PUBLIC_KEY_SIZE];
+		if(LoadSeed(aSeed))
+		{
+			KogLogin::PublicKeyFromSeed(aSeed, aPublic);
+			KogLogin::Fingerprint(aPublic, m_aFingerprint);
+		}
+		KogLogin::Wipe(aSeed, sizeof(aSeed));
+	}
+	return m_aFingerprint;
+}
+
+bool CKogLogin::AccountPageUrl(char *pBuf, size_t Size) const
+{
+	char aBase[256];
+	if(!BaseUrl(aBase, sizeof(aBase)))
+		return false;
+	str_format(pBuf, Size, "%s/account", aBase);
+	return true;
+}
+
 void CKogLogin::FailHttp(const char *pWhat)
 {
+	CountFailure(m_pRequest->StatusCode() == 429 ? KogLogin::ERegisterError::RATE_LIMITED : KogLogin::ERegisterError::OTHER);
 	char aMessage[256];
 	if(m_pRequest->State() != EHttpState::DONE)
 		str_format(aMessage, sizeof(aMessage), "%s: %s", pWhat, Localize("network problem, could not reach the KoG account server."));
@@ -313,6 +355,13 @@ void CKogLogin::StartLogin()
 	if(KeyHasPassphrase() || KeyDamaged())
 	{
 		Fail(Localize("This device already has a key file that is locked or cannot be read. Log out on this device first; such a file is never replaced."));
+		return;
+	}
+	if(const int Wait = RetryInSeconds(); Wait > 0)
+	{
+		char aMessage[256];
+		str_format(aMessage, sizeof(aMessage), "%s %d %s", Localize("The last login did not work. Try again in"), Wait, Localize("seconds."));
+		Fail(aMessage);
 		return;
 	}
 	Reset();
@@ -573,8 +622,15 @@ void CKogLogin::BeginDevice()
 	KogLogin::Base64UrlEncode(aPublic, sizeof(aPublic), aPublicKey, sizeof(aPublicKey));
 	char aName[512];
 	EscapeJson(aName, sizeof(aName), m_aDeviceName);
+	// the proof is over the name as the account server reads it from the JSON, which is m_aDeviceName
+	char aProof[KogLogin::PROOF_LENGTH + 1];
+	if(!KogLogin::SignRegistration(m_PendingKey.m_aSeed, m_aDeviceName, aProof))
+	{
+		Fail(Localize("Could not make the proof for this device."));
+		return;
+	}
 	char aBody[1024];
-	str_format(aBody, sizeof(aBody), "{\"device_name\":\"%s\",\"public_key\":\"%s\"}", aName, aPublic);
+	str_format(aBody, sizeof(aBody), "{\"device_name\":\"%s\",\"public_key\":\"%s\",\"proof\":\"%s\"}", aName, aPublic, aProof);
 
 	char aBase[256], aUrl[300];
 	BaseUrl(aBase, sizeof(aBase));
@@ -587,13 +643,58 @@ void CKogLogin::BeginDevice()
 	Request(pRequest, true);
 }
 
+void CKogLogin::FailRegistration()
+{
+	if(m_pRequest->State() != EHttpState::DONE)
+	{
+		FailHttp(Localize("Registering this device"));
+		return;
+	}
+	char aWord[64] = "";
+	json_value *pJson = m_pRequest->ResultJson();
+	const json_value *pError = pJson ? json_object_get(pJson, "error") : nullptr;
+	if(pError && pError->type == json_string)
+		str_copy(aWord, pError->u.string.ptr);
+	if(pJson)
+		json_value_free(pJson);
+	const KogLogin::ERegisterError Error = KogLogin::ClassifyRegisterAnswer(m_pRequest->StatusCode(), aWord);
+	const char *pMessage = nullptr;
+	switch(Error)
+	{
+	case KogLogin::ERegisterError::DEVICE_LIMIT:
+		pMessage = Localize("Your account already has as many devices as it may. Remove one under your devices on kog.tw, then log in again.");
+		break;
+	case KogLogin::ERegisterError::KEY_REGISTERED:
+		pMessage = Localize("The account server says this key is registered already. Log in again to make a new one.");
+		break;
+	case KogLogin::ERegisterError::INVALID_PROOF:
+		pMessage = Localize("The account server did not accept the proof of this device's key. Update the client and try again.");
+		break;
+	case KogLogin::ERegisterError::RATE_LIMITED:
+		pMessage = Localize("Too many attempts. Wait a few minutes and try again.");
+		break;
+	case KogLogin::ERegisterError::UNAUTHORIZED:
+		pMessage = Localize("The account server refused this login. Try again.");
+		break;
+	default:
+		break;
+	}
+	if(pMessage == nullptr)
+	{
+		FailHttp(Localize("Registering this device"));
+		return;
+	}
+	CountFailure(Error);
+	Fail(pMessage);
+}
+
 void CKogLogin::StepDevice()
 {
 	if(!m_pRequest->Done())
 		return;
 	if(m_pRequest->State() != EHttpState::DONE || m_pRequest->StatusCode() != 201)
 	{
-		FailHttp(Localize("Registering this device"));
+		FailRegistration();
 		return;
 	}
 	json_value *pJson = m_pRequest->ResultJson();
@@ -618,6 +719,9 @@ void CKogLogin::StepDevice()
 		return;
 	}
 	m_KeyState = EKeyState::PLAIN;
+	m_aFingerprint[0] = '\0';
+	m_Failures = 0;
+	m_RetryAtMs = 0;
 	str_copy(g_Config.m_ClKogAccountName, m_aAccountName);
 	char aMessage[256];
 	if(m_aAccountName[0] != '\0')

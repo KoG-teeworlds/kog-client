@@ -585,6 +585,7 @@ protected:
 
 	// found in menus_settings_general.cpp
 	void RenderSettingsGeneral(CUIRect MainView);
+	void RenderKogDevices(CUIRect View);
 	void RenderKogAccount(CUIRect View);
 	void RenderThemeSelection(CUIRect MainView);
 

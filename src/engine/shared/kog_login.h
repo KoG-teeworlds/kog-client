@@ -24,12 +24,18 @@ enum
 	SEED_SIZE = 32,
 	PUBLIC_KEY_SIZE = 32,
 	SIGNATURE_SIZE = 64,
+	// base64url without padding of a signature
+	PROOF_LENGTH = 86,
+	// the first 16 hex characters of SHA-256 of the public key, as the account page of kog.tw shows it
+	FINGERPRINT_LENGTH = 16,
+	MAX_RETRY_MS = 5 * 60 * 1000,
 };
 
 constexpr const char *CLIENT_ID = "kog-client";
 constexpr const char *SCOPE = "openid profile kog:login";
 constexpr const char *CALLBACK_PATH = "/callback";
 constexpr const char *CHALLENGE_PREFIX = "KoG-login-v1";
+constexpr const char *REGISTER_PREFIX = "KoG-register-v1";
 
 void Base64UrlEncode(char *pDst, size_t DstSize, const void *pData, size_t DataSize);
 // Returns the number of bytes, or -1 if the input is not base64url without padding
@@ -82,6 +88,32 @@ size_t BuildChallengeMessage(uint8_t *pOut, size_t OutSize, const char *pServerA
 // pDeviceId is the UUID text of the device as the account server issued it
 bool SignChallenge(const uint8_t (&aSeed)[SEED_SIZE], const char *pServerAddress, const uint8_t *pNonce, size_t NonceSize, const char *pDeviceId, const uint8_t (&aSessionId)[UUID_SIZE], uint8_t (&aSignature)[SIGNATURE_SIZE]);
 bool VerifyChallenge(const uint8_t (&aPublicKey)[PUBLIC_KEY_SIZE], const char *pServerAddress, const uint8_t *pNonce, size_t NonceSize, const char *pDeviceId, const uint8_t (&aSessionId)[UUID_SIZE], const uint8_t (&aSignature)[SIGNATURE_SIZE]);
+
+// The proof of possession that comes with the registration of a device: the new key signs
+// "KoG-register-v1" 0x00 || device_name (the bytes of the name as sent), so the account server knows the client holds the
+// private key of the public key it registers. Returns 0 for an empty name or one that does not fit.
+size_t BuildRegisterMessage(uint8_t *pOut, size_t OutSize, const char *pDeviceName);
+// base64url of the signature, 86 characters
+bool SignRegistration(const uint8_t (&aSeed)[SEED_SIZE], const char *pDeviceName, char (&aProof)[PROOF_LENGTH + 1]);
+bool VerifyRegistration(const uint8_t (&aPublicKey)[PUBLIC_KEY_SIZE], const char *pDeviceName, const char *pProof);
+void Fingerprint(const uint8_t (&aPublicKey)[PUBLIC_KEY_SIZE], char (&aFingerprint)[FINGERPRINT_LENGTH + 1]);
+
+// How the account server answered the registration of a device (POST /api/client/device), by status and the `error` word
+// of its JSON body
+enum class ERegisterError
+{
+	NONE, // registered
+	DEVICE_LIMIT, // the account has as many devices as it may: remove one on the website
+	KEY_REGISTERED, // the public key is registered already
+	INVALID_PROOF, // the proof of possession was not accepted
+	RATE_LIMITED,
+	UNAUTHORIZED, // the token was refused
+	OTHER,
+};
+ERegisterError ClassifyRegisterAnswer(int Status, const char *pErrorWord);
+// How long to wait before the next login after this many failures in a row: none for 0, then 5 s, doubling to 5 minutes,
+// and at least a minute after a rate limit. There is no retry on a timer: this only gates the next click.
+int64_t RetryDelayMs(int Failures, ERegisterError Error);
 
 // Whether an endpoint named by the discovery document may be used. It must be https (http only if the base is http and
 // the same origin) and have the origin of pBaseUrl, or a host ending in ".kog.tw" on the default https port, or an origin

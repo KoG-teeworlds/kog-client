@@ -28,13 +28,56 @@
 
 #include <algorithm>
 
+void CMenus::RenderKogDevices(CUIRect View)
+{
+	CKogLogin &Login = GameClient()->m_KogLogin;
+	CUIRect Text, Manage;
+	View.VSplitRight(200.0f, &Text, &Manage);
+	Text.VSplitRight(10.0f, &Text, nullptr);
+
+	char aBuf[256];
+	bool Problem = false;
+	if(Login.KeyLocked())
+		str_copy(aBuf, Localize("Install key: locked. Unlock it to use it on KoG servers."));
+	else if(Login.KeyDamaged())
+		str_copy(aBuf, Localize("Install key: the key file cannot be read."));
+	else if(!Login.HasDeviceKey())
+		str_copy(aBuf, Localize("Install key: none. Logging in registers one for this device."));
+	else if(Login.JoinState() == CKogLogin::EJoinState::REFUSED)
+	{
+		str_format(aBuf, sizeof(aBuf), "%s %s %s", Localize("Install key"), Login.Fingerprint(), Localize("was not accepted by this server. It may have been removed or revoked: see your devices."));
+		Problem = true;
+	}
+	else
+	{
+		CKogAttest &Attest = GameClient()->m_KogAttest;
+		const char *pServer = Localize("not asked on this server");
+		if(Attest.HadChallenge() && Attest.LastDecision() == KogAttest::EDecision::ANSWER)
+			pServer = Localize("answered on this server");
+		str_format(aBuf, sizeof(aBuf), "%s %s: %s.", Localize("Install key"), Login.Fingerprint(), pServer);
+	}
+	if(Problem)
+		TextRender()->TextColor(1.0f, 0.4f, 0.4f, 1.0f);
+	Ui()->DoLabel(&Text, aBuf, 12.0f, TEXTALIGN_ML);
+	TextRender()->TextColor(1.0f, 1.0f, 1.0f, 1.0f);
+
+	static CButtonContainer s_ButtonDevices;
+	if(DoButton_Menu(&s_ButtonDevices, Localize("Your devices on kog.tw"), 0, &Manage))
+	{
+		char aUrl[300];
+		if(Login.AccountPageUrl(aUrl, sizeof(aUrl)))
+			Client()->ViewLink(aUrl);
+	}
+}
+
 void CMenus::RenderKogAccount(CUIRect View)
 {
 	CKogLogin &Login = GameClient()->m_KogLogin;
-	CUIRect Title, Status, Controls, Options, Button;
+	CUIRect Title, Status, Controls, Devices, Options, Button;
 	View.HSplitTop(20.0f, &Title, &View);
 	View.HSplitTop(20.0f, &Status, &View);
 	View.HSplitTop(20.0f, &Controls, &Options);
+	Options.HSplitTop(22.0f, &Devices, &Options);
 	Ui()->DoLabel(&Title, Localize("KoG account"), 16.0f, TEXTALIGN_ML);
 
 	if(!g_Config.m_ClKogLogin)
@@ -94,6 +137,8 @@ void CMenus::RenderKogAccount(CUIRect View)
 		if(DoButton_Menu(&s_ButtonCancel, Localize("Cancel"), 0, &CancelButton))
 			Login.Cancel();
 	}
+
+	RenderKogDevices(Devices);
 
 	Options.HSplitTop(2.0f, nullptr, &Options);
 	Options.HSplitTop(20.0f, &Button, &Options);
@@ -185,7 +230,7 @@ void CMenus::RenderSettingsDDNet(CUIRect MainView)
 #endif
 
 	CUIRect AccountRect;
-	MainView.HSplitBottom(126.0f, &MainView, &AccountRect);
+	MainView.HSplitBottom(148.0f, &MainView, &AccountRect);
 	MainView.HSplitBottom(5.0f, &MainView, nullptr);
 
 	// demo
