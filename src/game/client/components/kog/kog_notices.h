@@ -14,9 +14,9 @@ class CKogNotices : public CComponent
 {
 	struct SToast
 	{
-		KogNotices::EKind m_Kind;
+		KogNotices::EKind m_Kind = KogNotices::EKind::NONE;
 		std::string m_Text;
-		float m_Start;
+		float m_Start = 0.0f;
 	};
 
 	std::deque<SToast> m_Toasts;
