@@ -52,6 +52,7 @@ uint32_t CKogHello::Offer() const
 	uint32_t Offer = 0;
 	if(g_Config.m_ClKogLogin && g_Config.m_ClKogAutoLogin && GameClient()->m_KogLogin.HasDeviceKey())
 		Offer |= KogHello::Bit(EKogCap::CLIENT_LOGIN);
+	Offer |= KogHello::Bit(EKogCap::NOTICES);
 	return Offer;
 }
 

@@ -809,7 +809,17 @@ void CMenus::RenderServerInfo(CUIRect MainView)
 	str_format(aBuf, sizeof(aBuf), "%s: %d/%d", Localize("Players"), GameClient()->m_Snap.m_NumPlayers, CurrentServerInfo.m_MaxClients);
 	Ui()->DoLabel(&Label, aBuf, FontSizeBody, TEXTALIGN_ML);
 
-	RenderServerInfoMotd(Motd);
+	if(GameClient()->m_KogQuests.Empty())
+	{
+		RenderServerInfoMotd(Motd);
+	}
+	else
+	{
+		CUIRect Quests;
+		Motd.VSplitMid(&Motd, &Quests, 10.0f);
+		RenderServerInfoMotd(Motd);
+		RenderKogQuests(Quests);
+	}
 }
 
 void CMenus::RenderServerInfoMotd(CUIRect Motd)
