@@ -13,6 +13,7 @@
 #include <engine/client/enums.h>
 #include <engine/console.h>
 #include <engine/shared/config.h>
+#include <engine/shared/kog_quests.h>
 #include <engine/shared/snapshot.h>
 
 #include <generated/protocol7.h>
@@ -233,6 +234,7 @@ public:
 	CTClient m_TClient;
 	CKogHello m_KogHello;
 	CKogLogin m_KogLogin;
+	KogQuests::CList m_KogQuests;
 	CKogTrust m_KogTrust;
 	CTrails m_Trails;
 	CPet m_Pet;

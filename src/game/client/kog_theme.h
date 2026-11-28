@@ -102,17 +102,9 @@ public:
 		m_Outline(pTextRender->DefaultTextOutlineColor())
 	{
 		const float Luminance = 0.2126f * Color.r + 0.7152f * Color.g + 0.0722f * Color.b;
-		Set(Color, Luminance > 0.5f ? ColorRGBA(0.0f, 0.0f, 0.0f, 0.3f * Color.a) : ColorRGBA(1.0f, 1.0f, 1.0f, 0.35f * Color.a));
+		pTextRender->SetDefaultTextColors(Color, Luminance > 0.5f ? ColorRGBA(0.0f, 0.0f, 0.0f, 0.3f * Color.a) : ColorRGBA(1.0f, 1.0f, 1.0f, 0.35f * Color.a));
 	}
-	~CTextColor() { Set(m_Color, m_Outline); }
-
-private:
-	void Set(ColorRGBA Color, ColorRGBA Outline)
-	{
-		m_pTextRender->SetDefaultTextColors(Color, Outline);
-		m_pTextRender->TextColor(Color);
-		m_pTextRender->TextOutlineColor(Outline);
-	}
+	~CTextColor() { m_pTextRender->SetDefaultTextColors(m_Color, m_Outline); }
 };
 }
 
