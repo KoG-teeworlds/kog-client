@@ -18,6 +18,8 @@ check true other/icons/kog.png
 check true data/languages/german.txt
 check true cmake/FindFoo.cmake
 check true scripts/kog/make_package.sh
+check true scripts/kog/linux_package_check.sh
+check true scripts/kog/linux_package_distros.sh
 check true .github/workflows/kog-build.yml
 check true .github/workflows/kog-package.yml
 check true Cargo.lock

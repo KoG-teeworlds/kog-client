@@ -52,7 +52,7 @@ jobs:
         include:
         - name: linux
           os: ubuntu-22.04
-          cmake-args: -G Ninja -DPREFER_BUNDLED_LIBS=ON
+          cmake-args: -G Ninja -DPREFER_BUNDLED_LIBS=ON -DCMAKE_SKIP_BUILD_RPATH=ON
           # The bundled zlib declares read and write differently from glibc; with LTO under -Werror that is a link error
           cmake-args-release: -DIPO=ON -DCMAKE_EXE_LINKER_FLAGS=-Wno-error=lto-type-mismatch
           cmake-init-env: CXXFLAGS=-Werror
@@ -169,6 +169,10 @@ jobs:
         if-no-files-found: ignore
         retention-days: 14
 
+    - name: Check the dynamic dependencies
+      if: matrix.run == 'yes' && (runner.os == 'Linux')
+      run: bash scripts/kog/linux_package_check.sh "release/$KOG_EXE"
+
     - name: Package
       if: matrix.run == 'yes'
       run: |
@@ -176,6 +180,10 @@ jobs:
         cmake --build . --config Release --target package_default
         mkdir artifacts
         mv ${{ matrix.package-file }} artifacts
+
+    - name: Start the package on clean distributions
+      if: matrix.run == 'yes' && (runner.os == 'Linux')
+      run: bash scripts/kog/linux_package_distros.sh release/artifacts/*-linux_x86_64.tar.xz
 
     - name: Upload build
       if: matrix.run == 'yes'
