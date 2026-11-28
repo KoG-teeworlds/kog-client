@@ -69,3 +69,7 @@ hello, only the offered ids are listed, long texts, every malformed answer, unkn
 server cannot enable what the client did not offer, and the decision to send (vanilla server, switch off, dummy, 0.7,
 empty offer: nothing). The test of the join proof decision also checks that it needs the agreed feature. Not tested
 automatically: the exchange with a running KoG server.
+
+## See also
+
+What the client can and cannot prove about itself, and the planned `client_attest` proof: [CLIENT-ATTESTATION.md](https://github.com/KoG-teeworlds/kog-2.0-server/blob/main/docs/CLIENT-ATTESTATION.md) in `kog-2.0-server` (design, not built).

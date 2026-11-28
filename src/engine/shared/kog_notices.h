@@ -12,23 +12,23 @@
 // and completed quests as plain chat lines; only their first words tell what they are (Classify).
 namespace KogNotices
 {
-// The values of the kinds 1 to 7 are the ones of the wire
-enum class EKind
-{
-	NONE,
-	INFO,
-	ACHIEVEMENT,
-	QUEST, // completed
-	QUEST_PROGRESS,
-	MAINTENANCE,
-	WARNING,
-	TOURNAMENT,
-};
+	// The values of the kinds 1 to 7 are the ones of the wire
+	enum class EKind
+	{
+		NONE,
+		INFO,
+		ACHIEVEMENT,
+		QUEST, // completed
+		QUEST_PROGRESS,
+		MAINTENANCE,
+		WARNING,
+		TOURNAMENT,
+	};
 
-// A kind that this client does not know is an info
-inline EKind KindFromWire(int Kind)
-{
-	return Kind >= (int)EKind::INFO && Kind <= (int)EKind::TOURNAMENT ? (EKind)Kind : EKind::INFO;
+	// A kind that this client does not know is an info
+	inline EKind KindFromWire(int Kind)
+	{
+		return Kind >= (int)EKind::INFO && Kind <= (int)EKind::TOURNAMENT ? (EKind)Kind : EKind::INFO;
 }
 
 inline constexpr int MAX_TOASTS_PER_WINDOW = 4;
