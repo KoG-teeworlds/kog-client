@@ -44,6 +44,8 @@ Planned, not built yet:
 Same as DDNet, see [docs/BUILDING.md](docs/BUILDING.md). The updater needs `-DAUTOUPDATE=ON` (default OFF; the release workflows turn it on). Run the tests with
 `cmake --build . --target run_tests`.
 
+Running the Linux release: supported distributions and the runtime packages are in [docs/LINUX.md](docs/LINUX.md).
+
 How a release is made and signed (owner guide): [docs/RELEASING.md](docs/RELEASING.md).
 
 ## Contributing
