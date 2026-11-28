@@ -7,7 +7,7 @@ using namespace KogMotion;
 TEST(KogMotion, ANewWidgetStartsAtItsTarget)
 {
 	CHoverTable Table;
-	int A, B;
+	int A = 0, B = 0;
 	EXPECT_FLOAT_EQ(Table.Update(&A, false, 1.0, 0.1f), 0.0f);
 	EXPECT_FLOAT_EQ(Table.Update(&B, true, 1.0, 0.1f), 1.0f);
 }
@@ -15,7 +15,7 @@ TEST(KogMotion, ANewWidgetStartsAtItsTarget)
 TEST(KogMotion, HoverEasesInAndOutWithinTheDuration)
 {
 	CHoverTable Table;
-	int A;
+	int A = 0;
 	Table.Update(&A, false, 0.0, 0.1f);
 	const float Early = Table.Update(&A, true, 0.02, 0.1f);
 	EXPECT_GT(Early, 0.0f);
@@ -30,7 +30,7 @@ TEST(KogMotion, HoverEasesInAndOutWithinTheDuration)
 TEST(KogMotion, TheSameTimeGivesTheSameValue)
 {
 	CHoverTable Table;
-	int A;
+	int A = 0;
 	Table.Update(&A, false, 0.0, 0.1f);
 	const float First = Table.Update(&A, true, 0.03, 0.1f);
 	EXPECT_FLOAT_EQ(Table.Update(&A, true, 0.03, 0.1f), First);
@@ -39,7 +39,7 @@ TEST(KogMotion, TheSameTimeGivesTheSameValue)
 TEST(KogMotion, ReducedMotionJumpsAndAHugeGapJumps)
 {
 	CHoverTable Table;
-	int A;
+	int A = 0;
 	Table.Update(&A, false, 0.0, 0.1f);
 	EXPECT_FLOAT_EQ(Table.Update(&A, true, 0.001, 0.0f), 1.0f);
 	EXPECT_FLOAT_EQ(Table.Update(&A, false, 500.0, 0.1f), 0.0f);
