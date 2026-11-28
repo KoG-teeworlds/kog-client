@@ -36,6 +36,7 @@
 #include <game/client/components/menu_background.h>
 #include <game/client/components/sounds.h>
 #include <game/client/gameclient.h>
+#include <game/client/kog_theme.h>
 #include <game/client/ui_listbox.h>
 #include <game/localization.h>
 
@@ -132,7 +133,7 @@ int CMenus::DoButton_Menu(CButtonContainer *pButtonContainer, const char *pText,
 	else // TClient, why was this not here? ig they never use "checked" anywhere important
 		Color.a *= Ui()->ButtonColorMul(pButtonContainer);
 
-	pRect->Draw(Color, Corners, Rounding);
+	pRect->Draw(KogTheme::Control(Color), Corners, Rounding);
 
 	if(pImageName)
 	{
@@ -288,9 +289,9 @@ int CMenus::DoButton_CheckBox_Common(const void *pId, const char *pText, const c
 	Label.VSplitLeft(5.0f, nullptr, &Label);
 
 	Box.Margin(2.0f, &Box);
-	Box.Draw(ColorRGBA(1, 1, 1, 0.25f * Ui()->ButtonColorMul(pId)), IGraphics::CORNER_ALL, 3.0f);
-
 	const bool Checkable = *pBoxText == 'X';
+	Box.Draw(KogTheme::CheckBox(Checkable, Ui()->ButtonColorMul(pId)), IGraphics::CORNER_ALL, 3.0f);
+
 	if(Checkable)
 	{
 		TextRender()->SetRenderFlags(ETextRenderFlags::TEXT_RENDER_FLAG_ONLY_ADVANCE_WIDTH | ETextRenderFlags::TEXT_RENDER_FLAG_NO_X_BEARING | ETextRenderFlags::TEXT_RENDER_FLAG_NO_Y_BEARING | ETextRenderFlags::TEXT_RENDER_FLAG_NO_OVERSIZE | ETextRenderFlags::TEXT_RENDER_FLAG_NO_PIXEL_ALIGNMENT);
@@ -967,6 +968,10 @@ void CMenus::Render()
 {
 	Ui()->MapScreen();
 	Ui()->SetMouseSlow(false);
+	const KogTheme::CMenuTextScope TextScope(TextRender());
+
+	if(m_AppliedKogTheme != g_Config.m_ClKogTheme)
+		UpdateColors();
 
 	static int s_Frame = 0;
 	if(s_Frame == 0)
@@ -2462,6 +2467,19 @@ void CMenus::UpdateColors()
 		ms_GuiColor.a);
 
 	ms_ColorTabbarHoverIngame = ColorRGBA(1.0f, 1.0f, 1.0f, 0.75f);
+
+	if(KogTheme::On())
+	{
+		const KogStyle::SPalette &Palette = KogTheme::Palette();
+		ms_GuiColor = Palette.m_Backdrop;
+		ms_ColorTabbarInactiveOutgame = KogTheme::Layer(0.05f);
+		ms_ColorTabbarActiveOutgame = Palette.m_Panel;
+		ms_ColorTabbarHoverOutgame = KogTheme::Layer(0.12f);
+		ms_ColorTabbarInactiveIngame = KogTheme::Layer(0.05f);
+		ms_ColorTabbarActiveIngame = Palette.m_Panel;
+		ms_ColorTabbarHoverIngame = KogTheme::Layer(0.16f);
+	}
+	m_AppliedKogTheme = g_Config.m_ClKogTheme;
 }
 
 void CMenus::RenderBackground()

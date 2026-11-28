@@ -2958,6 +2958,8 @@ if(CLIENT)
     components/voting.h
     gameclient.cpp
     gameclient.h
+    kog_style.h
+    kog_theme.h
     laser_data.cpp
     laser_data.h
     lineinput.cpp
@@ -3677,6 +3679,7 @@ if(GTEST_FOUND OR DOWNLOAD_GTEST)
     kog_keyfile_test.cpp
     kog_login_test.cpp
     kog_login_wire_test.cpp
+    kog_style_test.cpp
     kog_update_test.cpp
     kog_user_agent_test.cpp
     linereader_test.cpp
