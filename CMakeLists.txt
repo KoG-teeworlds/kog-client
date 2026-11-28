@@ -2152,6 +2152,7 @@ set(EXPECTED_DATA
   tclient/fonts/Rubik-Regular.ttf
   tclient/fonts/minecraft_font.ttf
   tclient/gui_logo.png
+  tclient/gui_logo_light.png
   tclient/languages/arabic.txt
   tclient/languages/azerbaijani.txt
   tclient/languages/belarusian.txt
@@ -2881,6 +2882,7 @@ if(CLIENT)
     components/kog/kog_login.cpp
     components/kog/kog_login.h
     components/kog/kog_menu_quests.cpp
+    components/kog/kog_menu_start.cpp
     components/kog/kog_trust.cpp
     components/kog/kog_trust.h
     components/local_server.cpp
