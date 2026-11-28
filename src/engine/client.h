@@ -446,6 +446,8 @@ public:
 	// The login with the device key: the challenge and the result of the server (main connection only)
 	virtual void KogLoginChallenge(CUnpacker *pUnpacker) = 0;
 	virtual void KogLoginResult(CUnpacker *pUnpacker) = 0;
+	// A typed notice of the server, only after notices was agreed (main connection only)
+	virtual void KogNotice(CUnpacker *pUnpacker) = 0;
 
 	virtual void OnDummyDisconnect() = 0;
 	virtual void DummyResetInput() = 0;

@@ -100,7 +100,7 @@ TEST(KogHello, ReadsTheServerHello)
 TEST(KogHello, UnknownIdsAndNewerRevisionsAreIgnored)
 {
 	CPacker Packer;
-	Start(Packer, 9, {4000, 1, 2});
+	Start(Packer, 9, {4000, 1, 5});
 	Packer.AddString("a field of a later revision", 0);
 	KogHello::SServerHello Hello;
 	ASSERT_TRUE(Unpack(Packer, &Hello));

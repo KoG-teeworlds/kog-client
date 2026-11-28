@@ -217,7 +217,9 @@ TEST(KogHud, RandomScreensAndPlayerCountsKeepEveryInvariant)
 			ASSERT_GE(Plan.m_ColumnWidth, Hud::MIN_COLUMN_WIDTH);
 			ASSERT_LE(Plan.m_RowsPerColumn * Hud::ROW + Hud::TITLE_BAR + 2.0f * Hud::TEXT_HEADER + 10.0f, Plan.m_Height + 0.01f);
 			if(Width / Height > Hud::WIDE_ASPECT)
+			{
 				ASSERT_GE(Plan.m_X, Hud::CHAT_RESERVE);
+			}
 			const float Spectators = Hud::PlanSpectatorsHeight(Height, Plan.m_Y + Plan.m_Height);
 			ASSERT_GE(Spectators, 0.0f);
 			ASSERT_LE(Plan.m_Y + Plan.m_Height + (Spectators > 0.0f ? 5.0f + Spectators : 0.0f), Height);
