@@ -32,6 +32,11 @@ must replace them. The logo does not make this client an official release. See [
 | --- | --- | --- |
 | Monocypher 4.0.3 | `src/engine/external/monocypher/` | BSD-2-Clause OR CC0-1.0 |
 
+## Linked into the Linux and Windows release
+
+The video recorder uses FFmpeg 7.0.1 with x264 from `ddnet-libs`, built with `--enable-gpl`: GPL version 2 or later for those
+parts. Where the source is and how to build without them: [docs/LINUX.md](docs/LINUX.md).
+
 ## Assets that need a licence check before the first release
 
 Not verified. Remove or replace what cannot be redistributed.

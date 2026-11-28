@@ -52,8 +52,9 @@ jobs:
         include:
         - name: linux
           os: ubuntu-22.04
-          cmake-args: -G Ninja
-          cmake-args-release: -DIPO=ON
+          cmake-args: -G Ninja -DPREFER_BUNDLED_LIBS=ON -DCMAKE_SKIP_BUILD_RPATH=ON
+          # The bundled zlib declares read and write differently from glibc; with LTO under -Werror that is a link error
+          cmake-args-release: -DIPO=ON -DCMAKE_EXE_LINKER_FLAGS=-Wno-error=lto-type-mismatch
           cmake-init-env: CXXFLAGS=-Werror
           package-file: "*-linux_x86_64.tar.xz"
           run: "yes"
@@ -64,7 +65,7 @@ jobs:
         - name: macos
           run: ${{ (github.event_name != 'pull_request' || needs.changes.outputs.native == 'true') && 'yes' || 'no' }}
           os: ${{ (github.event_name != 'pull_request' || needs.changes.outputs.native == 'true') && 'macos-15-intel' || 'ubuntu-22.04' }}
-          cmake-args: -G Ninja
+          cmake-args: -G Ninja -DPREFER_BUNDLED_LIBS=ON
           cmake-args-release: -DIPO=ON
           package-file: "*-macos.dmg"
         - name: windows
@@ -84,14 +85,13 @@ jobs:
       if: matrix.run == 'yes' && (runner.os == 'Linux')
       run: |
         sudo apt-get update -y
-        sudo apt-get install -y cmake glslang-tools libavcodec-dev libavformat-dev libavutil-dev libcurl4-openssl-dev libfreetype6-dev libglew-dev libnotify-dev libogg-dev libopus-dev libopusfile-dev libpng-dev libsdl2-dev libsqlite3-dev libssl-dev libswresample-dev libswscale-dev libvulkan-dev libwavpack-dev libx264-dev ninja-build pkg-config spirv-tools zlib1g-dev xvfb xauth libgl1-mesa-dri libglx-mesa0
+        sudo apt-get install -y cmake glslang-tools libcurl4-openssl-dev libfreetype6-dev libglew-dev libnotify-dev libogg-dev libopus-dev libopusfile-dev libpng-dev libsdl2-dev libsqlite3-dev libssl-dev libvulkan-dev libwavpack-dev ninja-build pkg-config spirv-tools zlib1g-dev xvfb xauth libgl1-mesa-dri libglx-mesa0
 
     - name: Prepare macOS
       if: matrix.run == 'yes' && (runner.os == 'macOS')
       run: |
         brew update
-        brew install ffmpeg molten-vk ninja pkg-config sdl2
-        brew upgrade freetype
+        brew install ninja pkg-config
         pip3 install --break-system-packages dmgbuild==1.6.7 pyobjc-framework-Quartz==12.2.2
         echo /Library/Frameworks/Python.framework/Versions/3.12/bin >> "$GITHUB_PATH"
         sudo rm -rf /Library/Developer/CommandLineTools
@@ -168,6 +168,10 @@ jobs:
         if-no-files-found: ignore
         retention-days: 14
 
+    - name: Check the dynamic dependencies
+      if: matrix.run == 'yes' && (runner.os == 'Linux')
+      run: bash scripts/kog/linux_package_check.sh "release/$KOG_EXE"
+
     - name: Package
       if: matrix.run == 'yes'
       run: |
@@ -176,6 +180,10 @@ jobs:
         mkdir artifacts
         mv ${{ matrix.package-file }} artifacts
 
+    - name: Start the package on clean distributions
+      if: matrix.run == 'yes' && (runner.os == 'Linux')
+      run: bash scripts/kog/linux_package_distros.sh release/artifacts/*-linux_x86_64.tar.xz
+
     - name: Upload build
       if: matrix.run == 'yes'
       uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
@@ -183,3 +191,7 @@ jobs:
         name: kog-${{ matrix.name }}
         path: release/artifacts
         retention-days: 14
+
+    - name: Check the macOS app
+      if: matrix.run == 'yes' && (runner.os == 'macOS')
+      run: bash scripts/kog/macos_package_check.sh release/artifacts/*-macos.dmg
