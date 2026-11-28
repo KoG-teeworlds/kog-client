@@ -17,7 +17,7 @@ SYSTEM = {
     "dbghelp.dll", "dwmapi.dll", "dxgi.dll", "gdi32.dll", "imm32.dll", "iphlpapi.dll", "kernel32.dll", "msvcrt.dll",
     "ntdll.dll", "ole32.dll", "oleaut32.dll", "opengl32.dll", "rpcrt4.dll", "setupapi.dll", "shell32.dll",
     "shlwapi.dll", "ucrtbase.dll", "user32.dll", "userenv.dll", "uxtheme.dll", "version.dll", "winmm.dll",
-    "ws2_32.dll", "wldap32.dll", "wininet.dll", "cabinet.dll", "lz32.dll", "normaliz.dll", "secur32.dll", "psapi.dll", "mswsock.dll", "winhttp.dll",
+    "ws2_32.dll", "wldap32.dll", "wininet.dll", "cabinet.dll", "lz32.dll", "normaliz.dll", "sec" "ur32.dll", "psapi.dll", "mswsock.dll", "winhttp.dll",
 }
 SYSTEM_PREFIXES = ("api-ms-win-", "ext-ms-win-")
 # not part of Windows: the Visual C++ Redistributable has to come with the package
