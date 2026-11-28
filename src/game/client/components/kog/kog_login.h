@@ -75,7 +75,7 @@ public:
 	void OnLoginResult(class CUnpacker *pUnpacker);
 
 	// The challenge of the server, already read. True if it was answered.
-	bool OnChallenge(const char *pServerAddress, const uint8_t *pNonce, size_t NonceSize, const uint8_t (&aSessionId)[KogLogin::UUID_SIZE]);
+	bool OnChallenge(const char *pServerAddress, const uint8_t *pNonce, size_t NonceSize, const uint8_t (&aSessionId)[KogLogin::UUID_SIZE], bool CertVerified, bool CertBad);
 	void NoteManualLogin() { m_ManualLogin = true; }
 	static bool ServerIsKog(class IServerBrowser *pBrowser, const NETADDR &Address);
 
