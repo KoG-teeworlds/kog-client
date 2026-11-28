@@ -655,6 +655,7 @@ protected:
 
 	void SetNeedSendInfo();
 	void UpdateColors();
+	int m_AppliedKogTheme = -1;
 
 	IGraphics::CTextureHandle m_TextureBlob;
 
