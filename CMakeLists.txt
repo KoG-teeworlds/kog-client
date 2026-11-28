@@ -2988,6 +2988,7 @@ if(CLIENT)
     components/voting.h
     gameclient.cpp
     gameclient.h
+    kog_hud.h
     kog_style.h
     kog_theme.h
     laser_data.cpp
