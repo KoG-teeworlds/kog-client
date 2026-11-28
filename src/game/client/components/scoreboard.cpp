@@ -1121,7 +1121,7 @@ void CScoreboard::OnRender()
 			if(KogPlan.m_Truncated)
 			{
 				char aMore[64];
-				str_format(aMore, sizeof(aMore), Localize("+%d players not shown"), NumPlayers - KogPlan.m_Shown);
+				str_format(aMore, sizeof(aMore), "+%d %s", NumPlayers - KogPlan.m_Shown, Localize("players not shown"));
 				CUIRect More = {Panel.x, Panel.y + Panel.h - KogStyle::Hud::ROW - 5.0f, Panel.w, KogStyle::Hud::ROW};
 				Ui()->DoLabel(&More, aMore, KogStyle::Hud::TEXT, TEXTALIGN_MC);
 			}

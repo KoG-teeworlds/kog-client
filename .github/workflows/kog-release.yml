@@ -70,4 +70,4 @@ jobs:
       - name: Create the prerelease
         run: |
           gh release create "$TAG" release/* --verify-tag --prerelease --title "KoG Client ${TAG#v}" \
-            --notes "Not usable for updates until it is signed twice: workflow Sign release in kog-client-updates, then scripts/kog/approve_release.sh."
+            --notes "Not usable for updates until it is signed twice: workflow Sign release in kog-client-updates, then scripts/kog/approve_release.sh. Linux: needs glibc 2.35 or newer and the runtime packages in docs/LINUX.md; FFmpeg is not needed."

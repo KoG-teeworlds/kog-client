@@ -13,6 +13,7 @@
 #include <engine/client/enums.h>
 #include <engine/console.h>
 #include <engine/shared/config.h>
+#include <engine/shared/kog_quests.h>
 #include <engine/shared/snapshot.h>
 
 #include <generated/protocol7.h>
@@ -52,6 +53,7 @@
 #include "components/kog/kog_hello.h"
 #include "components/kog/kog_login.h"
 #include "components/kog/kog_notices.h"
+#include "components/kog/kog_trust.h"
 #include "components/local_server.h"
 #include "components/mapimages.h"
 #include "components/maplayers.h"
@@ -233,7 +235,9 @@ public:
 	CTClient m_TClient;
 	CKogHello m_KogHello;
 	CKogLogin m_KogLogin;
+	KogQuests::CList m_KogQuests;
 	CKogNotices m_KogNotices;
+	CKogTrust m_KogTrust;
 	CTrails m_Trails;
 	CPet m_Pet;
 	CPlayerIndicator m_PlayerIndicator;
@@ -727,6 +731,7 @@ public:
 	void KogServerHello(CUnpacker *pUnpacker) override { m_KogHello.OnServerHello(pUnpacker); }
 	void KogLoginChallenge(CUnpacker *pUnpacker) override { m_KogLogin.OnLoginChallenge(pUnpacker); }
 	void KogLoginResult(CUnpacker *pUnpacker) override { m_KogLogin.OnLoginResult(pUnpacker); }
+	void KogNotice(CUnpacker *pUnpacker) override { m_KogNotices.OnNotice(pUnpacker); }
 	int ClientVersion7() const override;
 
 	void DoTeamChangeMessage7(const char *pName, int ClientId, int Team, const char *pPrefix = "");

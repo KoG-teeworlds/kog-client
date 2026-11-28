@@ -37,6 +37,7 @@ The numbers are written once and never reused. They are the same on every client
 | Id | Name | Offered when | What it enables |
 | --- | --- | --- | --- |
 | 1 | `client_login` | `cl_kog_login` and `cl_kog_auto_login` are on and this device has a key | the client may prove your account at join (see [LOGIN.md](LOGIN.md)) |
+| 2 | `notices` | always | the server sends achievements, quests and maintenance as the message `kog-notice@kog.tw` instead of a chat line; the client shows a toast and writes the same text into the chat log (see [KOG-NOTICE.md](KOG-NOTICE.md)) |
 
 The list is generated from one table in `src/engine/shared/kog_protocol.h` (`KOG_CAPABILITIES`); adding a feature is
 one line there. A feature is offered only if its own settings are on.
@@ -68,3 +69,7 @@ hello, only the offered ids are listed, long texts, every malformed answer, unkn
 server cannot enable what the client did not offer, and the decision to send (vanilla server, switch off, dummy, 0.7,
 empty offer: nothing). The test of the join proof decision also checks that it needs the agreed feature. Not tested
 automatically: the exchange with a running KoG server.
+
+## See also
+
+What the client can and cannot prove about itself, and the planned `client_attest` proof: [CLIENT-ATTESTATION.md](https://github.com/KoG-teeworlds/kog-2.0-server/blob/main/docs/CLIENT-ATTESTATION.md) in `kog-2.0-server` (design, not built).

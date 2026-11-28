@@ -23,13 +23,15 @@ jobs:
       fail-fast: true
       matrix:
         include:
+        # The oldest hosted image, so the binary needs an old glibc; FFmpeg and its codecs come from ddnet-libs and are linked statically
         - name: linux
-          os: ubuntu-latest
-          cmake-args: -G Ninja -DIPO=ON
+          os: ubuntu-22.04
+          cmake-args: -G Ninja -DIPO=ON -DPREFER_BUNDLED_LIBS=ON -DCMAKE_SKIP_BUILD_RPATH=ON
           package-file: "*-linux_x86_64.tar.xz"
+        # Libraries come from ddnet-libs, so the app has no path into Homebrew; SDL2 and FFmpeg are copied into Contents/Frameworks
         - name: macos
           os: macos-15
-          cmake-args: -G Ninja -DIPO=ON
+          cmake-args: -G Ninja -DIPO=ON -DPREFER_BUNDLED_LIBS=ON
           package-file: "*-macos.dmg"
         - name: windows
           os: windows-latest
@@ -45,14 +47,13 @@ jobs:
       if: runner.os == 'Linux'
       run: |
         sudo apt-get update -y
-        sudo apt-get install -y cmake glslang-tools libavcodec-dev libavformat-dev libavutil-dev libcurl4-openssl-dev libfreetype6-dev libglew-dev libnotify-dev libogg-dev libopus-dev libopusfile-dev libpng-dev libsdl2-dev libsqlite3-dev libssl-dev libswresample-dev libswscale-dev libvulkan-dev libwavpack-dev libx264-dev ninja-build pkg-config spirv-tools zlib1g-dev xvfb xauth libgl1-mesa-dri libglx-mesa0
+        sudo apt-get install -y cmake glslang-tools libcurl4-openssl-dev libfreetype6-dev libglew-dev libnotify-dev libogg-dev libopus-dev libopusfile-dev libpng-dev libsdl2-dev libsqlite3-dev libssl-dev libvulkan-dev libwavpack-dev ninja-build pkg-config spirv-tools zlib1g-dev xvfb xauth libgl1-mesa-dri libglx-mesa0
 
     - name: Prepare macOS
       if: runner.os == 'macOS'
       run: |
         brew update
-        brew install ffmpeg molten-vk ninja pkg-config sdl2
-        brew upgrade freetype
+        brew install ninja pkg-config
         pip3 install --break-system-packages dmgbuild==1.6.7 pyobjc-framework-Quartz==12.2.2
         echo /Library/Frameworks/Python.framework/Versions/3.12/bin >> "$GITHUB_PATH"
         sudo rm -rf /Library/Developer/CommandLineTools
@@ -87,6 +88,18 @@ jobs:
         mv ${{ matrix.package-file }} artifacts
 
     # The packaged client is started before it is attested; the Windows and macOS runners have no GPU
+    - name: Check the dynamic dependencies
+      if: runner.os == 'Linux'
+      run: |
+        exe=$(sed -n 's/^#define KOG_CLIENT_EXECUTABLE "\(.*\)"$/\1/p' src/game/kog_version.h)
+        mkdir release/inspect
+        tar -xf release/artifacts/*-linux_x86_64.tar.xz -C release/inspect --strip-components=1
+        bash scripts/kog/linux_package_check.sh "release/inspect/$exe"
+
+    - name: Start the package on clean distributions
+      if: runner.os == 'Linux'
+      run: bash scripts/kog/linux_package_distros.sh release/artifacts/*-linux_x86_64.tar.xz
+
     - name: Smoke test the package
       if: runner.os == 'Linux'
       run: |
@@ -110,3 +123,15 @@ jobs:
         path: release/artifacts
         if-no-files-found: error
         retention-days: 7
+
+    # The last step: it moves Homebrew away to show that the app does not load anything from it
+    - name: Check the macOS app
+      if: runner.os == 'macOS'
+      env:
+        HIDE_HOMEBREW: "1"
+      run: bash scripts/kog/macos_package_check.sh release/artifacts/*-macos.dmg
+
+    - name: Check the Windows package
+      if: runner.os == 'Windows'
+      shell: bash
+      run: python3 -I scripts/kog/windows_package_check.py release/artifacts/*-win64.zip

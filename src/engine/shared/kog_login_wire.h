@@ -2,6 +2,7 @@
 #define ENGINE_SHARED_KOG_LOGIN_WIRE_H
 
 #include <cstdint>
+#include <vector>
 
 class CAbstractPacker;
 class CUnpacker;
@@ -21,6 +22,7 @@ enum
 	// a server that asks for more or less than this is not asking for a login
 	MIN_TTL_MS = 1000,
 	MAX_TTL_MS = 5 * 60 * 1000,
+	MAX_CHAIN_SIZE = 1024,
 };
 
 struct SChallenge
@@ -29,6 +31,10 @@ struct SChallenge
 	uint8_t m_aNonce[NONCE_SIZE] = {};
 	uint8_t m_aSessionId[ID_SIZE] = {};
 	int m_TtlMs = 0;
+	// revision 2: the KoG certificate chain of the server (node certificate, then game server certificate) and the
+	// server's signature over the challenge. Empty chain: the server presented none.
+	std::vector<uint8_t> m_Chain;
+	uint8_t m_aServerSignature[SIGNATURE_SIZE] = {};
 };
 
 // Reads the fields after the message id. False: not understood, nothing is signed.
