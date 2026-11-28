@@ -20,6 +20,11 @@
 #define KOG_LOGIN_DEFAULT 0
 #endif
 
+// Requiring a KoG certificate before answering a login challenge is on by default in canary and dev builds only (CMake sets it)
+#ifndef KOG_REQUIRE_CERT_DEFAULT
+#define KOG_REQUIRE_CERT_DEFAULT 0
+#endif
+
 // The KoG hello (announce capabilities to KoG servers) is on by default in canary and dev builds only (CMake sets it)
 #ifndef KOG_HELLO_DEFAULT
 #define KOG_HELLO_DEFAULT 0
