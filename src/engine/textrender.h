@@ -205,8 +205,14 @@ public:
 	virtual void SetRenderFlags(unsigned Flags) = 0;
 	virtual unsigned GetRenderFlags() const = 0;
 
-	ColorRGBA DefaultTextColor() const { return ColorRGBA(1, 1, 1, 1); }
-	ColorRGBA DefaultTextOutlineColor() const { return ColorRGBA(0, 0, 0, 0.3f); }
+	ColorRGBA DefaultTextColor() const { return m_DefaultTextColor; }
+	ColorRGBA DefaultTextOutlineColor() const { return m_DefaultTextOutlineColor; }
+	// KoG: the menus draw with other defaults while the light theme is on (kog_theme.h); everything else keeps white
+	void SetDefaultTextColors(ColorRGBA Color, ColorRGBA OutlineColor)
+	{
+		m_DefaultTextColor = Color;
+		m_DefaultTextOutlineColor = OutlineColor;
+	}
 	ColorRGBA DefaultTextSelectionColor() const { return ColorRGBA(1.0f, 1.0f, 1.0f, 0.5f); }
 
 	//
@@ -249,6 +255,10 @@ public:
 
 	virtual void OnPreWindowResize() = 0;
 	virtual void OnWindowResize() = 0;
+
+private:
+	ColorRGBA m_DefaultTextColor = ColorRGBA(1, 1, 1, 1);
+	ColorRGBA m_DefaultTextOutlineColor = ColorRGBA(0, 0, 0, 0.3f);
 };
 
 class IEngineTextRender : public ITextRender
