@@ -52,6 +52,7 @@
 #include "components/kog/kog_hello.h"
 #include "components/kog/kog_login.h"
 #include "components/kog/kog_notices.h"
+#include "components/kog/kog_trust.h"
 #include "components/local_server.h"
 #include "components/mapimages.h"
 #include "components/maplayers.h"
@@ -234,6 +235,7 @@ public:
 	CKogHello m_KogHello;
 	CKogLogin m_KogLogin;
 	CKogNotices m_KogNotices;
+	CKogTrust m_KogTrust;
 	CTrails m_Trails;
 	CPet m_Pet;
 	CPlayerIndicator m_PlayerIndicator;
