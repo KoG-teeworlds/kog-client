@@ -107,6 +107,8 @@ public:
 	int m_NumPlayers;
 	int m_Flags;
 	EClientScoreKind m_ClientScoreKind;
+	// The server is in a list signed by the KoG master. Anything that must trust a server needs this (or a certificate)
+	bool m_KogSigned = false;
 	TRISTATE m_Favorite;
 	TRISTATE m_FavoriteAllowPing;
 	char m_aCommunityId[MAX_COMMUNITY_ID_LENGTH];

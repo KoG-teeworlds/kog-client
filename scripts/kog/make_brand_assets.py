@@ -3,7 +3,7 @@
 
 Needs rsvg-convert (librsvg 2.63.4 was used) and Pillow. The artwork itself is never edited, only scaled.
 Icons: logo_short_black.svg (the fox carries its own outline, so it reads on light and dark).
-Menu banner: logo_long_white.svg (the menu background is dark).
+Menu banner: logo_long_white.svg (the menu background is dark), logo_long_black.svg for the light theme.
 """
 import io
 import os
@@ -51,6 +51,7 @@ def main():
     ico[-1].save(f"{OUT_ICONS}/{ID}.ico", sizes=[(s, s) for s in ICO_SIZES], append_images=ico[:-1])
     write_icns(f"{OUT_ICONS}/{ID}.icns")
     render("logo_long_white.svg", BANNER_WIDTH).save("data/tclient/gui_logo.png", optimize=True)
+    render("logo_long_black.svg", BANNER_WIDTH).save("data/tclient/gui_logo_light.png", optimize=True)
     open(f"{OUT_ICONS}/{ID}.rc", "w").write(f'ID ICON "{ID}.ico"\n')
     open(f"other/{ID.lower()}.desktop", "w").write(
         f"[Desktop Entry]\nType=Application\nName={NAME}\nGenericName=Platform Game\nExec={ID} %u\n"

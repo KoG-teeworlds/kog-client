@@ -101,6 +101,9 @@ struct SJoinDecision
 	bool m_AlreadyLoggedIn;
 	bool m_AlreadyAnsweredThisJoin;
 	bool m_CapabilityNegotiated; // the server agreed to client_login in the KoG hello
+	bool m_CertVerified; // the server proved with a valid, not revoked KoG certificate that KoG enrolled it
+	bool m_CertBad; // the server presented a certificate and it is wrong, revoked, or the list to check it is missing
+	bool m_CertRequired; // cl_kog_require_server_cert
 };
 // Whether this client may answer a login challenge of the server it is on. Vanilla and other servers: never.
 bool MayAnswerChallenge(const SJoinDecision &Decision);
