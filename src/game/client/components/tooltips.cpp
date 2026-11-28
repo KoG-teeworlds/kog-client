@@ -2,6 +2,7 @@
 
 #include <base/time.h>
 
+#include <game/client/kog_hud.h>
 #include <game/client/ui.h>
 
 CTooltips::CTooltips()
@@ -96,6 +97,7 @@ void CTooltips::OnRender()
 		constexpr float SecondsFadeIn = 0.25f;
 		const float AlphaFactor = SecondsSinceActivation < SecondsBeforeFadeIn + SecondsFadeIn ? (SecondsSinceActivation - SecondsBeforeFadeIn) / SecondsFadeIn : 1.0f;
 
+		const KogTheme::CMenuTextScope TextScope(TextRender());
 		constexpr float FontSize = 14.0f;
 		constexpr float Margin = 5.0f;
 		constexpr float Padding = 5.0f;
@@ -134,7 +136,7 @@ void CTooltips::OnRender()
 			Rect.y = std::clamp(Ui()->MouseY() - Rect.h / 2.0f, Margin, pScreen->h - Rect.h - Margin);
 		}
 
-		Rect.Draw(ColorRGBA(0.2f, 0.2f, 0.2f, 0.8f * AlphaFactor), IGraphics::CORNER_ALL, Padding);
+		Rect.Draw(KogHud::Panel(ColorRGBA(0.2f, 0.2f, 0.2f, 0.8f)).WithMultipliedAlpha(AlphaFactor), IGraphics::CORNER_ALL, KogHud::Radius(Padding));
 		Rect.Margin(Padding, &Rect);
 
 		CTextCursor Cursor;

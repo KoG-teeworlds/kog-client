@@ -1,0 +1,270 @@
+diff --git a/CMakeLists.txt b/CMakeLists.txt
+index 659cb3267..414bdcb31 100644
+--- a/CMakeLists.txt
++++ b/CMakeLists.txt
+@@ -2859,6 +2859,8 @@ if(CLIENT)
+     components/kog/kog_hello.h
+     components/kog/kog_login.cpp
+     components/kog/kog_login.h
++    components/kog/kog_fixture.cpp
++    components/kog/kog_fixture.h
+     components/kog/kog_notices.cpp
+     components/kog/kog_notices.h
+     components/local_server.cpp
+diff --git a/src/engine/client/graphics_threaded.cpp b/src/engine/client/graphics_threaded.cpp
+index d1f8c9967..2ad82a030 100644
+--- a/src/engine/client/graphics_threaded.cpp
++++ b/src/engine/client/graphics_threaded.cpp
+@@ -706,8 +706,6 @@ void CGraphics_Threaded::ScreenshotDirect(bool *pSwapped)
+ 	if(!m_DoScreenshot)
+ 		return;
+ 	m_DoScreenshot = false;
+-	if(!WindowActive())
+-		return;
+ 
+ 	CImageInfo Image;
+ 
+diff --git a/src/game/client/components/chat.cpp b/src/game/client/components/chat.cpp
+index 780589d9d..41e629315 100644
+--- a/src/game/client/components/chat.cpp
++++ b/src/game/client/components/chat.cpp
+@@ -1187,7 +1187,7 @@ void CChat::OnPrepareLines(float y)
+ 
+ void CChat::OnRender()
+ {
+-	if(Client()->State() != IClient::STATE_ONLINE && Client()->State() != IClient::STATE_DEMOPLAYBACK)
++	if(getenv("KOG_FIXTURE") == nullptr && Client()->State() != IClient::STATE_ONLINE && Client()->State() != IClient::STATE_DEMOPLAYBACK)
+ 		return;
+ 
+ 	// send pending chat messages
+diff --git a/src/game/client/components/infomessages.cpp b/src/game/client/components/infomessages.cpp
+index d29122c57..8cc6117c5 100644
+--- a/src/game/client/components/infomessages.cpp
++++ b/src/game/client/components/infomessages.cpp
+@@ -482,7 +482,7 @@ void CInfoMessages::RenderKogBackground(float x, float y, float Width)
+ 
+ void CInfoMessages::OnRender()
+ {
+-	if(Client()->State() != IClient::STATE_ONLINE && Client()->State() != IClient::STATE_DEMOPLAYBACK)
++	if(getenv("KOG_FIXTURE") == nullptr && Client()->State() != IClient::STATE_ONLINE && Client()->State() != IClient::STATE_DEMOPLAYBACK)
+ 		return;
+ 
+ 	const float Height = 1.5f * 400.0f * 3.0f;
+diff --git a/src/game/client/components/kog/kog_fixture.cpp b/src/game/client/components/kog/kog_fixture.cpp
+new file mode 100644
+index 000000000..b5a55f280
+--- /dev/null
++++ b/src/game/client/components/kog/kog_fixture.cpp
+@@ -0,0 +1,93 @@
++#include "kog_fixture.h"
++// LOCAL screenshot and benchmark fixture, not committed: fills the game client with N fake players, chat lines and kills so that
++// the real scoreboard, chat and kill feed components draw offline. KOG_FIXTURE=<number of players>.
++#include <engine/shared/config.h>
++#include <engine/textrender.h>
++
++#include <generated/protocol.h>
++
++#include <game/client/component.h>
++#include <game/client/gameclient.h>
++
++#include <cstdio>
++#include <cstdlib>
++#include <cstring>
++
++void CKogFixture::OnRender()
++{
++		const char *pEnv = getenv("KOG_FIXTURE");
++		if(pEnv == nullptr)
++			return;
++		if(!m_Done)
++		{
++			m_Done = true;
++			m_Num = std::clamp(atoi(pEnv), 1, 128);
++			const char *apNames[] = {"Aqua", "Pixel", "Rex", "You", "Nova", "Bolt", "Kira", "Mono", "Zed", "Lux", "Frost", "Ember", "Quill", "Tango", "Vex", "Orbit"};
++			const char *apClans[] = {"KoG", "", "Fox", "Tee", "", "Gore", "TH", "KoG"};
++			auto &Snap = GameClient()->m_Snap;
++			Snap = {};
++			for(int i = 0; i < m_Num; i++)
++			{
++				CNetObj_PlayerInfo &Info = m_aInfos[i];
++				Info = {};
++				Info.m_Local = i == 3;
++				Info.m_ClientId = i;
++				Info.m_Team = TEAM_RED;
++				Info.m_Score = 12000 - i * 83;
++				Info.m_Latency = 18 + (i * 37) % 130;
++				Snap.m_apPlayerInfos[i] = &Info;
++				Snap.m_apInfoByScore[i] = &Info;
++				Snap.m_apInfoByDDTeamScore[i] = &Info;
++				auto &Client = GameClient()->m_aClients[i];
++				char aName[32];
++				if(i == 5)
++					str_copy(aName, "AVeryLongPlayerNameIndeed_12345");
++				else if(i < 16)
++					str_copy(aName, apNames[i]);
++				else
++					str_format(aName, sizeof(aName), "%s%d", apNames[i % 16], i);
++				str_copy(Client.m_aName, aName);
++				str_copy(Client.m_aClan, i == 9 ? "LongClanNameHere" : apClans[i % 8]);
++				Client.m_Active = true;
++				Client.m_Team = TEAM_RED;
++				Client.m_Country = -1;
++				str_copy(Client.m_aSkinName, i % 3 == 0 ? "default" : (i % 3 == 1 ? "cammostripes" : "kitty"));
++				Client.UpdateSkinInfo();
++			}
++			Snap.m_NumPlayers = m_Num;
++			Snap.m_aTeamSize[TEAM_RED] = m_Num;
++			Snap.m_aTeamSize[TEAM_BLUE] = 0;
++			Snap.m_LocalClientId = 3;
++			Snap.m_pLocalInfo = &m_aInfos[3];
++			GameClient()->m_aLocalIds[0] = 3;
++			static const struct
++			{
++				int m_Id;
++				const char *m_pText;
++				int m_Team;
++			} aChat[] = {{0, "anyone up for a team run?", 0}, {1, "sure, joining now", 0}, {-1, "Pixel joined team 2", 0}, {3, "need a hook at gate 2", 1}, {-1, "Quest completed: No hammer", 0}, {5, "this is a rather long chat line that has to wrap over more than one row of the chat box", 0}};
++			for(const auto &Line : aChat)
++				GameClient()->m_Chat.AddLine(Line.m_Id, Line.m_Team, Line.m_pText);
++			static const int aKills[][3] = {{0, 1, 5}, {2, 5, 1}, {4, 4, -1}, {5, 6, 4}};
++			for(const auto &Kill : aKills)
++			{
++				CNetMsg_Sv_KillMsg Msg;
++				Msg.m_Killer = Kill[0];
++				Msg.m_Victim = Kill[1];
++				Msg.m_Weapon = Kill[2];
++				Msg.m_ModeSpecial = 0;
++				GameClient()->m_InfoMessages.OnMessage(NETMSGTYPE_SV_KILLMSG, &Msg);
++			}
++		}
++		// keep the fixture in place: the snapshot code of an offline client clears it
++		auto &Snap = GameClient()->m_Snap;
++		for(int i = 0; i < m_Num; i++)
++		{
++			Snap.m_apPlayerInfos[i] = &m_aInfos[i];
++			Snap.m_apInfoByDDTeamScore[i] = &m_aInfos[i];
++			Snap.m_apInfoByScore[i] = &m_aInfos[i];
++		}
++		Snap.m_NumPlayers = m_Num;
++		Snap.m_aTeamSize[TEAM_RED] = m_Num;
++		Snap.m_pLocalInfo = &m_aInfos[3];
++}
+diff --git a/src/game/client/components/kog/kog_fixture.h b/src/game/client/components/kog/kog_fixture.h
+new file mode 100644
+index 000000000..28a0ce3e0
+--- /dev/null
++++ b/src/game/client/components/kog/kog_fixture.h
+@@ -0,0 +1,16 @@
++#pragma once
++// LOCAL fixture hook, not committed (see kog_fixture.cpp)
++#include <game/client/component.h>
++#include <generated/protocol.h>
++#include <engine/shared/protocol.h>
++
++class CKogFixture : public CComponent
++{
++	CNetObj_PlayerInfo m_aInfos[MAX_CLIENTS];
++	bool m_Done = false;
++	int m_Num = 0;
++
++public:
++	int Sizeof() const override { return sizeof(*this); }
++	void OnRender() override;
++};
+diff --git a/src/game/client/components/menus.cpp b/src/game/client/components/menus.cpp
+index ea7535f77..cfe32f75f 100644
+--- a/src/game/client/components/menus.cpp
++++ b/src/game/client/components/menus.cpp
+@@ -969,6 +969,17 @@ void CMenus::Render()
+ 	Ui()->MapScreen();
+ 	Ui()->SetMouseSlow(false);
+ 	const KogTheme::CMenuTextScope TextScope(TextRender());
++	if(getenv("KOG_HUD") != nullptr)
++		return;
++	{
++		static bool s_Once = false;
++		if(!s_Once && getenv("KOG_PAGE") && Client()->State() == IClient::STATE_OFFLINE)
++		{
++			s_Once = true;
++			SetShowStart(false);
++			SetMenuPage(atoi(getenv("KOG_PAGE")));
++		}
++	}
+ 
+ 	if(m_AppliedKogTheme != g_Config.m_ClKogTheme)
+ 		UpdateColors();
+diff --git a/src/game/client/components/scoreboard.cpp b/src/game/client/components/scoreboard.cpp
+index 77bf8c67d..b1ae0f82b 100644
+--- a/src/game/client/components/scoreboard.cpp
++++ b/src/game/client/components/scoreboard.cpp
+@@ -948,7 +948,7 @@ void CScoreboard::RenderRecordingNotification(float x)
+ 
+ void CScoreboard::OnRender()
+ {
+-	if(Client()->State() != IClient::STATE_ONLINE && Client()->State() != IClient::STATE_DEMOPLAYBACK)
++	if(getenv("KOG_FIXTURE") == nullptr && Client()->State() != IClient::STATE_ONLINE && Client()->State() != IClient::STATE_DEMOPLAYBACK)
+ 		return;
+ 
+ 	if(!IsActive())
+@@ -1084,7 +1084,7 @@ void CScoreboard::OnRender()
+ 		}
+ 		else
+ 		{
+-			pTitle = GameClient()->Map()->BaseName();
++			pTitle = getenv("KOG_FIXTURE") ? "GER3 #6 - Hard Gores" : GameClient()->Map()->BaseName();
+ 		}
+ 
+ 		CUIRect Title;
+@@ -1179,6 +1179,8 @@ void CScoreboard::OnRender()
+ 
+ bool CScoreboard::IsActive() const
+ {
++	if(getenv("KOG_FIXTURE") != nullptr && getenv("KOG_NOSCORE") == nullptr)
++		return true;
+ 	// if statboard is active don't show scoreboard
+ 	if(GameClient()->m_Statboard.IsActive())
+ 		return false;
+diff --git a/src/game/client/gameclient.cpp b/src/game/client/gameclient.cpp
+index a1c28c393..820f1a384 100644
+--- a/src/game/client/gameclient.cpp
++++ b/src/game/client/gameclient.cpp
+@@ -165,6 +165,7 @@ void CGameClient::OnConsoleInit()
+ 					      &m_PlayerIndicator, // TClient
+ 					      &m_Mod, // TClient
+ 					      &m_CustomCommunities, // TClient
++					      &m_KogFixture,
+ 					      &m_Hud,
+ 					      &m_Spectator,
+ 					      &m_Emoticon,
+@@ -804,6 +805,11 @@ void CGameClient::OnRender()
+ {
+ 	const ColorRGBA ClearColor = color_cast<ColorRGBA>(ColorHSLA(g_Config.m_ClOverlayEntities ? g_Config.m_ClBackgroundEntitiesColor : g_Config.m_ClBackgroundColor));
+ 	Graphics()->Clear(ClearColor.r, ClearColor.g, ClearColor.b);
++	if(getenv("KOG_HUD") != nullptr)
++	{
++		Ui()->MapScreen();
++		m_MenuBackground.Render();
++	}
+ 
+ 	// check if multi view got activated
+ 	if(!m_MultiView.m_IsInit && m_MultiViewActivated)
+diff --git a/src/game/client/gameclient.h b/src/game/client/gameclient.h
+index a450b7186..173b3e777 100644
+--- a/src/game/client/gameclient.h
++++ b/src/game/client/gameclient.h
+@@ -51,6 +51,7 @@
+ #include "components/key_binder.h"
+ #include "components/kog/kog_hello.h"
+ #include "components/kog/kog_login.h"
++#include "components/kog/kog_fixture.h"
+ #include "components/kog/kog_notices.h"
+ #include "components/local_server.h"
+ #include "components/mapimages.h"
+@@ -234,6 +235,7 @@ public:
+ 	CKogHello m_KogHello;
+ 	CKogLogin m_KogLogin;
+ 	CKogNotices m_KogNotices;
++	CKogFixture m_KogFixture;
+ 	CTrails m_Trails;
+ 	CPet m_Pet;
+ 	CPlayerIndicator m_PlayerIndicator;

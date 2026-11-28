@@ -20,8 +20,11 @@
 #include <game/client/components/motd.h>
 #include <game/client/components/statboard.h>
 #include <game/client/gameclient.h>
+#include <game/client/kog_hud.h>
 #include <game/client/ui.h>
 #include <game/localization.h>
+
+#include <optional>
 
 // Horizontal spacing of the scoreboard contents, both to its edges and between columns
 static constexpr float MARGIN = 10.0f;
@@ -291,10 +294,10 @@ void CScoreboard::RenderTitleBar(CUIRect TitleBar, int Team, const char *pTitle)
 
 void CScoreboard::RenderGoals(CUIRect Goals)
 {
-	Goals.Draw(ColorRGBA(0.0f, 0.0f, 0.0f, 0.5f), IGraphics::CORNER_ALL, 7.5f);
+	Goals.Draw(KogHud::Panel(ColorRGBA(0.0f, 0.0f, 0.0f, 0.5f)), IGraphics::CORNER_ALL, KogHud::Radius(7.5f));
 	Goals.VMargin(5.0f, &Goals);
 
-	const float FontSize = 10.0f;
+	const float FontSize = KogHud::Text(10.0f);
 	const CNetObj_GameInfo *pGameInfoObj = GameClient()->m_Snap.m_pGameInfoObj;
 	char aBuf[64];
 
@@ -319,13 +322,13 @@ void CScoreboard::RenderGoals(CUIRect Goals)
 
 void CScoreboard::RenderSpectators(CUIRect Spectators)
 {
-	Spectators.Draw(ColorRGBA(0.0f, 0.0f, 0.0f, 0.5f), IGraphics::CORNER_ALL, 7.5f);
+	Spectators.Draw(KogHud::Panel(ColorRGBA(0.0f, 0.0f, 0.0f, 0.5f)), IGraphics::CORNER_ALL, KogHud::Radius(7.5f));
 	constexpr float SpectatorCut = 5.0f;
 	Spectators.Margin(SpectatorCut, &Spectators);
 
 	CTextCursor Cursor;
 	Cursor.SetPosition(Spectators.TopLeft());
-	Cursor.m_FontSize = 11.0f;
+	Cursor.m_FontSize = KogHud::Text(11.0f);
 	Cursor.m_LineWidth = Spectators.w;
 	Cursor.m_MaxLines = round_truncate(Spectators.h / Cursor.m_FontSize);
 
@@ -544,6 +547,9 @@ void CScoreboard::RenderScoreboard(CUIRect Scoreboard, int Team, int CountStart,
 		RoundRadius = 1.0f;
 		FontSize = 5.0f;
 	}
+	// the KoG look has one text size and one row height for every number of players, see kog_style.h (Hud)
+	if(KogHud::On() && !GameClient()->IsTeamPlay())
+		KogHud::ScoreboardMeasure(LineHeight, TeeSizeMod, Spacing, RoundRadius, FontSize);
 
 	const float ScoreOffset = Scoreboard.x + MARGIN;
 	const float ScoreLength = TextRender()->TextWidth(FontSize, UseTime ? "00:00:00" : "99999");
@@ -568,7 +574,7 @@ void CScoreboard::RenderScoreboard(CUIRect Scoreboard, int Team, int CountStart,
 	const float ClanLength = std::max(0.0f, CountryOffset - ClanOffset - 2.5f);
 
 	// render headlines
-	const float HeadlineFontsize = 11.0f;
+	const float HeadlineFontsize = KogHud::Text(11.0f);
 	CUIRect Headline;
 	Scoreboard.HSplitTop(HeadlineFontsize * 2.0f, &Headline, &Scoreboard);
 	const float HeadlineY = Headline.y + Headline.h / 2.0f - HeadlineFontsize / 2.0f;
@@ -581,6 +587,27 @@ void CScoreboard::RenderScoreboard(CUIRect Scoreboard, int Team, int CountStart,
 	m_HeadlineName.Render(TextRender(), vec2(NameOffset, HeadlineY), HeadlineColor);
 	m_HeadlineClan.Render(TextRender(), vec2(ClanOffset + (ClanLength - m_HeadlineClan.Width()) / 2.0f, HeadlineY), HeadlineColor);
 	m_HeadlinePing.Render(TextRender(), vec2(PingOffset + PingLength - m_HeadlinePing.Width(), HeadlineY), HeadlineColor);
+
+	// the zebra rows of the KoG look, behind everything else of the rows and in one draw call
+	if(KogHud::On())
+	{
+		const int Rows = std::clamp(CountEnd - CountStart, 0, (int)MAX_CLIENTS);
+		IGraphics::CQuadItem aZebra[MAX_CLIENTS / 2 + 1];
+		int NumZebra = 0;
+		for(int Row = 0; Row < Rows; ++Row)
+		{
+			if(((CountStart + Row) & 1) != 0)
+				aZebra[NumZebra++] = IGraphics::CQuadItem(Scoreboard.x, Scoreboard.y + Row * (LineHeight + Spacing), Scoreboard.w, LineHeight);
+		}
+		if(NumZebra > 0)
+		{
+			Graphics()->TextureClear();
+			Graphics()->QuadsBegin();
+			Graphics()->SetColor(KogHud::Zebra());
+			Graphics()->QuadsDrawTL(aZebra, NumZebra);
+			Graphics()->QuadsEnd();
+		}
+	}
 
 	// render player entries
 	int CountRendered = 0;
@@ -659,7 +686,7 @@ void CScoreboard::RenderScoreboard(CUIRect Scoreboard, int Team, int CountStart,
 
 				if(NextDDTeam != DDTeam)
 				{
-					const float TeamFontSize = FontSize / 1.5f;
+					const float TeamFontSize = KogHud::Text(FontSize / 1.5f);
 
 					if(NumPlayers > 8)
 					{
@@ -692,7 +719,7 @@ void CScoreboard::RenderScoreboard(CUIRect Scoreboard, int Team, int CountStart,
 				(GameClient()->m_Snap.m_SpecInfo.m_SpectatorId == SPEC_FREEVIEW && pInfo->m_Local) ||
 				(GameClient()->m_Snap.m_SpecInfo.m_Active && pInfo->m_ClientId == GameClient()->m_Snap.m_SpecInfo.m_SpectatorId))
 			{
-				Row.Draw(ColorRGBA(1.0f, 1.0f, 1.0f, 0.25f), IGraphics::CORNER_ALL, RoundRadius);
+				Row.Draw(KogHud::Self(ColorRGBA(1.0f, 1.0f, 1.0f, 0.25f)), IGraphics::CORNER_ALL, RoundRadius);
 			}
 
 			const CGameClient::CClientData &ClientData = GameClient()->m_aClients[pInfo->m_ClientId];
@@ -946,6 +973,7 @@ void CScoreboard::OnRender()
 
 	const CUIRect Screen = *Ui()->Screen();
 	Ui()->MapScreen();
+	const KogTheme::CMenuTextScope TextScope(TextRender());
 
 	const CNetObj_GameInfo *pGameInfoObj = GameClient()->m_Snap.m_pGameInfoObj;
 	const bool Teams = GameClient()->IsTeamPlay();
@@ -957,6 +985,14 @@ void CScoreboard::OnRender()
 	const float TitleHeight = 30.0f;
 
 	CUIRect Scoreboard = {(Screen.w - ScoreboardWidth) / 2.0f, 75.0f, ScoreboardWidth, 355.0f + TitleHeight};
+	// the KoG look sizes the scoreboard from the number of players and never shrinks text or rows (kog_style.h, Hud)
+	KogStyle::Hud::SScoreboardPlan KogPlan{};
+	if(KogHud::On() && !Teams)
+	{
+		KogPlan = KogStyle::Hud::PlanScoreboard(Screen.w, Screen.h, NumPlayers);
+		Scoreboard = {KogPlan.m_X, KogPlan.m_Y, KogPlan.m_Width, KogPlan.m_Height};
+		m_KogTopY = Scoreboard.y;
+	}
 	CScoreboardRenderState RenderState{};
 
 	if(Teams)
@@ -1012,8 +1048,8 @@ void CScoreboard::OnRender()
 
 		RedTitle.Draw(ColorRGBA(0.975f, 0.17f, 0.17f, 0.5f), IGraphics::CORNER_T, 7.5f);
 		BlueTitle.Draw(ColorRGBA(0.17f, 0.46f, 0.975f, 0.5f), IGraphics::CORNER_T, 7.5f);
-		RedScoreboard.Draw(ColorRGBA(0.0f, 0.0f, 0.0f, 0.5f), IGraphics::CORNER_B, 7.5f);
-		BlueScoreboard.Draw(ColorRGBA(0.0f, 0.0f, 0.0f, 0.5f), IGraphics::CORNER_B, 7.5f);
+		RedScoreboard.Draw(KogHud::Panel(ColorRGBA(0.0f, 0.0f, 0.0f, 0.5f)), IGraphics::CORNER_B, KogHud::Radius(7.5f));
+		BlueScoreboard.Draw(KogHud::Panel(ColorRGBA(0.0f, 0.0f, 0.0f, 0.5f)), IGraphics::CORNER_B, KogHud::Radius(7.5f));
 
 		RenderTitleBar(RedTitle, TEAM_RED, pRedTeamName == nullptr ? Localize("Red team") : pRedTeamName);
 		RenderTitleBar(BlueTitle, TEAM_BLUE, pBlueTeamName == nullptr ? Localize("Blue team") : pBlueTeamName);
@@ -1039,7 +1075,7 @@ void CScoreboard::OnRender()
 	}
 	else
 	{
-		Scoreboard.Draw(ColorRGBA(0.0f, 0.0f, 0.0f, 0.5f), IGraphics::CORNER_ALL, 7.5f);
+		Scoreboard.Draw(KogHud::Panel(ColorRGBA(0.0f, 0.0f, 0.0f, 0.5f)), IGraphics::CORNER_ALL, KogHud::Radius(7.5f));
 
 		const char *pTitle;
 		if(pGameInfoObj && (pGameInfoObj->m_GameStateFlags & GAMESTATEFLAG_GAMEOVER))
@@ -1053,9 +1089,34 @@ void CScoreboard::OnRender()
 
 		CUIRect Title;
 		Scoreboard.HSplitTop(TitleHeight, &Title, &Scoreboard);
+		std::optional<KogTheme::CTextColor> HeaderText;
+		if(KogHud::On())
+		{
+			Title.Draw(KogHud::Header(), IGraphics::CORNER_T, KogHud::Radius(0.0f));
+			HeaderText.emplace(TextRender(), KogHud::OnHeader());
+		}
 		RenderTitleBar(Title, TEAM_GAME, pTitle);
+		HeaderText.reset();
 
-		if(NumPlayers <= 16)
+		if(KogHud::On())
+		{
+			// columns of rows of the fixed height; what does not fit is counted, not shrunk
+			const CUIRect Panel = Scoreboard;
+			for(int Column = 0; Column < KogPlan.m_Columns; ++Column)
+			{
+				CUIRect ColumnRect;
+				Scoreboard.VSplitLeft(Scoreboard.w / (KogPlan.m_Columns - Column), &ColumnRect, &Scoreboard);
+				RenderScoreboard(ColumnRect, TEAM_GAME, Column * KogPlan.m_RowsPerColumn, std::min(KogPlan.m_Shown, (Column + 1) * KogPlan.m_RowsPerColumn), RenderState);
+			}
+			if(KogPlan.m_Truncated)
+			{
+				char aMore[64];
+				str_format(aMore, sizeof(aMore), "+%d %s", NumPlayers - KogPlan.m_Shown, Localize("players not shown"));
+				CUIRect More = {Panel.x, Panel.y + Panel.h - KogStyle::Hud::ROW - 5.0f, Panel.w, KogStyle::Hud::ROW};
+				Ui()->DoLabel(&More, aMore, KogStyle::Hud::TEXT, TEXTALIGN_MC);
+			}
+		}
+		else if(NumPlayers <= 16)
 		{
 			RenderScoreboard(Scoreboard, TEAM_GAME, 0, NumPlayers, RenderState);
 		}
@@ -1091,14 +1152,17 @@ void CScoreboard::OnRender()
 	}
 
 	CUIRect Spectators = {(Screen.w - ScoreboardSmallWidth) / 2.0f, Scoreboard.y + Scoreboard.h + 5.0f, ScoreboardSmallWidth, 100.0f};
-	if(pGameInfoObj && (pGameInfoObj->m_ScoreLimit || pGameInfoObj->m_TimeLimit || (pGameInfoObj->m_RoundNum && pGameInfoObj->m_RoundCurrent)))
+	// the KoG look keeps the panel on the screen and leaves it out where there is no room for it
+	const bool DrawSpectators = !KogHud::On() || (Spectators.h = KogStyle::Hud::PlanSpectatorsHeight(Screen.h, Scoreboard.y + Scoreboard.h)) > 0.0f;
+	if(DrawSpectators && pGameInfoObj && (pGameInfoObj->m_ScoreLimit || pGameInfoObj->m_TimeLimit || (pGameInfoObj->m_RoundNum && pGameInfoObj->m_RoundCurrent)))
 	{
 		CUIRect Goals;
 		Spectators.HSplitTop(25.0f, &Goals, &Spectators);
 		Spectators.HSplitTop(5.0f, nullptr, &Spectators);
 		RenderGoals(Goals);
 	}
-	RenderSpectators(Spectators);
+	if(DrawSpectators)
+		RenderSpectators(Spectators);
 
 	RenderRecordingNotification((Screen.w / 7) * 4 + 10);
 

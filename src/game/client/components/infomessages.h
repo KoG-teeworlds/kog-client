@@ -58,6 +58,9 @@ class CInfoMessages : public CComponent
 
 	CInfoMsg CreateInfoMsg(EType Type);
 	void AddInfoMsg(const CInfoMsg &InfoMsg);
+	float KillMsgWidth(const CInfoMsg &InfoMsg) const;
+	float FinishMsgWidth(const CInfoMsg &InfoMsg) const;
+	void RenderKogBackground(float x, float y, float Width);
 	void RenderKillMsg(const CInfoMsg &InfoMsg, float x, float y);
 	void RenderFinishMsg(const CInfoMsg &InfoMsg, float x, float y);
 

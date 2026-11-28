@@ -2990,6 +2990,7 @@ if(CLIENT)
     components/voting.h
     gameclient.cpp
     gameclient.h
+    kog_hud.h
     kog_style.h
     kog_theme.h
     laser_data.cpp
@@ -3708,6 +3709,7 @@ if(GTEST_FOUND OR DOWNLOAD_GTEST)
     kog_community_test.cpp
     kog_failsafe_test.cpp
     kog_hello_test.cpp
+    kog_hud_test.cpp
     kog_keyfile_test.cpp
     kog_login_test.cpp
     kog_login_wire_test.cpp

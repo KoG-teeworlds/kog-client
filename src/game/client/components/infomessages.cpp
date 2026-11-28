@@ -14,12 +14,15 @@
 
 #include <game/client/animstate.h>
 #include <game/client/gameclient.h>
+#include <game/client/kog_hud.h>
 #include <game/client/prediction/entities/character.h>
 #include <game/client/prediction/gameworld.h>
 #include <game/localization.h>
 
-static constexpr float ROW_HEIGHT = 46.0f;
-static constexpr float FONT_SIZE = 36.0f;
+static constexpr float CLASSIC_ROW_HEIGHT = 46.0f;
+// the kill feed draws in a space three times larger than the UI (see OnRender), so a row of Hud::ROW_KILL_FEED units is three times that
+static float RowHeight() { return KogHud::On() ? std::max(CLASSIC_ROW_HEIGHT, KogStyle::Hud::ROW_KILL_FEED * KogStyle::Hud::KILL_FEED_SCALE) : CLASSIC_ROW_HEIGHT; }
+static constexpr float FONT_SIZE = 36.0f; // 12 units in the space of the kill feed, the smallest text of the KoG look
 static constexpr float RACE_FLAG_SIZE = 52.0f;
 
 void CInfoMessages::OnWindowResize()
@@ -307,6 +310,32 @@ void CInfoMessages::OnRaceFinishMessage(const CNetMsg_Sv_RaceFinish *pMsg)
 	AddInfoMsg(Finish);
 }
 
+float CInfoMessages::KillMsgWidth(const CInfoMsg &InfoMsg) const
+{
+	float Width = 0.0f;
+	if(InfoMsg.m_VictimTextContainerIndex.Valid())
+		Width += TextRender()->GetBoundingBoxTextContainer(InfoMsg.m_VictimTextContainerIndex).m_W;
+	Width += 24.0f + InfoMsg.m_TeamSize * 44.0f + 32.0f + 52.0f;
+	if(InfoMsg.m_aVictimIds[0] != InfoMsg.m_KillerId)
+	{
+		Width += 24.0f + 32.0f;
+		if(InfoMsg.m_KillerTextContainerIndex.Valid())
+			Width += TextRender()->GetBoundingBoxTextContainer(InfoMsg.m_KillerTextContainerIndex).m_W;
+	}
+	return Width;
+}
+
+float CInfoMessages::FinishMsgWidth(const CInfoMsg &InfoMsg) const
+{
+	float Width = RACE_FLAG_SIZE + 24.0f;
+	for(const STextContainerIndex &Index : {InfoMsg.m_DiffTextContainerIndex, InfoMsg.m_TimeTextContainerIndex, InfoMsg.m_VictimTextContainerIndex})
+	{
+		if(Index.Valid())
+			Width += TextRender()->GetBoundingBoxTextContainer(Index).m_W;
+	}
+	return Width;
+}
+
 void CInfoMessages::RenderKillMsg(const CInfoMsg &InfoMsg, float x, float y)
 {
 	ColorRGBA TextColor;
@@ -319,7 +348,7 @@ void CInfoMessages::RenderKillMsg(const CInfoMsg &InfoMsg, float x, float y)
 	if(InfoMsg.m_VictimTextContainerIndex.Valid())
 	{
 		x -= TextRender()->GetBoundingBoxTextContainer(InfoMsg.m_VictimTextContainerIndex).m_W;
-		TextRender()->RenderTextContainer(InfoMsg.m_VictimTextContainerIndex, TextColor, TextRender()->DefaultTextOutlineColor(), x, y + (ROW_HEIGHT - FONT_SIZE) / 2.0f);
+		TextRender()->RenderTextContainer(InfoMsg.m_VictimTextContainerIndex, TextColor, TextRender()->DefaultTextOutlineColor(), x, y + (RowHeight() - FONT_SIZE) / 2.0f);
 	}
 
 	// render victim flag
@@ -345,7 +374,7 @@ void CInfoMessages::RenderKillMsg(const CInfoMsg &InfoMsg, float x, float y)
 	{
 		vec2 OffsetToMid;
 		CRenderTools::GetRenderTeeOffsetToRenderedTee(CAnimState::GetIdle(), &InfoMsg.m_apVictimManagedTeeRenderInfos[j]->TeeRenderInfo(), OffsetToMid);
-		const vec2 TeeRenderPos = vec2(x, y + ROW_HEIGHT / 2.0f + OffsetToMid.y);
+		const vec2 TeeRenderPos = vec2(x, y + RowHeight() / 2.0f + OffsetToMid.y);
 		RenderTools()->RenderTee(CAnimState::GetIdle(), &InfoMsg.m_apVictimManagedTeeRenderInfos[j]->TeeRenderInfo(), EMOTE_PAIN, vec2(-1, 0), TeeRenderPos);
 		x -= 44.0f;
 	}
@@ -385,7 +414,7 @@ void CInfoMessages::RenderKillMsg(const CInfoMsg &InfoMsg, float x, float y)
 		{
 			vec2 OffsetToMid;
 			CRenderTools::GetRenderTeeOffsetToRenderedTee(CAnimState::GetIdle(), &InfoMsg.m_pKillerManagedTeeRenderInfo->TeeRenderInfo(), OffsetToMid);
-			const vec2 TeeRenderPos = vec2(x, y + ROW_HEIGHT / 2.0f + OffsetToMid.y);
+			const vec2 TeeRenderPos = vec2(x, y + RowHeight() / 2.0f + OffsetToMid.y);
 			RenderTools()->RenderTee(CAnimState::GetIdle(), &InfoMsg.m_pKillerManagedTeeRenderInfo->TeeRenderInfo(), EMOTE_ANGRY, vec2(1, 0), TeeRenderPos);
 		}
 		x -= 32.0f;
@@ -394,7 +423,7 @@ void CInfoMessages::RenderKillMsg(const CInfoMsg &InfoMsg, float x, float y)
 		if(InfoMsg.m_KillerTextContainerIndex.Valid())
 		{
 			x -= TextRender()->GetBoundingBoxTextContainer(InfoMsg.m_KillerTextContainerIndex).m_W;
-			TextRender()->RenderTextContainer(InfoMsg.m_KillerTextContainerIndex, TextColor, TextRender()->DefaultTextOutlineColor(), x, y + (ROW_HEIGHT - FONT_SIZE) / 2.0f);
+			TextRender()->RenderTextContainer(InfoMsg.m_KillerTextContainerIndex, TextColor, TextRender()->DefaultTextOutlineColor(), x, y + (RowHeight() - FONT_SIZE) / 2.0f);
 		}
 	}
 }
@@ -405,14 +434,14 @@ void CInfoMessages::RenderFinishMsg(const CInfoMsg &InfoMsg, float x, float y)
 	if(InfoMsg.m_DiffTextContainerIndex.Valid())
 	{
 		x -= TextRender()->GetBoundingBoxTextContainer(InfoMsg.m_DiffTextContainerIndex).m_W;
-		TextRender()->RenderTextContainer(InfoMsg.m_DiffTextContainerIndex, TextRender()->DefaultTextColor(), TextRender()->DefaultTextOutlineColor(), x, y + (ROW_HEIGHT - FONT_SIZE) / 2.0f);
+		TextRender()->RenderTextContainer(InfoMsg.m_DiffTextContainerIndex, TextRender()->DefaultTextColor(), TextRender()->DefaultTextOutlineColor(), x, y + (RowHeight() - FONT_SIZE) / 2.0f);
 	}
 
 	// render time
 	if(InfoMsg.m_TimeTextContainerIndex.Valid())
 	{
 		x -= TextRender()->GetBoundingBoxTextContainer(InfoMsg.m_TimeTextContainerIndex).m_W;
-		TextRender()->RenderTextContainer(InfoMsg.m_TimeTextContainerIndex, TextRender()->DefaultTextColor(), TextRender()->DefaultTextOutlineColor(), x, y + (ROW_HEIGHT - FONT_SIZE) / 2.0f);
+		TextRender()->RenderTextContainer(InfoMsg.m_TimeTextContainerIndex, TextRender()->DefaultTextColor(), TextRender()->DefaultTextOutlineColor(), x, y + (RowHeight() - FONT_SIZE) / 2.0f);
 	}
 
 	// render flag
@@ -429,16 +458,26 @@ void CInfoMessages::RenderFinishMsg(const CInfoMsg &InfoMsg, float x, float y)
 			TextColor = GameClient()->GetDDTeamColor(InfoMsg.m_VictimDDTeam, 0.75f);
 		else
 			TextColor = TextRender()->DefaultTextColor();
-		TextRender()->RenderTextContainer(InfoMsg.m_VictimTextContainerIndex, TextColor, TextRender()->DefaultTextOutlineColor(), x, y + (ROW_HEIGHT - FONT_SIZE) / 2.0f);
+		TextRender()->RenderTextContainer(InfoMsg.m_VictimTextContainerIndex, TextColor, TextRender()->DefaultTextOutlineColor(), x, y + (RowHeight() - FONT_SIZE) / 2.0f);
 	}
 
 	// render victim tee
 	x -= 24.0f;
 	vec2 OffsetToMid;
 	CRenderTools::GetRenderTeeOffsetToRenderedTee(CAnimState::GetIdle(), &InfoMsg.m_apVictimManagedTeeRenderInfos[0]->TeeRenderInfo(), OffsetToMid);
-	const vec2 TeeRenderPos = vec2(x, y + ROW_HEIGHT / 2.0f + OffsetToMid.y);
+	const vec2 TeeRenderPos = vec2(x, y + RowHeight() / 2.0f + OffsetToMid.y);
 	const int Emote = InfoMsg.m_RecordPersonal ? EMOTE_HAPPY : EMOTE_NORMAL;
 	RenderTools()->RenderTee(CAnimState::GetIdle(), &InfoMsg.m_apVictimManagedTeeRenderInfos[0]->TeeRenderInfo(), Emote, vec2(-1, 0), TeeRenderPos);
+}
+
+void CInfoMessages::RenderKogBackground(float x, float y, float Width)
+{
+	const float Pad = KogStyle::Hud::PAD * KogStyle::Hud::KILL_FEED_SCALE;
+	Graphics()->TextureClear();
+	// a pill of the row height minus a gap, the text ends at x, so the pill ends Pad to the right of it
+	const float Gap = 2.0f * KogStyle::Hud::KILL_FEED_SCALE;
+	CUIRect Rect = {x - Width - Pad, y + Gap / 2.0f, Width + 2.0f * Pad, RowHeight() - Gap};
+	Rect.Draw(KogHud::Panel(ColorRGBA(0.0f, 0.0f, 0.0f, 0.5f)), IGraphics::CORNER_ALL, KogHud::Radius(0.0f) * KogStyle::Hud::KILL_FEED_SCALE);
 }
 
 void CInfoMessages::OnRender()
@@ -451,16 +490,26 @@ void CInfoMessages::OnRender()
 
 	Graphics()->MapScreenToSize(Width, Height);
 	Graphics()->SetColor(1.0f, 1.0f, 1.0f, 1.0f);
+	const KogTheme::CMenuTextScope TextScope(TextRender());
 
 	int Showfps = g_Config.m_ClShowfps;
 #if defined(CONF_VIDEORECORDER)
 	if(IVideo::Current())
 		Showfps = 0;
 #endif
-	const float StartX = Width - 10.0f;
+	const float StartX = Width - 10.0f - (KogHud::On() ? KogStyle::Hud::PAD * KogStyle::Hud::KILL_FEED_SCALE : 0.0f);
 	const float StartY = 30.0f + (Showfps ? 100.0f : 0.0f) + (g_Config.m_ClShowpred && Client()->State() != IClient::STATE_DEMOPLAYBACK ? 100.0f : 0.0f);
 
 	float y = StartY;
+	// next to an open scoreboard of the KoG look only the newest messages that fit above it are drawn
+	int Skip = 0;
+	if(KogHud::On() && GameClient()->m_Scoreboard.IsActive())
+	{
+		int Shown = 0;
+		for(const CInfoMsg &Msg : m_aInfoMsgs)
+			Shown += Msg.m_Tick != -1 && ((Msg.m_Type == EType::TYPE_KILL && g_Config.m_ClShowKillMessages) || (Msg.m_Type == EType::TYPE_FINISH && g_Config.m_ClShowFinishMessages));
+		Skip = std::max(0, Shown - KogStyle::Hud::PlanKillFeedRows(true, GameClient()->m_Scoreboard.KogTopY(), MAX_INFOMSGS));
+	}
 	for(int i = 1; i <= MAX_INFOMSGS; i++)
 	{
 		CInfoMsg &InfoMsg = m_aInfoMsgs[(m_InfoMsgCurrent + i) % MAX_INFOMSGS];
@@ -476,15 +525,26 @@ void CInfoMessages::OnRender()
 
 		CreateTextContainersIfNotCreated(InfoMsg);
 
+		const bool Displayed = (InfoMsg.m_Type == EType::TYPE_KILL && g_Config.m_ClShowKillMessages) || (InfoMsg.m_Type == EType::TYPE_FINISH && g_Config.m_ClShowFinishMessages);
+		if(Displayed && Skip > 0)
+		{
+			--Skip;
+			continue;
+		}
+
 		if(InfoMsg.m_Type == EType::TYPE_KILL && g_Config.m_ClShowKillMessages)
 		{
+			if(KogHud::On())
+				RenderKogBackground(StartX, y, KillMsgWidth(InfoMsg));
 			RenderKillMsg(InfoMsg, StartX, y);
-			y += ROW_HEIGHT;
+			y += RowHeight();
 		}
 		else if(InfoMsg.m_Type == EType::TYPE_FINISH && g_Config.m_ClShowFinishMessages)
 		{
+			if(KogHud::On())
+				RenderKogBackground(StartX, y, FinishMsgWidth(InfoMsg));
 			RenderFinishMsg(InfoMsg, StartX, y);
-			y += ROW_HEIGHT;
+			y += RowHeight();
 		}
 	}
 }
