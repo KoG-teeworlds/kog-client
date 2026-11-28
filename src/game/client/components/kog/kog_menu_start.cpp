@@ -278,7 +278,7 @@ void CMenusStart::RenderKogStartMenu(CUIRect MainView, int &NewPage)
 		const bool LoggedIn = GameClient()->m_KogLogin.HasDeviceKey() && g_Config.m_ClKogAccountName[0] != '\0';
 		char aText[128];
 		if(LoggedIn)
-			str_format(aText, sizeof(aText), Localize("Logged in as %s"), g_Config.m_ClKogAccountName);
+			str_format(aText, sizeof(aText), "%s %s", Localize("Logged in as"), g_Config.m_ClKogAccountName);
 		else
 			str_copy(aText, Localize("Not logged in"));
 		CUIRect Chip = MainView;
