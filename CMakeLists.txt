@@ -2993,6 +2993,7 @@ if(CLIENT)
     kog_draw.cpp
     kog_draw.h
     kog_hud.h
+    kog_motion.h
     kog_style.h
     kog_theme.h
     laser_data.cpp
@@ -3718,6 +3719,7 @@ if(GTEST_FOUND OR DOWNLOAD_GTEST)
     kog_login_wire_test.cpp
     kog_master_test.cpp
     kog_master_vector.h
+    kog_motion_test.cpp
     kog_notice_wire_test.cpp
     kog_notices_test.cpp
     kog_quests_test.cpp

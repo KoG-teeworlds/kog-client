@@ -439,6 +439,8 @@ int CMenus::DoButton_CheckBox_Number(const void *pId, const char *pText, int Che
 void CMenus::RenderMenubar(CUIRect Box, IClient::EClientState ClientState)
 {
 	CUIRect Button;
+	if(KogTheme::On())
+		KogDraw::Panel(Box, {KogTheme::Palette().m_Panel, &KogStyle::Elevation::SMALL, 0.0f, IGraphics::CORNER_NONE, KogStyle::Elevation::GLASS_TOP_LIGHTEN});
 
 	int NewPage = -1;
 	int ActivePage = -1;
@@ -724,7 +726,7 @@ void CMenus::RenderLoadingDirect(const char *pCaption, const char *pContent, std
 	Ui()->Screen()->Margin(160.0f, &Box);
 
 	Graphics()->TextureClear();
-	Box.Draw(ColorRGBA(0.0f, 0.0f, 0.0f, 0.5f), IGraphics::CORNER_ALL, 15.0f);
+	KogTheme::DrawPopupBox(Box, ColorRGBA(0.0f, 0.0f, 0.0f, 0.5f), 15.0f);
 	Box.Margin(20.0f, &Box);
 
 	CUIRect Label;
@@ -1297,7 +1299,7 @@ void CMenus::RenderPopupFullscreen(CUIRect Screen)
 	}
 
 	// Background
-	Box.Draw(BgColor, IGraphics::CORNER_ALL, 15.0f);
+	KogTheme::DrawPopupBox(Box, BgColor, 15.0f);
 
 	// Title
 	{
@@ -2088,7 +2090,7 @@ void CMenus::RenderPopupConnecting(CUIRect Screen)
 
 	CUIRect Box, Label;
 	Screen.Margin(150.0f, &Box);
-	Box.Draw(ColorRGBA(0.0f, 0.0f, 0.0f, 0.5f), IGraphics::CORNER_ALL, 15.0f);
+	KogTheme::DrawPopupBox(Box, ColorRGBA(0.0f, 0.0f, 0.0f, 0.5f), 15.0f);
 	Box.Margin(20.0f, &Box);
 
 	Box.HSplitTop(24.0f, &Label, &Box);
@@ -2219,7 +2221,7 @@ void CMenus::RenderPopupLoading(CUIRect Screen)
 
 	CUIRect Box, Label;
 	Screen.Margin(150.0f, &Box);
-	Box.Draw(ColorRGBA(0.0f, 0.0f, 0.0f, 0.5f), IGraphics::CORNER_ALL, 15.0f);
+	KogTheme::DrawPopupBox(Box, ColorRGBA(0.0f, 0.0f, 0.0f, 0.5f), 15.0f);
 	Box.Margin(20.0f, &Box);
 
 	Box.HSplitTop(24.0f, &Label, &Box);

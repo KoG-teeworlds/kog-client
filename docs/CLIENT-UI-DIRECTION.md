@@ -101,6 +101,10 @@ including the lighter top of a glass panel and the self row. Status colours diff
 | Menu views (browser, settings, demos, in-game pages) | glass view with a shadow (`KogTheme::DrawView`, 15 call sites) |
 | Controls | one style set: `KogTheme::DrawControl` (gradient, rim) for buttons and edit boxes; `KogTheme::Control` keeps the meaning of an upstream colour (green good, red bad, yellow warn, blue other) and replaces the colour with the palette's; cached buttons (dropdowns, `DoButton_Menu` with properties) too; grid headers (sorted column in the brand colour); popups and dropdown lists as one glass panel with a shadow |
 | Cards, list headers, rows | `KogTheme::MenuFill`: while the menus draw, upstream's translucent pure white becomes a theme layer in `CUIRect::Draw`; our own layers are white 0.996 so they are not dimmed twice |
+| Browser text | search hits in the soft brand colour, game types muted, ping in the three status colours (`KogTheme::Highlight`, `GametypeText`, `PingText`) |
+| Settings page list, top tab bar | a glass panel behind each, so the text keeps its contrast over the sky in every theme |
+| Popups (connecting, messages), rank and score boxes, movement information | glass; boxes with white HUD text stay dark in the light theme |
+| Motion | every widget that asks `CUi::ButtonColorMul` fades between default and hot in 0.1 s (`KogMotion::CHoverTable`, a fixed table, no allocation); reduce motion or no smooth scrolling jumps |
 | Start page | scrim that lets the sky show, glass cards, brand gradient Play button |
 
 ## 7. Measurements
@@ -124,9 +128,16 @@ Sanitizers: a RelWithDebInfo client with `-fsanitize=address,undefined` ran 20 s
 
 ## 8. What is not done, and not verified
 
-- **Not seen on screen:** the in-game menu (Esc), player list, chat input, connecting and loading screens, the vote bar, the emote wheel and the spectator menu need a live game; the dev hooks only fake the scoreboard, chat and kill feed. They use the same helpers and compile, but I have not looked at them. Treat them as unverified.
-- Hover and press: upstream's colour multiplication; only the start page eases. No keyboard focus rings beyond the start page. The settings page list on the right and the top tab bar keep upstream's shapes in the theme's colours.
-- Cached buttons (dropdowns) keep the colour they were built with until their rectangle changes, so switching the theme while one is on screen shows it in the old colour until the page is reopened.
+Seen on screen on a live public DDNet server (joined read-only as a normal player, dev hooks local): connecting dialog, in-game HUD,
+scoreboard (real, 14 players), Esc menu, chat input, emote wheel, rank boxes, kill feed, in glass, and the light and dark themes for most of them.
+
+- **Not seen:** the vote bar (calling a vote would affect other players), the spectator menu (needs spectator mode; the flag hook only set its state and nothing drew), the player list page and the Server info page of the Esc menu, popups other than "connecting", the loading screen after the map download.
+- **Esc menu and tab bar:** the tabs use upstream's large text and the Esc menu does not fade or slide in.
+- **Spectators panel** under the scoreboard is upstream's, and tall even when empty.
+- **Keyboard:** only text fields (a ring while editing) and the start page have a focus ring. Upstream's menus have no keyboard navigation of buttons, sliders and tabs, and building that is a larger piece of work than a style; it is not done.
+- **Ghost placeholders** in the communities and countries lists ("None", "unknown country") are working filter entries, not decoration; they are unchanged.
+- Cached widgets (dropdowns) now rebuild when the theme changes, because the cache remembers the theme it was built for.
+- Hover easing covers every widget that asks `CUi::ButtonColorMul` (buttons, edit boxes, boxes, list rows); cached dropdowns and the popup buttons use their cached states and do not ease.
 - Icons: no new icon set and no atlas script (the shipped Font Awesome 6 Free is the one set; no sprite was missing).
 - Sound feedback: none.
 - Contrast is tested for the palettes; it is not tested per widget.

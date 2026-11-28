@@ -21,6 +21,7 @@
 #include <game/client/animstate.h>
 #include <game/client/components/scoreboard.h>
 #include <game/client/gameclient.h>
+#include <game/client/kog_hud.h>
 #include <game/client/prediction/entities/character.h>
 #include <game/layers.h>
 #include <game/localization.h>
@@ -424,9 +425,9 @@ void CHud::RenderScoreHud()
 					Graphics()->DeleteQuadContainer(m_aScoreInfo[t].m_RoundRectQuadContainerIndex);
 
 					if(t == Local)
-						Graphics()->SetColor(1.0f, 1.0f, 1.0f, 0.25f);
+						Graphics()->SetColor(KogHud::ScoreBox(ColorRGBA(1.0f, 1.0f, 1.0f, 0.25f), true));
 					else
-						Graphics()->SetColor(0.0f, 0.0f, 0.0f, 0.25f);
+						Graphics()->SetColor(KogHud::ScoreBox(ColorRGBA(0.0f, 0.0f, 0.0f, 0.25f), false));
 					m_aScoreInfo[t].m_RoundRectQuadContainerIndex = Graphics()->CreateRectQuadContainer(m_Width - ScoreWidthMax - ImageSize - 2 * Split - PosSize, StartY + t * 20, ScoreWidthMax + ImageSize + 2 * Split + PosSize, ScoreSingleBoxHeight, 5.0f, IGraphics::CORNER_L);
 				}
 				Graphics()->TextureClear();
@@ -1525,7 +1526,7 @@ void CHud::RenderSpectatorCount()
 		StartY = StartY - 29.0f - 4; // dummy actions height and padding
 	}
 
-	Graphics()->DrawRect(StartX, StartY, BoxWidth, BoxHeight, ColorRGBA(0.0f, 0.0f, 0.0f, 0.4f), IGraphics::CORNER_L, 5.0f);
+	KogHud::DrawBox300(CUIRect{StartX, StartY, BoxWidth, BoxHeight}, ColorRGBA(0.0f, 0.0f, 0.0f, 0.4f), IGraphics::CORNER_L, 5.0f);
 
 	float y = StartY + BoxHeight / 3;
 	float x = StartX + 2;
@@ -1559,7 +1560,7 @@ void CHud::RenderDummyActions()
 		StartY -= 56;
 	}
 
-	Graphics()->DrawRect(StartX, StartY, BoxWidth, BoxHeight, ColorRGBA(0.0f, 0.0f, 0.0f, 0.4f), IGraphics::CORNER_L, 5.0f);
+	KogHud::DrawBox300(CUIRect{StartX, StartY, BoxWidth, BoxHeight}, ColorRGBA(0.0f, 0.0f, 0.0f, 0.4f), IGraphics::CORNER_L, 5.0f);
 
 	float y = StartY + 2;
 	float x = StartX + 2;
@@ -1757,7 +1758,7 @@ void CHud::RenderMovementInformation()
 		StartY -= 56.0f;
 	}
 
-	Graphics()->DrawRect(StartX, StartY, BoxWidth, BoxHeight, ColorRGBA(0.0f, 0.0f, 0.0f, 0.4f), IGraphics::CORNER_L, 5.0f);
+	KogHud::DrawBox300(CUIRect{StartX, StartY, BoxWidth, BoxHeight}, ColorRGBA(0.0f, 0.0f, 0.0f, 0.4f), IGraphics::CORNER_L, 5.0f);
 
 	const CMovementInformation Info = GetMovementInformation(ClientId, g_Config.m_ClDummy);
 
@@ -1876,7 +1877,7 @@ void CHud::RenderSpectatorHud()
 	// TClient
 	float AdjustedHeight = m_Height - (g_Config.m_TcStatusBar ? g_Config.m_TcStatusBarHeight : 0.0f);
 	// draw the box
-	Graphics()->DrawRect(m_Width - 180.0f, AdjustedHeight - 15.0f, 180.0f, 15.0f, ColorRGBA(0.0f, 0.0f, 0.0f, 0.4f), IGraphics::CORNER_TL, 5.0f);
+	KogHud::DrawBox300(CUIRect{m_Width - 180.0f, AdjustedHeight - 15.0f, 180.0f, 15.0f}, ColorRGBA(0.0f, 0.0f, 0.0f, 0.4f), IGraphics::CORNER_TL, 5.0f);
 
 	// draw the text
 	char aBuf[128];
@@ -1931,7 +1932,7 @@ void CHud::RenderLocalTime(float x)
 	str_timestamp_format(aTimeStr, sizeof(aTimeStr), Seconds ? "%H:%M.%S" : "%H:%M");
 	const float Width = std::round(TextRender()->TextBoundingBox(5.0f, aTimeStr).m_W);
 
-	Graphics()->DrawRect(x - (Width + 15.0f), 0.0f, Width + 10.0f, 12.5f, ColorRGBA(0.0f, 0.0f, 0.0f, 0.4f), IGraphics::CORNER_B, 3.75f);
+	KogHud::DrawBox300(CUIRect{x - (Width + 15.0f), 0.0f, Width + 10.0f, 12.5f}, ColorRGBA(0.0f, 0.0f, 0.0f, 0.4f), IGraphics::CORNER_B, 3.75f);
 	TextRender()->Text(x - (Width + 10.0f), (12.5f - 5.f) / 2.f, 5.0f, aTimeStr, -1.0f);
 
 	// Graphics()->DrawRect(x - 30.0f, 0.0f, 25.0f, 12.5f, ColorRGBA(0.0f, 0.0f, 0.0f, 0.4f), IGraphics::CORNER_B, 3.75f);

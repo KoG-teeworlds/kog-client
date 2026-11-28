@@ -40,7 +40,14 @@ void CMenus::RenderSettings(CUIRect MainView)
 	}
 
 	TabBar.HSplitTop(50.0f, &Button, &TabBar);
-	Button.Draw(ms_ColorTabbarActive, IGraphics::CORNER_BR, 10.0f);
+	KogTheme::DrawView(Button, ms_ColorTabbarActive, IGraphics::CORNER_BR, 10.0f);
+	if(KogTheme::On())
+	{
+		// the page list sits over the sky, not over the view: it gets a panel of its own so the text keeps its contrast
+		CUIRect Rail = TabBar;
+		Rail.HSplitTop(10.0f, nullptr, &Rail);
+		KogTheme::DrawView(Rail, ms_ColorTabbarActive, IGraphics::CORNER_R, 10.0f);
+	}
 
 	const char *apTabs[SETTINGS_LENGTH] = {
 		Localize("Language"),

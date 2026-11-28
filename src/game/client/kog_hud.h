@@ -52,6 +52,29 @@ namespace KogHud
 	inline ColorRGBA WheelLight(const ColorRGBA &Classic) { return On() ? KogTheme::Layer(0.9f * Classic.a) : Classic; }
 	inline ColorRGBA VoteYes(const ColorRGBA &Classic) { return On() ? KogTheme::Palette().m_Ok.WithAlpha(Classic.a) : Classic; }
 	inline ColorRGBA VoteNo(const ColorRGBA &Classic) { return On() ? KogTheme::Palette().m_Err.WithAlpha(Classic.a) : Classic; }
+	// A box of the HUD that draws in the 300 high space (movement information, the score and rank boxes): a glass panel with the small
+	// elevation at half size, or the classic rectangle
+	inline void DrawBox300(const CUIRect &Rect, const ColorRGBA &Classic, int Corners, float ClassicRadius)
+	{
+		static constexpr KogStyle::Elevation::SLevel LEVEL = {
+			KogStyle::Elevation::SMALL.m_Blur / 2.0f, KogStyle::Elevation::SMALL.m_OffsetY / 2.0f,
+			KogStyle::Elevation::SMALL.m_ShadowAlpha, KogStyle::Elevation::SMALL.m_RimAlpha};
+		if(!On())
+		{
+			Rect.Draw(Classic, Corners, ClassicRadius);
+			return;
+		}
+		// these boxes carry the white text of the game HUD, so they stay dark in the light theme too
+		const ColorRGBA Base = KogTheme::IsLight() ? KogStyle::GLASS.m_Panel : Panel(Classic);
+		KogDraw::Panel(Rect, {Base, &LEVEL, KogStyle::Hud::PANEL_RADIUS / 2.0f, Corners, KogStyle::Elevation::GLASS_TOP_LIGHTEN});
+	}
+	inline ColorRGBA ScoreBox(const ColorRGBA &Classic, bool Local)
+	{
+		if(!On())
+			return Classic;
+		const ColorRGBA Dark = KogTheme::IsLight() ? KogStyle::GLASS.m_Panel : KogTheme::Palette().m_Panel;
+		return Local ? KogTheme::Palette().m_Brand.WithAlpha(0.45f) : Dark.WithAlpha(0.7f);
+	}
 	inline ColorRGBA Accent() { return KogTheme::Palette().m_Brand; }
 	inline ColorRGBA Zebra() { return KogTheme::Layer(KogStyle::Hud::ZEBRA_ALPHA); }
 	inline ColorRGBA Header() { return KogTheme::Palette().m_Brand; }
