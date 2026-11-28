@@ -37,6 +37,7 @@ The numbers are written once and never reused. They are the same on every client
 | Id | Name | Offered when | What it enables |
 | --- | --- | --- | --- |
 | 1 | `client_login` | `cl_kog_login` and `cl_kog_auto_login` are on and this device has a key | the client may prove your account at join (see [LOGIN.md](LOGIN.md)) |
+| 2 | `notices` | always | the server sends achievements, quests and maintenance as the message `kog-notice@kog.tw` instead of a chat line; the client shows a toast and writes the same text into the chat log (see [KOG-NOTICE.md](KOG-NOTICE.md)) |
 
 The list is generated from one table in `src/engine/shared/kog_protocol.h` (`KOG_CAPABILITIES`); adding a feature is
 one line there. A feature is offered only if its own settings are on.
