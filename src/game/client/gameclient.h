@@ -52,6 +52,7 @@
 #include "components/key_binder.h"
 #include "components/kog/kog_hello.h"
 #include "components/kog/kog_login.h"
+#include "components/kog/kog_notices.h"
 #include "components/kog/kog_trust.h"
 #include "components/local_server.h"
 #include "components/mapimages.h"
@@ -235,6 +236,7 @@ public:
 	CKogHello m_KogHello;
 	CKogLogin m_KogLogin;
 	KogQuests::CList m_KogQuests;
+	CKogNotices m_KogNotices;
 	CKogTrust m_KogTrust;
 	CTrails m_Trails;
 	CPet m_Pet;
