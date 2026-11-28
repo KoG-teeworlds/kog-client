@@ -5295,6 +5295,7 @@ static bool UnknownMapSettingCallback(const char *pCommand, void *pUser)
 void CGameClient::LoadMapSettings()
 {
 	m_MapBugs = CMapBugs::Create(Map()->BaseName(), Map()->Size(), Map()->Sha256());
+	m_KogQuests.Clear();
 
 	// Reset Tunezones
 	for(int TuneZone = 0; TuneZone < TuneZone::NUM; TuneZone++)
@@ -5330,6 +5331,7 @@ void CGameClient::LoadMapSettings()
 		while(pNext < pSettings + Size)
 		{
 			int StrSize = str_length(pNext) + 1;
+			m_KogQuests.AddLine(pNext);
 			Console()->ExecuteLine(pNext, IConsole::CLIENT_ID_GAME);
 			pNext += StrSize;
 		}

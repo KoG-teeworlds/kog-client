@@ -2152,6 +2152,7 @@ set(EXPECTED_DATA
   tclient/fonts/Rubik-Regular.ttf
   tclient/fonts/minecraft_font.ttf
   tclient/gui_logo.png
+  tclient/gui_logo_light.png
   tclient/languages/arabic.txt
   tclient/languages/azerbaijani.txt
   tclient/languages/belarusian.txt
@@ -2540,6 +2541,7 @@ set_src(ENGINE_SHARED GLOB_RECURSE src/engine/shared
   kog_master.h
   kog_notices.h
   kog_protocol.h
+  kog_quests.h
   kog_trust.cpp
   kog_trust.h
   kog_update.cpp
@@ -2880,6 +2882,8 @@ if(CLIENT)
     components/kog/kog_hello.h
     components/kog/kog_login.cpp
     components/kog/kog_login.h
+    components/kog/kog_menu_quests.cpp
+    components/kog/kog_menu_start.cpp
     components/kog/kog_notices.cpp
     components/kog/kog_notices.h
     components/kog/kog_trust.cpp
@@ -3708,6 +3712,7 @@ if(GTEST_FOUND OR DOWNLOAD_GTEST)
     kog_master_test.cpp
     kog_master_vector.h
     kog_notices_test.cpp
+    kog_quests_test.cpp
     kog_style_test.cpp
     kog_trust_test.cpp
     kog_update_test.cpp
