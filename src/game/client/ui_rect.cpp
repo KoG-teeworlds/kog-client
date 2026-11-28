@@ -4,6 +4,8 @@
 
 #include <engine/graphics.h>
 
+#include <game/client/kog_theme.h>
+
 IGraphics *CUIRect::ms_pGraphics = nullptr;
 
 void CUIRect::HSplitMid(CUIRect *pTop, CUIRect *pBottom, float Spacing) const
@@ -168,7 +170,7 @@ bool CUIRect::Inside(vec2 Point) const
 
 void CUIRect::Draw(ColorRGBA Color, int Corners, float Rounding) const
 {
-	ms_pGraphics->DrawRect(x, y, w, h, Color, Corners, Rounding);
+	ms_pGraphics->DrawRect(x, y, w, h, KogTheme::MenuFill(Color), Corners, Rounding);
 }
 
 void CUIRect::Draw4(ColorRGBA ColorTopLeft, ColorRGBA ColorTopRight, ColorRGBA ColorBottomLeft, ColorRGBA ColorBottomRight, int Corners, float Rounding) const

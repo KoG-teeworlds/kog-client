@@ -13,6 +13,7 @@
 #include <game/client/components/scoreboard.h>
 #include <game/client/components/sounds.h>
 #include <game/client/gameclient.h>
+#include <game/client/kog_hud.h>
 #include <game/localization.h>
 
 void CVoting::ConCallvote(IConsole::IResult *pResult, void *pUserData)
@@ -354,7 +355,7 @@ void CVoting::Render()
 	}
 
 	CUIRect View = {0.0f, 60.0f, 120.0f, 38.0f};
-	View.Draw(ColorRGBA(0.0f, 0.0f, 0.0f, 0.4f), IGraphics::CORNER_R, 3.0f);
+	KogHud::DrawPanel(View, ColorRGBA(0.0f, 0.0f, 0.0f, 0.4f), IGraphics::CORNER_R, 3.0f, KogStyle::Elevation::SMALL);
 	View.Margin(3.0f, &View);
 
 	SLabelProperties Props;
@@ -421,14 +422,14 @@ void CVoting::RenderBars(CUIRect Bars) const
 		{
 			CUIRect YesArea;
 			Bars.VSplitLeft(Bars.w * m_Yes / m_Total, &YesArea, nullptr);
-			YesArea.Draw(ColorRGBA(0.2f, 0.9f, 0.2f, 0.85f), IGraphics::CORNER_ALL, YesArea.h / 2.0f);
+			YesArea.Draw(KogHud::VoteYes(ColorRGBA(0.2f, 0.9f, 0.2f, 0.85f)), IGraphics::CORNER_ALL, YesArea.h / 2.0f);
 		}
 
 		if(m_No)
 		{
 			CUIRect NoArea;
 			Bars.VSplitRight(Bars.w * m_No / m_Total, nullptr, &NoArea);
-			NoArea.Draw(ColorRGBA(0.9f, 0.2f, 0.2f, 0.85f), IGraphics::CORNER_ALL, NoArea.h / 2.0f);
+			NoArea.Draw(KogHud::VoteNo(ColorRGBA(0.9f, 0.2f, 0.2f, 0.85f)), IGraphics::CORNER_ALL, NoArea.h / 2.0f);
 		}
 	}
 }

@@ -196,7 +196,8 @@ public:
 
 	float FontSize() const { return KogHud::TextIn300(g_Config.m_ClChatFontSize / 10.0f); }
 	float MessagePaddingX() const { return FontSize() * (5 / 6.f); }
-	float MessagePaddingY() const { return FontSize() * (1 / 6.f); }
+	float MessagePaddingY() const { return FontSize() * (KogHud::On() ? KogStyle::Hud::CHAT_PADDING_Y : 1 / 6.f); }
+	float KogLineSpacing() const { return KogHud::On() ? FontSize() * KogStyle::Hud::CHAT_LINE_SPACING : 0.0f; }
 	float MessageTeeSize() const { return FontSize() * (7 / 6.f); }
 	float MessageRounding() const { return FontSize() * (1 / 2.f); }
 

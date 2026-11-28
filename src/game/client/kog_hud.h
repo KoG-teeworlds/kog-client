@@ -41,6 +41,17 @@ namespace KogHud
 	}
 	inline ColorRGBA Headline(const ColorRGBA &Classic) { return On() ? KogTheme::Palette().m_Muted : Classic; }
 	inline ColorRGBA Self(const ColorRGBA &Classic) { return On() ? KogTheme::Palette().m_Brand.WithAlpha(KogStyle::Hud::SELF_ALPHA) : Classic; }
+	// Ping: the three status colours of the palette (they differ in lightness, the number is always shown too)
+	inline ColorRGBA Ping(int Latency)
+	{
+		const KogStyle::SPalette &P = KogTheme::Palette();
+		return Latency <= 60 ? P.m_Ok : (Latency <= 120 ? P.m_Warn : P.m_Err);
+	}
+	// Overlays that sit over the game (emote wheel, spectator menu, vote bar): glass colours in the KoG look
+	inline ColorRGBA Wheel(const ColorRGBA &Classic) { return On() ? KogTheme::Palette().m_Panel.WithAlpha(0.55f * Classic.a) : Classic; }
+	inline ColorRGBA WheelLight(const ColorRGBA &Classic) { return On() ? KogTheme::Layer(0.9f * Classic.a) : Classic; }
+	inline ColorRGBA VoteYes(const ColorRGBA &Classic) { return On() ? KogTheme::Palette().m_Ok.WithAlpha(Classic.a) : Classic; }
+	inline ColorRGBA VoteNo(const ColorRGBA &Classic) { return On() ? KogTheme::Palette().m_Err.WithAlpha(Classic.a) : Classic; }
 	inline ColorRGBA Accent() { return KogTheme::Palette().m_Brand; }
 	inline ColorRGBA Zebra() { return KogTheme::Layer(KogStyle::Hud::ZEBRA_ALPHA); }
 	inline ColorRGBA Header() { return KogTheme::Palette().m_Brand; }

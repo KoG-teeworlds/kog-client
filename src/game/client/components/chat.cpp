@@ -1032,6 +1032,7 @@ void CChat::OnPrepareLines(float y)
 			MeasureCursor.m_FontSize = FontSize;
 			MeasureCursor.m_Flags = 0;
 			MeasureCursor.m_LineWidth = LineWidth;
+			MeasureCursor.m_LineSpacing = KogLineSpacing();
 
 			if(Line.m_ClientId >= 0 && Line.m_aName[0] != '\0')
 			{
@@ -1083,6 +1084,7 @@ void CChat::OnPrepareLines(float y)
 		LineCursor.SetPosition(vec2(TextBegin, Line.m_TextYOffset));
 		LineCursor.m_FontSize = FontSize;
 		LineCursor.m_LineWidth = LineWidth;
+		LineCursor.m_LineSpacing = KogLineSpacing();
 
 		// Message is from valid player
 		if(Line.m_ClientId >= 0 && Line.m_aName[0] != '\0')

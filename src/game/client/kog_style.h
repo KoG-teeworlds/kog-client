@@ -198,11 +198,13 @@ namespace KogStyle
 		inline constexpr float ROW_KILL_FEED = MIN_ROW;
 		inline constexpr float ROW_CHAT = MIN_ROW;
 
+		inline constexpr float CHAT_PADDING_Y = 0.45f; // of the font size, around a chat line (upstream 1/6)
+		inline constexpr float CHAT_LINE_SPACING = 0.18f; // of the font size, between the rows of a wrapped line
 		inline constexpr float RADIUS = 4.0f; // rows (self, kill feed)
 		inline constexpr float PANEL_RADIUS = Radius::Panel;
 		inline constexpr float PAD = Space::S - 2.0f; // 6
 		inline constexpr float PANEL_ALPHA = 0.92f; // dark and light; the glass palette has its own
-		inline constexpr float ZEBRA_ALPHA = 0.06f;
+		inline constexpr float ZEBRA_ALPHA = 0.10f;
 		inline constexpr float SELF_ALPHA = 0.35f;
 		inline constexpr float MIN_COLUMN_WIDTH = 250.0f; // score, name, clan, ping at the text size above
 		inline constexpr float KILL_FEED_SCALE = 3.0f;
@@ -294,6 +296,29 @@ namespace KogStyle
 				return 0;
 			return (int)std::min(Room / ROW_KILL_FEED, (float)MaxRows);
 		}
+	}
+
+	// The meaning of an upstream colour of a control: neutral (white or grey), good (green), bad (red), warn (yellow), other (blue, purple).
+	// The KoG look keeps the meaning and replaces the colour with the one of the palette, so there is one set of control colours.
+	enum class ESemantic
+	{
+		NEUTRAL,
+		GOOD,
+		BAD,
+		WARN,
+		OTHER,
+	};
+	inline ESemantic Classify(const ColorRGBA &C)
+	{
+		const float Max = std::max({C.r, C.g, C.b});
+		const float Min = std::min({C.r, C.g, C.b});
+		if(!(Max - Min > 0.2f))
+			return ESemantic::NEUTRAL;
+		if(C.g >= C.r && C.g >= C.b)
+			return C.r > 0.85f * C.g && C.b < 0.6f * C.g ? ESemantic::WARN : ESemantic::GOOD;
+		if(C.r >= C.g && C.r >= C.b)
+			return C.g > 0.6f * C.r ? ESemantic::WARN : ESemantic::BAD;
+		return ESemantic::OTHER;
 	}
 
 	// WCAG 2.x, sRGB channels in [0, 1]
