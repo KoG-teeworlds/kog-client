@@ -6,7 +6,8 @@
 // What this client can do together with a KoG server: the only list. Wire id (written once, never reused or
 // renumbered), name for the console. A feature gets a line here when it is built.
 #define KOG_CAPABILITIES(X) \
-	X(CLIENT_LOGIN, 1, "client_login")
+	X(CLIENT_LOGIN, 1, "client_login") \
+	X(NOTICES, 2, "notices")
 
 enum class EKogCap
 {

@@ -696,3 +696,28 @@ TEST(KogLogin, CurlDoesNotFollowARedirectOfASecretRequest)
 	}
 	g_Config.m_HttpAllowInsecure = 0;
 }
+
+TEST(KogLogin, TheCertificateOfTheServer)
+{
+	SJoinDecision Decision = {};
+	Decision.m_SwitchOn = true;
+	Decision.m_AutoLoginOn = true;
+	Decision.m_HasDeviceKey = true;
+	Decision.m_ServerIsKog = true;
+	Decision.m_CapabilityNegotiated = true;
+	EXPECT_TRUE(MayAnswerChallenge(Decision)) << "no certificate, not required: as before";
+
+	SJoinDecision Required = Decision;
+	Required.m_CertRequired = true;
+	EXPECT_FALSE(MayAnswerChallenge(Required)) << "required and nothing proven";
+	Required.m_CertVerified = true;
+	EXPECT_TRUE(MayAnswerChallenge(Required));
+
+	SJoinDecision Bad = Decision;
+	Bad.m_CertBad = true;
+	EXPECT_FALSE(MayAnswerChallenge(Bad)) << "a certificate that is wrong is never answered, required or not";
+
+	SJoinDecision NotListed = Required;
+	NotListed.m_ServerIsKog = false;
+	EXPECT_FALSE(MayAnswerChallenge(NotListed)) << "the certificate adds to the list check, it does not replace it";
+}
