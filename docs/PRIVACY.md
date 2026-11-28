@@ -5,6 +5,7 @@ This lists every outbound connection of the client as built from this repository
 | Endpoint | Why | Default | What is sent besides your IP | Setting |
 | --- | --- | --- | --- | --- |
 | `master1.ddnet.org` to `master4.ddnet.org` (HTTPS) | Server list | On, at start | Nothing | None; the server browser needs it |
+| `master.client.<channel>.kog.tw` (HTTPS), then `client.kog.tw/list/<channel>/` if that fails | The signed KoG server list, merged into the server browser | Off until a master URL is set in `kog_master_url` (empty today; the address of the channel is built in once its master is deployed). Then on every start and every time the server browser refreshes, at most once in 30 seconds; no timer | Nothing but the request itself: `GET`, no cookie, no query, no account, no device key, no identifier, user agent `KoG-Client/<version> (<platform>; <arch>)`. The list is public and the same for everyone | `kog_master 0`, or `kog_master_url ""`. `kog_master_dns` (off, not implemented) |
 | `info.ddnet.org/info` (HTTPS) | Communities and countries for the server browser | On, at start | Nothing. Your player name is added only when `br_indicate_finished` is on | `br_indicate_finished` (off by default) |
 | Game servers (UDP) | Playing, and pinging every server in the list | On | Your name, clan, skin and country to the server you join; the client version string | None |
 | `maps.ddnet.org` (HTTPS) | Download a map you do not have | On demand | The map name. A server can name its own map host, which then sees your IP | `cl_map_download_url` |
