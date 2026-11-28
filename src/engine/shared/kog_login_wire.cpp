@@ -20,6 +20,18 @@ bool UnpackChallenge(CUnpacker *pUnpacker, SChallenge *pChallenge)
 	mem_copy(pChallenge->m_aNonce, pNonce, NONCE_SIZE);
 	mem_copy(pChallenge->m_aSessionId, pSession, ID_SIZE);
 	pChallenge->m_TtlMs = TtlMs;
+	// a chain that is cut or too big is the same as none: the challenge itself is still read
+	if(Revision >= 2)
+	{
+		const int ChainSize = pUnpacker->GetInt();
+		const unsigned char *pChain = ChainSize > 0 && ChainSize <= MAX_CHAIN_SIZE ? pUnpacker->GetRaw(ChainSize) : nullptr;
+		const unsigned char *pSignature = pChain != nullptr ? pUnpacker->GetRaw(SIGNATURE_SIZE) : nullptr;
+		if(!pUnpacker->Error() && pChain != nullptr && pSignature != nullptr)
+		{
+			pChallenge->m_Chain.assign(pChain, pChain + ChainSize);
+			mem_copy(pChallenge->m_aServerSignature, pSignature, SIGNATURE_SIZE);
+		}
+	}
 	return true;
 }
 

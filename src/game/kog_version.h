@@ -20,6 +20,17 @@
 #define KOG_LOGIN_DEFAULT 0
 #endif
 
+// The signed list of the KoG master. Empty = the client does not ask for one. Set it to the master address of the channel
+// (src/engine/client/kog_master_pubkey.h) when that master is deployed and its root keys are in that header
+#ifndef KOG_MASTER_URL_DEFAULT
+#define KOG_MASTER_URL_DEFAULT ""
+#endif
+
+// Requiring a KoG certificate before answering a login challenge is on by default in canary and dev builds only (CMake sets it)
+#ifndef KOG_REQUIRE_CERT_DEFAULT
+#define KOG_REQUIRE_CERT_DEFAULT 0
+#endif
+
 // The KoG hello (announce capabilities to KoG servers) is on by default in canary and dev builds only (CMake sets it)
 #ifndef KOG_HELLO_DEFAULT
 #define KOG_HELLO_DEFAULT 0

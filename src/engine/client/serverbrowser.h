@@ -3,6 +3,8 @@
 #ifndef ENGINE_CLIENT_SERVERBROWSER_H
 #define ENGINE_CLIENT_SERVERBROWSER_H
 
+#include "kog_master_list.h"
+
 #include <base/hash.h>
 #include <base/str.h>
 
@@ -333,6 +335,8 @@ private:
 	char m_aNetVersion[128];
 
 	bool m_RefreshingHttp = false;
+	CKogMasterList m_KogMasterList;
+	void AddKogMasterServers();
 	IServerBrowserHttp *m_pHttp = nullptr;
 	IServerBrowserPingCache *m_pPingCache = nullptr;
 	const char *m_pHttpPrevBestUrl = nullptr;
