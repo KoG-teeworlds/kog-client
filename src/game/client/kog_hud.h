@@ -1,7 +1,10 @@
 #ifndef GAME_CLIENT_KOG_HUD_H
 #define GAME_CLIENT_KOG_HUD_H
 
+#include "kog_draw.h"
 #include "kog_theme.h"
+
+#include <game/client/ui_rect.h>
 
 #include <algorithm>
 
@@ -19,8 +22,26 @@ namespace KogHud
 	inline float Row(float Classic) { return On() ? std::max(Classic, KogStyle::Hud::MIN_ROW) : Classic; }
 	inline float Radius(float Classic) { return On() ? KogStyle::Hud::RADIUS : Classic; }
 
-	inline ColorRGBA Panel(const ColorRGBA &Classic) { return On() ? KogTheme::Palette().m_Panel.WithAlpha(KogStyle::Hud::PANEL_ALPHA) : Classic; }
+	inline ColorRGBA Panel(const ColorRGBA &Classic)
+	{
+		if(!On())
+			return Classic;
+		return KogTheme::IsGlass() ? KogTheme::Palette().m_Panel : KogTheme::Palette().m_Panel.WithAlpha(KogStyle::Hud::PANEL_ALPHA);
+	}
+
+	// A HUD panel: the classic flat rectangle, or in the KoG look a glass panel with a shadow
+	inline void DrawPanel(const CUIRect &Rect, const ColorRGBA &Classic, int Corners, float ClassicRadius, const KogStyle::Elevation::SLevel &Level = KogStyle::Elevation::RAISED)
+	{
+		if(!On())
+		{
+			Rect.Draw(Classic, Corners, ClassicRadius);
+			return;
+		}
+		KogDraw::Panel(Rect, {Panel(Classic), &Level, KogStyle::Hud::PANEL_RADIUS, Corners, KogStyle::Elevation::GLASS_TOP_LIGHTEN});
+	}
+	inline ColorRGBA Headline(const ColorRGBA &Classic) { return On() ? KogTheme::Palette().m_Muted : Classic; }
 	inline ColorRGBA Self(const ColorRGBA &Classic) { return On() ? KogTheme::Palette().m_Brand.WithAlpha(KogStyle::Hud::SELF_ALPHA) : Classic; }
+	inline ColorRGBA Accent() { return KogTheme::Palette().m_Brand; }
 	inline ColorRGBA Zebra() { return KogTheme::Layer(KogStyle::Hud::ZEBRA_ALPHA); }
 	inline ColorRGBA Header() { return KogTheme::Palette().m_Brand; }
 	inline ColorRGBA OnHeader() { return KogTheme::Palette().m_OnBrand; }

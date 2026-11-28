@@ -294,7 +294,7 @@ void CScoreboard::RenderTitleBar(CUIRect TitleBar, int Team, const char *pTitle)
 
 void CScoreboard::RenderGoals(CUIRect Goals)
 {
-	Goals.Draw(KogHud::Panel(ColorRGBA(0.0f, 0.0f, 0.0f, 0.5f)), IGraphics::CORNER_ALL, KogHud::Radius(7.5f));
+	KogHud::DrawPanel(Goals, ColorRGBA(0.0f, 0.0f, 0.0f, 0.5f), IGraphics::CORNER_ALL, 7.5f);
 	Goals.VMargin(5.0f, &Goals);
 
 	const float FontSize = KogHud::Text(10.0f);
@@ -322,7 +322,7 @@ void CScoreboard::RenderGoals(CUIRect Goals)
 
 void CScoreboard::RenderSpectators(CUIRect Spectators)
 {
-	Spectators.Draw(KogHud::Panel(ColorRGBA(0.0f, 0.0f, 0.0f, 0.5f)), IGraphics::CORNER_ALL, KogHud::Radius(7.5f));
+	KogHud::DrawPanel(Spectators, ColorRGBA(0.0f, 0.0f, 0.0f, 0.5f), IGraphics::CORNER_ALL, 7.5f);
 	constexpr float SpectatorCut = 5.0f;
 	Spectators.Margin(SpectatorCut, &Spectators);
 
@@ -578,7 +578,7 @@ void CScoreboard::RenderScoreboard(CUIRect Scoreboard, int Team, int CountStart,
 	CUIRect Headline;
 	Scoreboard.HSplitTop(HeadlineFontsize * 2.0f, &Headline, &Scoreboard);
 	const float HeadlineY = Headline.y + Headline.h / 2.0f - HeadlineFontsize / 2.0f;
-	const ColorRGBA HeadlineColor = TextRender()->DefaultTextColor();
+	const ColorRGBA HeadlineColor = KogHud::Headline(TextRender()->DefaultTextColor());
 	m_HeadlineScore.Update(TextRender(), UseTime ? Localize("Time") : Localize("Score"), HeadlineFontsize);
 	m_HeadlineName.Update(TextRender(), Localize("Name"), HeadlineFontsize);
 	m_HeadlineClan.Update(TextRender(), Localize("Clan"), HeadlineFontsize);
@@ -720,6 +720,11 @@ void CScoreboard::RenderScoreboard(CUIRect Scoreboard, int Team, int CountStart,
 				(GameClient()->m_Snap.m_SpecInfo.m_Active && pInfo->m_ClientId == GameClient()->m_Snap.m_SpecInfo.m_SpectatorId))
 			{
 				Row.Draw(KogHud::Self(ColorRGBA(1.0f, 1.0f, 1.0f, 0.25f)), IGraphics::CORNER_ALL, RoundRadius);
+				if(KogHud::On())
+				{
+					const CUIRect Mark = {Row.x, Row.y + 2.0f, 3.0f, Row.h - 4.0f};
+					Mark.Draw(KogHud::Accent(), IGraphics::CORNER_R, 1.5f);
+				}
 			}
 
 			const CGameClient::CClientData &ClientData = GameClient()->m_aClients[pInfo->m_ClientId];
@@ -884,7 +889,8 @@ void CScoreboard::RenderScoreboard(CUIRect Scoreboard, int Team, int CountStart,
 			}
 
 			// country flag
-			GameClient()->m_CountryFlags.Render(ClientData.m_Country, ColorRGBA(1.0f, 1.0f, 1.0f, 0.5f),
+			if(!(KogHud::On() && ClientData.m_Country < 0)) // an unknown country is not drawn as a ghost
+				GameClient()->m_CountryFlags.Render(ClientData.m_Country, ColorRGBA(1.0f, 1.0f, 1.0f, 0.5f),
 				CountryOffset, Row.y + (Spacing + TeeSizeMod * 5.0f) / 2.0f, CountryLength, Row.h - Spacing - TeeSizeMod * 5.0f);
 
 			// ping
@@ -1048,8 +1054,8 @@ void CScoreboard::OnRender()
 
 		RedTitle.Draw(ColorRGBA(0.975f, 0.17f, 0.17f, 0.5f), IGraphics::CORNER_T, 7.5f);
 		BlueTitle.Draw(ColorRGBA(0.17f, 0.46f, 0.975f, 0.5f), IGraphics::CORNER_T, 7.5f);
-		RedScoreboard.Draw(KogHud::Panel(ColorRGBA(0.0f, 0.0f, 0.0f, 0.5f)), IGraphics::CORNER_B, KogHud::Radius(7.5f));
-		BlueScoreboard.Draw(KogHud::Panel(ColorRGBA(0.0f, 0.0f, 0.0f, 0.5f)), IGraphics::CORNER_B, KogHud::Radius(7.5f));
+		KogHud::DrawPanel(RedScoreboard, ColorRGBA(0.0f, 0.0f, 0.0f, 0.5f), IGraphics::CORNER_B, 7.5f);
+		KogHud::DrawPanel(BlueScoreboard, ColorRGBA(0.0f, 0.0f, 0.0f, 0.5f), IGraphics::CORNER_B, 7.5f);
 
 		RenderTitleBar(RedTitle, TEAM_RED, pRedTeamName == nullptr ? Localize("Red team") : pRedTeamName);
 		RenderTitleBar(BlueTitle, TEAM_BLUE, pBlueTeamName == nullptr ? Localize("Blue team") : pBlueTeamName);
@@ -1075,7 +1081,7 @@ void CScoreboard::OnRender()
 	}
 	else
 	{
-		Scoreboard.Draw(KogHud::Panel(ColorRGBA(0.0f, 0.0f, 0.0f, 0.5f)), IGraphics::CORNER_ALL, KogHud::Radius(7.5f));
+		KogHud::DrawPanel(Scoreboard, ColorRGBA(0.0f, 0.0f, 0.0f, 0.5f), IGraphics::CORNER_ALL, 7.5f);
 
 		const char *pTitle;
 		if(pGameInfoObj && (pGameInfoObj->m_GameStateFlags & GAMESTATEFLAG_GAMEOVER))
@@ -1092,8 +1098,12 @@ void CScoreboard::OnRender()
 		std::optional<KogTheme::CTextColor> HeaderText;
 		if(KogHud::On())
 		{
-			Title.Draw(KogHud::Header(), IGraphics::CORNER_T, KogHud::Radius(0.0f));
-			HeaderText.emplace(TextRender(), KogHud::OnHeader());
+			// the title is text on the glass, with the brand colour as a small bar and a hairline below, not a coloured slab
+			CUIRect Bar = {Title.x + KogStyle::Space::M, Title.y + KogStyle::Space::S, 3.0f, Title.h - 2.0f * KogStyle::Space::S};
+			Bar.Draw(KogHud::Accent(), IGraphics::CORNER_ALL, 1.5f);
+			CUIRect Line = {Title.x + KogStyle::Space::M, Title.y + Title.h - 1.0f, Title.w - 2.0f * KogStyle::Space::M, 1.0f};
+			Line.Draw(KogTheme::Layer(0.12f), IGraphics::CORNER_NONE, 0.0f);
+			Title.VMargin(KogStyle::Space::S, &Title);
 		}
 		RenderTitleBar(Title, TEAM_GAME, pTitle);
 		HeaderText.reset();

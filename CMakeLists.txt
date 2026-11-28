@@ -2990,6 +2990,8 @@ if(CLIENT)
     components/voting.h
     gameclient.cpp
     gameclient.h
+    kog_draw.cpp
+    kog_draw.h
     kog_hud.h
     kog_style.h
     kog_theme.h
@@ -3707,6 +3709,7 @@ if(GTEST_FOUND OR DOWNLOAD_GTEST)
     json_test.cpp
     jsonwriter_test.cpp
     kog_community_test.cpp
+    kog_draw_test.cpp
     kog_failsafe_test.cpp
     kog_hello_test.cpp
     kog_hud_test.cpp

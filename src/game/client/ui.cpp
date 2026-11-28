@@ -16,6 +16,7 @@
 #include <engine/keys.h>
 #include <engine/shared/config.h>
 
+#include <game/client/kog_draw.h>
 #include <game/client/kog_theme.h>
 #include <game/localization.h>
 
@@ -114,6 +115,7 @@ void CUi::Init(IKernel *pKernel)
 	m_pInput = pKernel->RequestInterface<IInput>();
 	m_pTextRender = pKernel->RequestInterface<ITextRender>();
 	CUIRect::Init(m_pGraphics);
+	KogDraw::Init(m_pGraphics);
 	CLineInput::Init(m_pClient, m_pGraphics, m_pInput, m_pTextRender);
 	CUIElementBase::Init(this);
 }

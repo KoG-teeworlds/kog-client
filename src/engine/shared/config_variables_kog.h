@@ -29,4 +29,5 @@ MACRO_CONFIG_STR(ClKogDeviceName, cl_kog_device_name, 161, "", CFGFLAG_CLIENT | 
 MACRO_CONFIG_STR(ClKogAccountName, cl_kog_account_name, 64, "", CFGFLAG_CLIENT | CFGFLAG_SAVE, "Account name shown in the settings after Log in with KoG (not a secret)")
 MACRO_CONFIG_STR(KogInstallId, kog_install_id, 40, "", CFGFLAG_CLIENT | CFGFLAG_SAVE, "Random value of this install that picks its place in a staged rollout. Never sent anywhere")
 MACRO_CONFIG_INT(ClKogDefaultCommunity, cl_kog_default_community, 1, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Select the KoG community in the server browser on the first start (0 = old default, DDNet). Players who already have a config are never changed")
-MACRO_CONFIG_INT(ClKogTheme, cl_kog_theme, 1, 0, 2, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Look of the menus: 0 = classic (as upstream), 1 = KoG dark, 2 = KoG light")
+MACRO_CONFIG_INT(ClKogTheme, cl_kog_theme, 3, 0, 3, CFGFLAG_CLIENT | CFGFLAG_SAVE, "Look of the menus and the HUD: 0 = classic (as upstream), 1 = KoG dark, 2 = KoG light, 3 = KoG glass")
+MACRO_CONFIG_INT(ClKogReduceMotion, cl_kog_reduce_motion, 0, 0, 1, CFGFLAG_CLIENT | CFGFLAG_SAVE, "No transitions in the KoG look: panels and toasts appear at once")

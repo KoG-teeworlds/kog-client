@@ -9,6 +9,7 @@
 
 #include <game/client/components/menus_start.h>
 #include <game/client/gameclient.h>
+#include <game/client/kog_draw.h>
 #include <game/client/kog_theme.h>
 #include <game/client/ui.h>
 #include <game/localization.h>
@@ -39,7 +40,7 @@ namespace
 	// Fades towards the target in Motion::Hover seconds, a frame time of zero or a disabled smooth scroll jumps
 	float Approach(float Value, float Target, float FrameTime)
 	{
-		if(g_Config.m_UiSmoothScrollTime <= 0)
+		if(g_Config.m_UiSmoothScrollTime <= 0 || g_Config.m_ClKogReduceMotion)
 			return Target;
 		const float Step = FrameTime / Motion::Hover;
 		return Value < Target ? std::min(Value + Step, Target) : std::max(Value - Step, Target);
@@ -47,10 +48,7 @@ namespace
 
 	void DrawCard(const CUIRect &Rect, const ColorRGBA &Fill, float Radius)
 	{
-		CUIRect Inner;
-		Rect.Draw(Pal().m_Line, IGraphics::CORNER_ALL, Radius);
-		Rect.Margin(1.0f, &Inner);
-		Inner.Draw(Fill, IGraphics::CORNER_ALL, Radius - 1.0f);
+		KogDraw::Panel(Rect, {Fill, &Elevation::SMALL, Radius, IGraphics::CORNER_ALL, Elevation::GLASS_TOP_LIGHTEN});
 	}
 }
 
@@ -58,8 +56,9 @@ void CMenusStart::DrawKogScrim(const CUIRect &Screen)
 {
 	Graphics()->TextureClear();
 	Graphics()->QuadsBegin();
-	const ColorRGBA Top = Pal().m_Bg.WithAlpha(0.55f);
-	const ColorRGBA Bottom = Pal().m_Bg.WithAlpha(0.80f);
+	const bool Glass = KogTheme::IsGlass(); // the glass look lets the map show: the sky is part of the look
+	const ColorRGBA Top = Pal().m_Bg.WithAlpha(Glass ? 0.20f : 0.55f);
+	const ColorRGBA Bottom = Pal().m_Bg.WithAlpha(Glass ? 0.55f : 0.80f);
 	Graphics()->SetColor4(Top, Top, Bottom, Bottom);
 	const IGraphics::CQuadItem Quad(Screen.x, Screen.y, Screen.w, Screen.h);
 	Graphics()->QuadsDrawTL(&Quad, 1);
@@ -83,7 +82,7 @@ bool CMenusStart::DoKogButton(const void *pId, float *pHover, const CUIRect &Rec
 	Fill.a = Primary ? 1.0f : (Quiet ? Pal().m_Panel.a : Pal().m_Panel2.a);
 
 	if(Primary)
-		Rect.Draw(Fill, IGraphics::CORNER_ALL, Radius);
+		KogDraw::Panel(Rect, {Fill, &Elevation::RAISED, Radius::Panel, IGraphics::CORNER_ALL, 0.14f});
 	else
 		DrawCard(Rect, Fill, Radius);
 

@@ -136,7 +136,10 @@ void CTooltips::OnRender()
 			Rect.y = std::clamp(Ui()->MouseY() - Rect.h / 2.0f, Margin, pScreen->h - Rect.h - Margin);
 		}
 
-		Rect.Draw(KogHud::Panel(ColorRGBA(0.2f, 0.2f, 0.2f, 0.8f)).WithMultipliedAlpha(AlphaFactor), IGraphics::CORNER_ALL, KogHud::Radius(Padding));
+		if(KogHud::On())
+			KogDraw::Panel(Rect, {KogHud::Panel(ColorRGBA(0.2f, 0.2f, 0.2f, 0.8f)).WithMultipliedAlpha(AlphaFactor), &KogStyle::Elevation::SMALL, KogStyle::Radius::Control, IGraphics::CORNER_ALL, KogStyle::Elevation::GLASS_TOP_LIGHTEN});
+		else
+			Rect.Draw(ColorRGBA(0.2f, 0.2f, 0.2f, 0.8f * AlphaFactor), IGraphics::CORNER_ALL, Padding);
 		Rect.Margin(Padding, &Rect);
 
 		CTextCursor Cursor;

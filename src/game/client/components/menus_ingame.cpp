@@ -28,6 +28,7 @@
 #include <generated/client_data.h>
 #include <generated/protocol.h>
 
+#include <game/client/kog_theme.h>
 #include <game/client/animstate.h>
 #include <game/client/components/countryflags.h>
 #include <game/client/components/touch_controls.h>
@@ -47,7 +48,7 @@ void CMenus::RenderGame(CUIRect MainView)
 	CUIRect Button, ButtonBars, ButtonBar, ButtonBar2;
 	bool ShowDDRaceButtons = MainView.w > 855.0f;
 	MainView.HSplitTop(45.0f + (g_Config.m_ClTouchControls ? 35.0f : 0.0f), &ButtonBars, &MainView);
-	ButtonBars.Draw(ms_ColorTabbarActive, IGraphics::CORNER_B, 10.0f);
+	KogTheme::DrawView(ButtonBars, ms_ColorTabbarActive, IGraphics::CORNER_B, 10.0f);
 	ButtonBars.Margin(10.0f, &ButtonBars);
 	ButtonBars.HSplitTop(25.0f, &ButtonBar, &ButtonBars);
 	if(g_Config.m_ClTouchControls)
@@ -492,7 +493,7 @@ void CMenus::PopupConfirmOpenWiki()
 void CMenus::RenderPlayers(CUIRect MainView)
 {
 	CUIRect Button, Button2, ButtonBar, PlayerList, Player;
-	MainView.Draw(ms_ColorTabbarActive, IGraphics::CORNER_B, 10.0f);
+	KogTheme::DrawView(MainView, ms_ColorTabbarActive, IGraphics::CORNER_B, 10.0f);
 
 	// list background color
 	MainView.Margin(10.0f, &PlayerList);
@@ -631,7 +632,7 @@ void CMenus::RenderServerInfo(CUIRect MainView)
 	const CServerInfo &CurrentServerInfo = Client()->ServerInfo();
 
 	CUIRect ServerInfo, GameInfo, Motd;
-	MainView.Draw(ms_ColorTabbarActive, IGraphics::CORNER_B, 10.0f);
+	KogTheme::DrawView(MainView, ms_ColorTabbarActive, IGraphics::CORNER_B, 10.0f);
 	MainView.Margin(10.0f, &MainView);
 	MainView.HSplitMid(&ServerInfo, &Motd, 10.0f);
 	ServerInfo.VSplitMid(&ServerInfo, &GameInfo, 10.0f);
@@ -977,7 +978,7 @@ void CMenus::RenderServerControl(CUIRect MainView)
 	MainView.HSplitTop(20.0f, &Bottom, &MainView);
 	Bottom.Draw(ms_ColorTabbarActive, IGraphics::CORNER_NONE, 0.0f);
 	MainView.HSplitTop(20.0f, &TabBar, &MainView);
-	MainView.Draw(ms_ColorTabbarActive, IGraphics::CORNER_B, 10.0f);
+	KogTheme::DrawView(MainView, ms_ColorTabbarActive, IGraphics::CORNER_B, 10.0f);
 	MainView.Margin(10.0f, &MainView);
 
 	if(Client()->RconAuthed())
@@ -1168,7 +1169,7 @@ void CMenus::RenderServerControl(CUIRect MainView)
 
 void CMenus::RenderInGameNetwork(CUIRect MainView)
 {
-	MainView.Draw(ms_ColorTabbarActive, IGraphics::CORNER_B, 10.0f);
+	KogTheme::DrawView(MainView, ms_ColorTabbarActive, IGraphics::CORNER_B, 10.0f);
 
 	CUIRect TabBar, Button;
 	MainView.HSplitTop(24.0f, &TabBar, &MainView);
@@ -1373,7 +1374,7 @@ void CMenus::SortGhostlist()
 void CMenus::RenderGhost(CUIRect MainView)
 {
 	// render background
-	MainView.Draw(ms_ColorTabbarActive, IGraphics::CORNER_B, 10.0f);
+	KogTheme::DrawView(MainView, ms_ColorTabbarActive, IGraphics::CORNER_B, 10.0f);
 
 	MainView.HSplitTop(10.0f, nullptr, &MainView);
 	MainView.HSplitBottom(5.0f, &MainView, nullptr);

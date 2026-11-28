@@ -771,7 +771,7 @@ void CMenus::RenderNews(CUIRect MainView)
 
 	g_Config.m_UiUnreadNews = false;
 
-	MainView.Draw(ms_ColorTabbarActive, IGraphics::CORNER_B, 10.0f);
+	KogTheme::DrawView(MainView, ms_ColorTabbarActive, IGraphics::CORNER_B, 10.0f);
 
 	MainView.HSplitTop(10.0f, nullptr, &MainView);
 	MainView.VSplitLeft(15.0f, nullptr, &MainView);

@@ -9,6 +9,7 @@
 
 #include <game/client/components/kog/kog_login.h>
 #include <game/client/gameclient.h>
+#include <game/client/kog_draw.h>
 #include <game/client/kog_theme.h>
 #include <game/client/ui.h>
 #include <game/localization.h>
@@ -102,7 +103,7 @@ void CKogNotices::OnRender()
 	for(const KogNotices::SToast &Toast : m_Toasts.All())
 	{
 		const float Age = Now - Toast.m_Start;
-		const float FadeIn = std::min(1.0f, Age / Motion::Panel);
+		const float FadeIn = Progress(Age, Motion::Toast, g_Config.m_ClKogReduceMotion != 0);
 		const float FadeOut = std::min(1.0f, (Toast.m_Duration - Age) / Motion::Panel);
 		const float Alpha = std::min(FadeIn, FadeOut);
 
@@ -117,7 +118,7 @@ void CKogNotices::OnRender()
 		const float Width = std::min(pScreen->w - 2.0f * Space::L, std::max(TextRender()->TextWidth(Hud::TEXT_NOTICE, Toast.m_Text.c_str()), TextRender()->TextWidth(Hud::TEXT, pTitle)) + 2.0f * Space::XL);
 		const float ProgressHeight = Toast.HasProgress() ? Space::S : 0.0f;
 		const float Height = Hud::TEXT + Hud::TEXT_NOTICE + 2.0f * Space::M + Space::XS + ProgressHeight;
-		CUIRect Box(pScreen->w / 2.0f - Width / 2.0f, Y - (1.0f - FadeIn) * Space::M, Width, Height);
+		CUIRect Box(pScreen->w / 2.0f - Width / 2.0f, Y - (1.0f - FadeIn) * Space::L, Width, Height);
 
 		const ColorRGBA Fill = Themed ? Palette.m_Panel2.WithMultipliedAlpha(Alpha) : ColorRGBA(0.0f, 0.0f, 0.0f, 0.6f * Alpha);
 		const bool Alert = Toast.m_Kind == KogNotices::EKind::MAINTENANCE || Toast.m_Kind == KogNotices::EKind::WARNING;
@@ -126,7 +127,10 @@ void CKogNotices::OnRender()
 		const ColorRGBA Muted = Themed ? Palette.m_BrandSoft.WithAlpha(Alpha) : ColorRGBA(1.0f, 1.0f, 1.0f, 0.8f * Alpha);
 
 		Graphics()->TextureClear();
-		Box.Draw(Fill, IGraphics::CORNER_ALL, Hud::RADIUS);
+		if(Themed)
+			KogDraw::Panel(Box, {Fill, &Elevation::FLOATING, Radius::Card, IGraphics::CORNER_ALL, Elevation::GLASS_TOP_LIGHTEN});
+		else
+			Box.Draw(Fill, IGraphics::CORNER_ALL, Hud::RADIUS);
 		CUIRect Bar;
 		Box.VSplitLeft(Space::XS, &Bar, nullptr);
 		Bar.HMargin(Space::S, &Bar);

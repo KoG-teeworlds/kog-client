@@ -22,6 +22,7 @@
 
 #include <generated/client_data.h>
 
+#include <game/client/kog_theme.h>
 #include <game/client/components/console.h>
 #include <game/client/gameclient.h>
 #include <game/client/ui.h>
@@ -1137,7 +1138,7 @@ void CMenus::RenderDemoBrowser(CUIRect MainView)
 	GameClient()->m_MenuBackground.ChangePosition(CMenuBackground::POS_DEMOS);
 
 	CUIRect ListView, DetailsView, ButtonsView;
-	MainView.Draw(ms_ColorTabbarActive, IGraphics::CORNER_B, 10.0f);
+	KogTheme::DrawView(MainView, ms_ColorTabbarActive, IGraphics::CORNER_B, 10.0f);
 	MainView.Margin(10.0f, &MainView);
 	MainView.HSplitBottom(22.0f * 2.0f + 5.0f, &ListView, &ButtonsView);
 	ListView.VSplitRight(205.0f, &ListView, &DetailsView);
